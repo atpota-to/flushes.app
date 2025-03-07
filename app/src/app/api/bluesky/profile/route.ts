@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Return the response
     if (!response.ok) {
       let errorText = '';
-      let errorObj = {};
+      let errorObj: Record<string, any> = {};
       
       try {
         errorText = await response.text();

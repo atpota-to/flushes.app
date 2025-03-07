@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     });
     
     // Log response headers for debugging
-    const responseHeaders = {};
+    const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
     });
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Debug the response
     console.log('Create record response status:', response.status);
     let responseText = '';
-    let responseData = {};
+    let responseData: Record<string, any> = {};
     
     try {
         responseText = await response.text();

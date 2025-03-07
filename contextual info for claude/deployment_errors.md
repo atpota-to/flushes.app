@@ -1,12 +1,12 @@
-Failed to compile.
-./src/app/auth/callback/page.tsx:165:61
-Type error: Cannot find name 'pdsEndpoint'.
-  163 |         
-  164 |         // Log the PDS endpoint that will be used
-> 165 |         console.log('Using PDS endpoint for API requests:', pdsEndpoint);
-      |                                                             ^
-  166 |         
-  167 |         // Make sure pdsEndpoint is accessible here for setAuth function
-  168 |         const extractedPdsEndpoint = pdsEndpoint;
+./src/app/api/bluesky/flushing/route.ts:87:7
+Type error: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+  85 |     const responseHeaders = {};
+  86 |     response.headers.forEach((value, key) => {
+> 87 |       responseHeaders[key] = value;
+     |       ^
+  88 |     });
+  89 |     console.log('Response headers:', JSON.stringify(responseHeaders));
+  90 |     
 Next.js build worker exited with code: 1 and signal: null
 Error: Command "npm run build" exited with 1
