@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken } from '@/lib/bluesky-auth';
 import { getProfile } from '@/lib/bluesky-api';
 import { useAuth } from '@/lib/auth-context';
+import { retrieveAuthData, clearAuthData } from '@/lib/storage-util';
 import styles from './callback.module.css';
 
 // Loading component to show while waiting
@@ -49,22 +50,22 @@ function CallbackHandler() {
           return;
         }
 
-        // Get stored values from session storage
-        if (typeof window === 'undefined' || !window.sessionStorage) {
-          setError('Browser storage not available');
+        // Get stored values from our robust storage utility
+        if (typeof window === 'undefined') {
+          setError('Browser environment not available');
           return;
         }
 
-        const storedState = sessionStorage.getItem('oauth_state');
-        const codeVerifier = sessionStorage.getItem('code_verifier');
-        const serializedKeyPair = sessionStorage.getItem('key_pair');
+        const storedState = retrieveAuthData('oauth_state');
+        const codeVerifier = retrieveAuthData('code_verifier');
+        const serializedKeyPair = retrieveAuthData('key_pair');
         
         console.log('Callback received state:', state?.substring(0, 5) + '...');
         console.log('Stored state:', storedState?.substring(0, 5) + '...');
         
         // Check if we have the stored values
         if (!storedState) {
-          console.error('No stored OAuth state found. Session storage may have been cleared.');
+          console.error('No stored OAuth state found. Browser storage may have been cleared.');
           setError('Session data lost. Please try logging in again.');
           return;
         }
@@ -229,10 +230,10 @@ function CallbackHandler() {
           pdsEndpoint: pdsEndpoint // Store the PDS endpoint for later use
         });
 
-        // Clear session storage
-        sessionStorage.removeItem('oauth_state');
-        sessionStorage.removeItem('code_verifier');
-        sessionStorage.removeItem('key_pair');
+        // Clear storage
+        clearAuthData('oauth_state');
+        clearAuthData('code_verifier');
+        clearAuthData('key_pair');
 
         // Redirect to dashboard
         router.push('/dashboard');

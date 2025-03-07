@@ -51,7 +51,8 @@ export async function checkAuth(
       publicKey,
       'GET',
       url,
-      dpopNonce || undefined
+      dpopNonce || undefined,
+      accessToken // Pass the access token for ath claim
     );
     
     console.log('Making auth check request to:', url);
@@ -232,12 +233,15 @@ export async function getProfile(
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     // Include the handle parameter in the URL for token creation
     const endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
+    
+    // Generate the DPoP token with the access token for the ath claim
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
       'GET', 
       endpoint, 
-      dpopNonce || undefined
+      dpopNonce || undefined,
+      accessToken // Include access token for ath claim
     );
     
     // Make the request via our proxy API
@@ -312,13 +316,15 @@ export async function createFlushingStatus(
     const publicKey = await exportJWK(keyPair.publicKey);
     
     console.log('Generating DPoP token for:', endpoint, 'with nonce:', dpopNonce || 'none');
+    console.log('Including access token hash (ath) in DPoP token');
     
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
       'POST', 
       endpoint, 
-      dpopNonce || undefined
+      dpopNonce || undefined,
+      accessToken // Pass the access token for ath claim
     );
     
     // Make the request via our proxy API

@@ -53,13 +53,34 @@ export async function exportJWK(key: CryptoKey): Promise<JsonWebKey> {
   return await window.crypto.subtle.exportKey('jwk', key);
 }
 
+// Calculate the SHA-256 hash of a string
+async function sha256(str: string): Promise<ArrayBuffer> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  return await window.crypto.subtle.digest('SHA-256', data);
+}
+
+// Convert ArrayBuffer to base64url string
+function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 // Generate a DPoP token
 export async function generateDPoPToken(
   privateKey: CryptoKey,
   publicKey: JsonWebKey,
   method: string,
   url: string,
-  nonce?: string
+  nonce?: string,
+  accessToken?: string // Add optional access token for ath claim
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const jti = generateRandomString(16);
@@ -77,8 +98,16 @@ export async function generateDPoPToken(
     iat: now
   };
 
+  // Add nonce if provided
   if (nonce) {
     payload.nonce = nonce;
+  }
+  
+  // Add access token hash (ath) if access token is provided
+  if (accessToken) {
+    console.log('Adding ath claim to DPoP token');
+    const tokenHash = await sha256(accessToken);
+    payload.ath = arrayBufferToBase64Url(tokenHash);
   }
 
   const encodedHeader = btoa(JSON.stringify(header))
@@ -237,7 +266,7 @@ export async function getAccessToken(
 
   console.log('Creating DPoP token with nonce:', dpopNonce);
   
-  // Create DPoP token with nonce if we have one
+  // For token requests, we don't include the ath claim as we don't have the token yet
   const publicKey = await exportJWK(keyPair.publicKey);
   const dpopToken = await generateDPoPToken(
     keyPair.privateKey,
@@ -245,6 +274,7 @@ export async function getAccessToken(
     'POST',
     tokenEndpoint,
     dpopNonce
+    // No access token for token requests as we don't have it yet
   );
 
   console.log('Making token request via proxy API');

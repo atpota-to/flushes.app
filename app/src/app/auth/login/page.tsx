@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthorizationUrl } from '@/lib/bluesky-auth';
+import { storeAuthData } from '@/lib/storage-util';
 import styles from './login.module.css';
 
 export default function LoginPage() {
@@ -35,33 +36,23 @@ export default function LoginPage() {
         // Get authorization URL
         const { url, state, codeVerifier, keyPair } = await getAuthorizationUrl();
         
-        // Store auth state in sessionStorage
+        // Store auth state in both storage mechanisms
         try {
-          // Clear any old values first
-          sessionStorage.removeItem('oauth_state');
-          sessionStorage.removeItem('code_verifier');
-          sessionStorage.removeItem('key_pair');
-          
-          // Set new values
-          sessionStorage.setItem('oauth_state', state);
-          sessionStorage.setItem('code_verifier', codeVerifier);
-          
-          // Serialize and store keyPair
+          // Serialize the key pair
           const publicJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey);
           const privateJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey);
           const serializedKeyPair = JSON.stringify({ publicKey: publicJwk, privateKey: privateJwk });
-          sessionStorage.setItem('key_pair', serializedKeyPair);
           
-          // Double-check that values were stored correctly
-          const storedState = sessionStorage.getItem('oauth_state');
-          const storedVerifier = sessionStorage.getItem('code_verifier');
-          const storedKeyPair = sessionStorage.getItem('key_pair');
+          // Store all values with our utility functions
+          const stateStored = storeAuthData('oauth_state', state);
+          const verifierStored = storeAuthData('code_verifier', codeVerifier);
+          const keyPairStored = storeAuthData('key_pair', serializedKeyPair);
           
-          if (!storedState || !storedVerifier || !storedKeyPair) {
-            throw new Error('Failed to store authentication data');
+          if (!stateStored || !verifierStored || !keyPairStored) {
+            throw new Error('Failed to store one or more authentication values');
           }
           
-          console.log('OAuth state stored successfully:', state.substring(0, 5) + '...');
+          console.log('OAuth data stored successfully:', state.substring(0, 5) + '...');
         } catch (storageError) {
           console.error('Error storing OAuth state:', storageError);
           setError('Failed to store login state. Please ensure cookies and storage are enabled.');
