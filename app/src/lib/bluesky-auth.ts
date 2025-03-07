@@ -196,6 +196,23 @@ async function getNonce(endpoint: string): Promise<string | null> {
   }
 }
 
+// Get a nonce using our server-side API endpoint
+async function fetchNonce(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/auth/nonce');
+    if (!response.ok) {
+      console.warn('Failed to get nonce from API');
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.nonce || null;
+  } catch (error) {
+    console.error('Error getting nonce from API:', error);
+    return null;
+  }
+}
+
 // Get access token from authorization code
 export async function getAccessToken(
   code: string,
@@ -207,11 +224,11 @@ export async function getAccessToken(
 
   // ALWAYS get a fresh nonce first if we don't have one
   if (!dpopNonce) {
-    console.log('No nonce provided, getting one...');
-    const nonce = await getNonce(tokenEndpoint);
+    console.log('No nonce provided, getting one from API...');
+    const nonce = await fetchNonce();
     if (nonce) {
-      console.log('Obtained nonce:', nonce);
-      return getAccessToken(code, codeVerifier, keyPair, nonce);
+      console.log('Obtained nonce from API:', nonce);
+      dpopNonce = nonce;
     } else {
       console.warn('Could not obtain a nonce, proceeding without one');
     }
@@ -229,69 +246,42 @@ export async function getAccessToken(
     dpopNonce
   );
 
-  console.log('Making token request with DPoP token');
+  console.log('Making token request via proxy API');
   
-  // Make the token request
-  const response = await fetch(tokenEndpoint, {
+  // Use our server-side proxy to make the token request
+  const proxyResponse = await fetch('/api/auth/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'DPoP': dpopToken
+      'Content-Type': 'application/json'
     },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
+    body: JSON.stringify({
       code,
-      redirect_uri: REDIRECT_URI,
-      client_id: CLIENT_ID,
-      code_verifier: codeVerifier
+      codeVerifier,
+      dpopToken
     })
   });
 
-  // Handle 401 errors which might contain a DPoP nonce
-  if (response.status === 401) {
-    const newNonce = response.headers.get('DPoP-Nonce');
-    let responseBody;
-    
-    try {
-      responseBody = await response.json();
-    } catch (e) {
-      responseBody = {};
-    }
-    
-    console.log('Received 401 response:', responseBody);
-    console.log('New nonce from response:', newNonce);
-    
-    // If we got a new nonce, retry with it
-    if (newNonce && newNonce !== dpopNonce) {
-      console.log('Retrying with new nonce:', newNonce);
-      return getAccessToken(code, codeVerifier, keyPair, newNonce);
-    }
-    
-    // Otherwise, throw an error
-    const responseText = JSON.stringify(responseBody);
-    throw new Error(`Token request failed: ${response.status}, ${responseText}`);
+  const responseData = await proxyResponse.json();
+  
+  // Check if we got a nonce error
+  if (
+    !proxyResponse.ok && 
+    responseData.error === 'use_dpop_nonce' && 
+    responseData.nonce
+  ) {
+    console.log('Received nonce from error response:', responseData.nonce);
+    // Retry with the new nonce
+    return getAccessToken(code, codeVerifier, keyPair, responseData.nonce);
   }
-
+  
   // Handle other errors
-  if (!response.ok) {
-    let errorText;
-    try {
-      const errorJson = await response.json();
-      errorText = JSON.stringify(errorJson);
-    } catch (e) {
-      errorText = await response.text();
-    }
-    throw new Error(`Token request failed: ${response.status}, ${errorText}`);
+  if (!proxyResponse.ok) {
+    console.error('Token request failed:', responseData);
+    throw new Error(`Token request failed: ${proxyResponse.status}, ${JSON.stringify(responseData)}`);
   }
 
-  const responseData = await response.json();
   console.log('Token request successful');
   
-  // Store the nonce for future use if provided in the response
-  const returnedNonce = response.headers.get('DPoP-Nonce');
-  if (returnedNonce) {
-    responseData.dpop_nonce = returnedNonce;
-  }
-  
+  // Return the token response
   return responseData;
 }

@@ -135,7 +135,38 @@ export async function getProfile(
   dpopNonce: string | null = null
 ): Promise<any> {
   try {
-    return await makeAuthenticatedRequest('com.atproto.identity.resolveHandle', 'GET', accessToken, keyPair, dpopNonce);
+    console.log('Getting profile via proxy API');
+    
+    // Generate a DPoP token for the profile request
+    const publicKey = await exportJWK(keyPair.publicKey);
+    const endpoint = 'https://bsky.social/xrpc/com.atproto.identity.resolveHandle';
+    const dpopToken = await generateDPoPToken(
+      keyPair.privateKey, 
+      publicKey, 
+      'GET', 
+      endpoint, 
+      dpopNonce || undefined
+    );
+    
+    // Make the request via our proxy API
+    const response = await fetch('/api/bluesky/profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        accessToken,
+        dpopToken
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Profile fetch error:', errorData);
+      throw new Error(`Profile fetch failed: ${response.status}`);
+    }
+    
+    return await response.json();
   } catch (error) {
     console.error('Error resolving handle:', error);
     // If we fail to get the profile, return a basic object to avoid breaking the flow
@@ -154,22 +185,41 @@ export async function createFlushingStatus(
   dpopNonce: string | null = null
 ): Promise<any> {
   console.log('Creating flushing status with nonce:', dpopNonce);
-
-  const record: FlushingRecord = {
-    $type: FLUSHING_STATUS_NSID,
-    text,
-    emoji,
-    createdAt: new Date().toISOString()
-  };
-
-  const body = {
-    repo: did,
-    collection: FLUSHING_STATUS_NSID,
-    record
-  };
-
+  
   try {
-    return await makeAuthenticatedRequest('com.atproto.repo.createRecord', 'POST', accessToken, keyPair, dpopNonce, body);
+    // Generate a DPoP token for the create request
+    const publicKey = await exportJWK(keyPair.publicKey);
+    const endpoint = 'https://bsky.social/xrpc/com.atproto.repo.createRecord';
+    const dpopToken = await generateDPoPToken(
+      keyPair.privateKey, 
+      publicKey, 
+      'POST', 
+      endpoint, 
+      dpopNonce || undefined
+    );
+    
+    // Make the request via our proxy API
+    const response = await fetch('/api/bluesky/flushing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        accessToken,
+        dpopToken,
+        did,
+        text,
+        emoji
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Status creation error:', errorData);
+      throw new Error(`Status creation failed: ${response.status}`);
+    }
+    
+    return await response.json();
   } catch (error) {
     console.error('Error creating flushing status:', error);
     throw error;
