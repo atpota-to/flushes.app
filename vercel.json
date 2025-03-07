@@ -1,3 +1,10 @@
 {
-  "outputDirectory": "app/.next"
+  "projectSettings": {
+    "framework": "nextjs",
+    "buildCommand": null,
+    "devCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": "app",
+    "nodeVersion": "18.x"
+  }
 }
