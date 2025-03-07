@@ -123,12 +123,17 @@ function CallbackHandler() {
 
         // Extract the PDS endpoint from the token audience
         let pdsEndpoint = null;
+        console.log('Token audience:', tokenResponse.aud);
         if (tokenResponse.aud && typeof tokenResponse.aud === 'string') {
           if (tokenResponse.aud.startsWith('did:web:')) {
             // Convert did:web:example.com to https://example.com
             pdsEndpoint = 'https://' + tokenResponse.aud.replace('did:web:', '');
             console.log('Extracted PDS endpoint from token:', pdsEndpoint);
+          } else {
+            console.warn('Token audience does not start with did:web:', tokenResponse.aud);
           }
+        } else {
+          console.warn('Token audience missing or not a string:', tokenResponse.aud);
         }
         
         // Get user profile
@@ -157,6 +162,32 @@ function CallbackHandler() {
         console.log('Token response:', tokenResponse);
         const userDid = tokenResponse.sub;
         console.log('User DID from token:', userDid);
+        
+        // Try to decode the access token to see if we can extract the audience
+        try {
+          if (tokenResponse.access_token) {
+            const parts = tokenResponse.access_token.split('.');
+            if (parts.length === 3) {
+              // Decode the payload (second part)
+              const payload = JSON.parse(atob(parts[1]));
+              console.log('Decoded token payload:', payload);
+              
+              // Extract audience from the decoded token
+              if (payload.aud && typeof payload.aud === 'string') {
+                console.log('Audience from decoded token:', payload.aud);
+                
+                // Update the pdsEndpoint from the decoded token if available
+                if (payload.aud.startsWith('did:web:')) {
+                  // Convert did:web:example.com to https://example.com
+                  pdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
+                  console.log('Updated PDS endpoint from decoded token:', pdsEndpoint);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to decode token:', error);
+        }
         
         // Try to resolve the user's own handle using the DID
         let userHandle = profileResponse?.handle || 'unknown';

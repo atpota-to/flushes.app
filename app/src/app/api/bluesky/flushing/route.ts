@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     const { accessToken, dpopToken, did, text, emoji, pdsEndpoint } = await request.json();
     
+    console.log('API received pdsEndpoint:', pdsEndpoint);
+    
     if (!accessToken || !dpopToken || !did || !text || !emoji) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
@@ -18,6 +20,11 @@ export async function POST(request: NextRequest) {
     // Use the user's PDS endpoint if available
     const apiUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
     console.log('Using API URL:', apiUrl);
+    
+    // If we're still using the default URL, that's likely the issue
+    if (apiUrl === DEFAULT_API_URL) {
+      console.warn('WARNING: Using default API URL instead of PDS endpoint. This will likely fail with "OAuth tokens are meant for PDS access only"');
+    }
     
     // Create the record
     const record = {

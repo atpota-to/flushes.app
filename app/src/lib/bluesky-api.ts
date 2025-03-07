@@ -206,9 +206,20 @@ export async function createFlushingStatus(
   try {
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
+    
     // Use the PDS endpoint if available
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
+    
+    console.log('Generating DPoP token for:', endpoint);
+    
+    // Special handling for PDS endpoints
+    if (pdsEndpoint) {
+      console.log('Using PDS endpoint for DPoP token generation');
+    } else {
+      console.warn('No PDS endpoint specified, using default URL which will likely fail');
+    }
+    
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 

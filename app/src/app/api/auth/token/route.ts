@@ -73,6 +73,20 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Log the token response for debugging
+    console.log('Token response from Bluesky:', JSON.stringify({
+      ...responseData,
+      access_token: responseData.access_token ? '[REDACTED]' : null,
+      refresh_token: responseData.refresh_token ? '[REDACTED]' : null,
+    }));
+    
+    // Check if we have an audience in the token
+    if (responseData.aud) {
+      console.log('Token audience:', responseData.aud);
+    } else {
+      console.warn('No audience in token response');
+    }
+    
     // Return the response
     return NextResponse.json(responseData, { status: response.status });
   } catch (error: any) {

@@ -77,6 +77,11 @@ export default function DashboardPage() {
       // Create flushing status - use the stored DPoP nonce if available
       console.log('Creating flushing status with DPoP nonce:', dpopNonce);
       console.log('User PDS endpoint:', pdsEndpoint);
+      
+      if (!pdsEndpoint) {
+        console.warn('WARNING: No PDS endpoint available. This will likely result in an error.');
+      }
+      
       const result = await createFlushingStatus(
         accessToken, 
         keyPair, 
