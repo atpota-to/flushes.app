@@ -44,8 +44,24 @@ export async function POST(request: NextRequest) {
     
     // Return the response
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error from Bluesky:', response.status, errorText);
+      let errorText = '';
+      let errorObj = {};
+      
+      try {
+        errorText = await response.text();
+        console.error('Error from Bluesky:', response.status, errorText);
+        
+        // Try to parse the response as JSON if it's not empty
+        if (errorText) {
+          try {
+            errorObj = JSON.parse(errorText);
+          } catch (parseError) {
+            console.error('Failed to parse error response as JSON:', parseError);
+          }
+        }
+      } catch (e) {
+        console.error('Error reading response:', e);
+      }
       
       // If we can't get the profile, return a basic response to continue the flow
       if (response.status === 400) {
@@ -56,7 +72,7 @@ export async function POST(request: NextRequest) {
       }
       
       return NextResponse.json(
-        { error: 'Profile fetch error', message: errorText },
+        { error: 'Profile fetch error', message: errorText, details: errorObj },
         { status: response.status }
       );
     }

@@ -78,11 +78,14 @@ export async function POST(request: NextRequest) {
     
     // If there's an error, return it with more details
     if (!response.ok) {
+        // Handle responseData which might be an empty object
+        const errorObj = typeof responseData === 'object' && responseData !== null ? responseData : {};
+        
         return NextResponse.json({
-            error: responseData.error || 'Status creation failed',
-            message: responseData.message || responseText,
+            error: (errorObj as any).error || 'Status creation failed',
+            message: (errorObj as any).message || responseText,
             status: response.status,
-            details: responseData
+            details: errorObj
         }, { status: response.status });
     }
     
