@@ -121,19 +121,19 @@ function CallbackHandler() {
 
         setStatus('Getting user profile...');
 
+        // Extract the PDS endpoint from the token audience
+        let pdsEndpoint = null;
+        if (tokenResponse.aud && typeof tokenResponse.aud === 'string') {
+          if (tokenResponse.aud.startsWith('did:web:')) {
+            // Convert did:web:example.com to https://example.com
+            pdsEndpoint = 'https://' + tokenResponse.aud.replace('did:web:', '');
+            console.log('Extracted PDS endpoint from token:', pdsEndpoint);
+          }
+        }
+        
         // Get user profile
         let profileResponse;
         try {
-          // Extract the PDS endpoint from the token audience
-          let pdsEndpoint = null;
-          if (tokenResponse.aud && typeof tokenResponse.aud === 'string') {
-            if (tokenResponse.aud.startsWith('did:web:')) {
-              // Convert did:web:example.com to https://example.com
-              pdsEndpoint = 'https://' + tokenResponse.aud.replace('did:web:', '');
-              console.log('Extracted PDS endpoint from token:', pdsEndpoint);
-            }
-          }
-          
           profileResponse = await getProfile(
             tokenResponse.access_token,
             keyPair,
@@ -164,9 +164,6 @@ function CallbackHandler() {
         // Log the PDS endpoint that will be used
         console.log('Using PDS endpoint for API requests:', pdsEndpoint);
         
-        // Make sure pdsEndpoint is accessible here for setAuth function
-        const extractedPdsEndpoint = pdsEndpoint;
-        
         // Store auth data
         setAuth({
           accessToken: tokenResponse.access_token,
@@ -175,7 +172,7 @@ function CallbackHandler() {
           handle: userHandle,
           serializedKeyPair: serializedKeysForStorage,
           dpopNonce: dpopNonce,
-          pdsEndpoint: extractedPdsEndpoint // Store the PDS endpoint for later use
+          pdsEndpoint: pdsEndpoint // Store the PDS endpoint for later use
         });
 
         // Clear session storage
