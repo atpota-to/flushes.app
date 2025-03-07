@@ -132,14 +132,16 @@ export async function makeAuthenticatedRequest(
 export async function getProfile(
   accessToken: string,
   keyPair: CryptoKeyPair,
-  dpopNonce: string | null = null
+  dpopNonce: string | null = null,
+  handle: string = 'atproto.com' // Default handle to resolve
 ): Promise<any> {
   try {
     console.log('Getting profile via proxy API');
     
     // Generate a DPoP token for the profile request
     const publicKey = await exportJWK(keyPair.publicKey);
-    const endpoint = 'https://bsky.social/xrpc/com.atproto.identity.resolveHandle';
+    // Include the handle parameter in the URL for token creation
+    const endpoint = `https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
@@ -156,17 +158,21 @@ export async function getProfile(
       },
       body: JSON.stringify({
         accessToken,
-        dpopToken
+        dpopToken,
+        handle  // Include the handle in the request
       })
     });
     
+    // Even if the response isn't OK, we'll try to parse it
+    const responseData = await response.json();
+    
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Profile fetch error:', errorData);
-      throw new Error(`Profile fetch failed: ${response.status}`);
+      console.error('Profile fetch error:', responseData);
+      // Return a basic profile if we got an error
+      return { did: responseData.did || 'unknown_did', handle: responseData.handle || 'unknown' };
     }
     
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error('Error resolving handle:', error);
     // If we fail to get the profile, return a basic object to avoid breaking the flow

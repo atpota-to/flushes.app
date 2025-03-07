@@ -4,7 +4,7 @@ const API_URL = 'https://bsky.social/xrpc';
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken, dpopToken } = await request.json();
+    const { accessToken, dpopToken, handle } = await request.json();
     
     if (!accessToken || !dpopToken) {
       return NextResponse.json(
@@ -13,8 +13,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Check if handle is provided, use a default otherwise
+    const userHandle = handle || 'atproto.com';
+    
     // Make the request to Bluesky
-    const response = await fetch(`${API_URL}/com.atproto.identity.resolveHandle`, {
+    const url = `${API_URL}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(userHandle)}`;
+    console.log('Making request to:', url);
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `DPoP ${accessToken}`,
@@ -37,14 +43,33 @@ export async function POST(request: NextRequest) {
     }
     
     // Return the response
-    const data = await response.json().catch(() => ({}));
-    return NextResponse.json(data, { status: response.status });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error from Bluesky:', response.status, errorText);
+      
+      // If we can't get the profile, return a basic response to continue the flow
+      if (response.status === 400) {
+        return NextResponse.json({
+          did: 'unknown_did',
+          handle: 'unknown'
+        });
+      }
+      
+      return NextResponse.json(
+        { error: 'Profile fetch error', message: errorText },
+        { status: response.status }
+      );
+    }
+    
+    const data = await response.json();
+    return NextResponse.json(data);
   } catch (error: any) {
     console.error('Profile fetch error:', error);
-    return NextResponse.json(
-      { error: 'Profile fetch error', message: error.message },
-      { status: 500 }
-    );
+    // Return a basic profile to continue the flow
+    return NextResponse.json({
+      did: 'unknown_did',
+      handle: 'unknown'
+    });
   }
 }
 

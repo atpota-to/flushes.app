@@ -2,6 +2,7 @@
 const BLUESKY_AUTH_SERVER = 'https://bsky.social';
 const REDIRECT_URI = 'https://flushing.im/auth/callback';
 const CLIENT_ID = 'https://flushing.im/client-metadata.json';
+// Need to include transition:generic to be able to create records
 const SCOPES = 'atproto transition:generic';
 
 // Generate a random string for PKCE and state

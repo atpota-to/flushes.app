@@ -54,6 +54,8 @@ export default function DashboardPage() {
     setSuccess(null);
 
     try {
+      console.log('Submitting status update with DID:', did);
+      
       // Deserialize key pair
       const keyPairData = JSON.parse(serializedKeyPair);
       const publicKey = await window.crypto.subtle.importKey(
@@ -73,7 +75,8 @@ export default function DashboardPage() {
       const keyPair = { publicKey, privateKey };
 
       // Create flushing status - use the stored DPoP nonce if available
-      await createFlushingStatus(
+      console.log('Creating flushing status with DPoP nonce:', dpopNonce);
+      const result = await createFlushingStatus(
         accessToken, 
         keyPair, 
         did, 
@@ -81,6 +84,8 @@ export default function DashboardPage() {
         selectedEmoji,
         dpopNonce || null
       );
+      
+      console.log('Status update result:', result);
       
       // Reset form and show success message
       setText('');

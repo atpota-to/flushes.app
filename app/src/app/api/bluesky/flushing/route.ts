@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
       record
     };
     
+    // Debug the request
+    console.log('Creating record with body:', JSON.stringify(body));
+    
     // Make the request to Bluesky
     const response = await fetch(`${API_URL}/com.atproto.repo.createRecord`, {
       method: 'POST',
@@ -39,23 +42,52 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body)
     });
     
+    // Debug the response
+    console.log('Create record response status:', response.status);
+    let responseText = '';
+    let responseData = {};
+    
+    try {
+        responseText = await response.text();
+        console.log('Create record response:', responseText);
+        
+        // Try to parse the response as JSON if it's not empty
+        if (responseText) {
+            try {
+                responseData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response as JSON:', parseError);
+            }
+        }
+    } catch (e) {
+        console.error('Error reading response:', e);
+    }
+    
     // Check for DPoP nonce error
     if (response.status === 401) {
       const newNonce = response.headers.get('DPoP-Nonce');
-      const errorResponse = await response.json().catch(() => ({}));
       
       if (newNonce) {
         return NextResponse.json({
           error: 'use_dpop_nonce',
           nonce: newNonce,
-          originalError: errorResponse
+          originalError: responseData
         }, { status: 401 });
       }
     }
     
+    // If there's an error, return it with more details
+    if (!response.ok) {
+        return NextResponse.json({
+            error: responseData.error || 'Status creation failed',
+            message: responseData.message || responseText,
+            status: response.status,
+            details: responseData
+        }, { status: response.status });
+    }
+    
     // Return the response
-    const data = await response.json().catch(() => ({}));
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(responseData, { status: response.status });
   } catch (error: any) {
     console.error('Create flushing status error:', error);
     return NextResponse.json(

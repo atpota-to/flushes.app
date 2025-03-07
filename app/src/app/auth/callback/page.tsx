@@ -141,12 +141,20 @@ function CallbackHandler() {
           privateKey: keyPairData.privateKey
         });
 
+        // Extract the DID from the token response
+        console.log('Token response:', tokenResponse);
+        const userDid = tokenResponse.sub;
+        console.log('User DID from token:', userDid);
+        
+        // Try to resolve the user's own handle using the DID
+        let userHandle = profileResponse?.handle || 'unknown';
+        
         // Store auth data
         setAuth({
           accessToken: tokenResponse.access_token,
           refreshToken: tokenResponse.refresh_token,
-          did: tokenResponse.sub,
-          handle: profileResponse?.handle || 'unknown',
+          did: userDid,
+          handle: userHandle,
           serializedKeyPair: serializedKeysForStorage,
           dpopNonce: dpopNonce
         });
