@@ -1,0 +1,22 @@
+{
+  "client_id": "https://flushing.im/client-metadata.json",
+  "application_type": "web",
+  "client_name": "I'm Flushing",
+  "client_uri": "https://flushing.im",
+  "logo_uri": "https://flushing.im/logo.png",
+  "tos_uri": "https://flushing.im/terms",
+  "policy_uri": "https://flushing.im/privacy",
+  "dpop_bound_access_tokens": true,
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "redirect_uris": [
+    "https://flushing.im/auth/callback"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "scope": "atproto transition:generic",
+  "token_endpoint_auth_method": "none"
+}
