@@ -124,10 +124,22 @@ function CallbackHandler() {
         // Get user profile
         let profileResponse;
         try {
+          // Extract the PDS endpoint from the token audience
+          let pdsEndpoint = null;
+          if (tokenResponse.aud && typeof tokenResponse.aud === 'string') {
+            if (tokenResponse.aud.startsWith('did:web:')) {
+              // Convert did:web:example.com to https://example.com
+              pdsEndpoint = 'https://' + tokenResponse.aud.replace('did:web:', '');
+              console.log('Extracted PDS endpoint from token:', pdsEndpoint);
+            }
+          }
+          
           profileResponse = await getProfile(
             tokenResponse.access_token,
             keyPair,
-            dpopNonce
+            dpopNonce,
+            undefined, // Use default handle
+            pdsEndpoint // Pass the PDS endpoint
           );
         } catch (profileError: any) {
           console.error('Profile fetch error:', profileError);
@@ -149,6 +161,12 @@ function CallbackHandler() {
         // Try to resolve the user's own handle using the DID
         let userHandle = profileResponse?.handle || 'unknown';
         
+        // Log the PDS endpoint that will be used
+        console.log('Using PDS endpoint for API requests:', pdsEndpoint);
+        
+        // Make sure pdsEndpoint is accessible here for setAuth function
+        const extractedPdsEndpoint = pdsEndpoint;
+        
         // Store auth data
         setAuth({
           accessToken: tokenResponse.access_token,
@@ -156,7 +174,8 @@ function CallbackHandler() {
           did: userDid,
           handle: userHandle,
           serializedKeyPair: serializedKeysForStorage,
-          dpopNonce: dpopNonce
+          dpopNonce: dpopNonce,
+          pdsEndpoint: extractedPdsEndpoint // Store the PDS endpoint for later use
         });
 
         // Clear session storage

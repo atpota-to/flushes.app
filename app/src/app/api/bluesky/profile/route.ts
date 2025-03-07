@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = 'https://bsky.social/xrpc';
+const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken, dpopToken, handle } = await request.json();
+    const { accessToken, dpopToken, handle, pdsEndpoint } = await request.json();
     
     if (!accessToken || !dpopToken) {
       return NextResponse.json(
@@ -16,8 +16,11 @@ export async function POST(request: NextRequest) {
     // Check if handle is provided, use a default otherwise
     const userHandle = handle || 'atproto.com';
     
-    // Make the request to Bluesky
-    const url = `${API_URL}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(userHandle)}`;
+    // Use the PDS endpoint if provided, otherwise use the default
+    const apiUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
+    
+    // Make the request to the user's PDS
+    const url = `${apiUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(userHandle)}`;
     console.log('Making request to:', url);
     
     const response = await fetch(url, {

@@ -14,7 +14,7 @@ const EMOJIS = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, clearAuth } = useAuth();
+  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
   
   const [text, setText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
@@ -76,13 +76,15 @@ export default function DashboardPage() {
 
       // Create flushing status - use the stored DPoP nonce if available
       console.log('Creating flushing status with DPoP nonce:', dpopNonce);
+      console.log('User PDS endpoint:', pdsEndpoint);
       const result = await createFlushingStatus(
         accessToken, 
         keyPair, 
         did, 
         text, 
         selectedEmoji,
-        dpopNonce || null
+        dpopNonce || null,
+        pdsEndpoint
       );
       
       console.log('Status update result:', result);

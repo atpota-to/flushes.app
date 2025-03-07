@@ -1,7 +1,7 @@
 import { exportJWK, generateDPoPToken } from './bluesky-auth';
 
 // Bluesky API utilities
-const API_URL = 'https://bsky.social/xrpc';
+const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 
 // Create a custom lexicon schema for "im.flushing.right.now"
 // This would normally be registered with the AT Protocol
@@ -21,9 +21,14 @@ export async function makeAuthenticatedRequest(
   accessToken: string,
   keyPair: CryptoKeyPair,
   dpopNonce: string | null = null,
-  body?: any
+  body?: any,
+  pdsEndpoint: string | null = null
 ): Promise<any> {
-  const url = `${API_URL}/${endpoint}`;
+  // Use the PDS endpoint if provided, otherwise fall back to default
+  const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
+  const url = `${baseUrl}/${endpoint}`;
+  
+  console.log(`Making ${method} request to ${url}`);
   
   // If no nonce is provided, try to get one first
   if (!dpopNonce) {
@@ -35,7 +40,7 @@ export async function makeAuthenticatedRequest(
       
       const nonce = headResponse.headers.get('DPoP-Nonce');
       if (nonce) {
-        return makeAuthenticatedRequest(endpoint, method, accessToken, keyPair, nonce, body);
+        return makeAuthenticatedRequest(endpoint, method, accessToken, keyPair, nonce, body, pdsEndpoint);
       }
     } catch (err) {
       console.warn('Failed to get nonce via HEAD request, continuing without it', err);
@@ -133,15 +138,18 @@ export async function getProfile(
   accessToken: string,
   keyPair: CryptoKeyPair,
   dpopNonce: string | null = null,
-  handle: string = 'atproto.com' // Default handle to resolve
+  handle: string = 'atproto.com', // Default handle to resolve
+  pdsEndpoint: string | null = null
 ): Promise<any> {
   try {
     console.log('Getting profile via proxy API');
     
     // Generate a DPoP token for the profile request
     const publicKey = await exportJWK(keyPair.publicKey);
+    // Use the PDS endpoint if available
+    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     // Include the handle parameter in the URL for token creation
-    const endpoint = `https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
+    const endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
@@ -159,7 +167,8 @@ export async function getProfile(
       body: JSON.stringify({
         accessToken,
         dpopToken,
-        handle  // Include the handle in the request
+        handle,  // Include the handle in the request
+        pdsEndpoint // Include the PDS endpoint
       })
     });
     
@@ -188,14 +197,18 @@ export async function createFlushingStatus(
   did: string,
   text: string,
   emoji: string,
-  dpopNonce: string | null = null
+  dpopNonce: string | null = null,
+  pdsEndpoint: string | null = null
 ): Promise<any> {
   console.log('Creating flushing status with nonce:', dpopNonce);
+  console.log('Using PDS endpoint:', pdsEndpoint || 'default');
   
   try {
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
-    const endpoint = 'https://bsky.social/xrpc/com.atproto.repo.createRecord';
+    // Use the PDS endpoint if available
+    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
+    const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
@@ -215,7 +228,8 @@ export async function createFlushingStatus(
         dpopToken,
         did,
         text,
-        emoji
+        emoji,
+        pdsEndpoint // Include the PDS endpoint
       })
     });
     

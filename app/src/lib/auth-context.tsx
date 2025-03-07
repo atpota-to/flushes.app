@@ -10,6 +10,7 @@ interface AuthContextType {
   handle: string | null;
   serializedKeyPair: string | null;
   dpopNonce: string | null;
+  pdsEndpoint: string | null;
   setAuth: (auth: {
     accessToken: string;
     refreshToken: string;
@@ -17,6 +18,7 @@ interface AuthContextType {
     handle: string;
     serializedKeyPair: string;
     dpopNonce?: string | null;
+    pdsEndpoint?: string | null;
   }) => void;
   clearAuth: () => void;
 }
@@ -35,6 +37,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [handle, setHandle] = useState<string | null>(null);
   const [serializedKeyPair, setSerializedKeyPair] = useState<string | null>(null);
   const [dpopNonce, setDpopNonce] = useState<string | null>(null);
+  const [pdsEndpoint, setPdsEndpoint] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storedHandle = localStorage.getItem('handle');
       const storedKeyPair = localStorage.getItem('keyPair');
       const storedDpopNonce = localStorage.getItem('dpopNonce');
+      const storedPdsEndpoint = localStorage.getItem('pdsEndpoint');
 
       if (storedAccessToken && storedDid && storedKeyPair) {
         setAccessToken(storedAccessToken);
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setHandle(storedHandle);
         setSerializedKeyPair(storedKeyPair);
         setDpopNonce(storedDpopNonce);
+        setPdsEndpoint(storedPdsEndpoint);
         setIsAuthenticated(true);
       }
     }
@@ -68,7 +73,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     did,
     handle,
     serializedKeyPair,
-    dpopNonce = null
+    dpopNonce = null,
+    pdsEndpoint = null
   }: {
     accessToken: string;
     refreshToken: string;
@@ -76,6 +82,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     handle: string;
     serializedKeyPair: string;
     dpopNonce?: string | null;
+    pdsEndpoint?: string | null;
   }) => {
     // Store auth data in state
     setAccessToken(accessToken);
@@ -84,6 +91,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setHandle(handle);
     setSerializedKeyPair(serializedKeyPair);
     setDpopNonce(dpopNonce);
+    setPdsEndpoint(pdsEndpoint);
     setIsAuthenticated(true);
 
     // Store auth data in localStorage (only on client)
@@ -96,6 +104,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (dpopNonce) {
         localStorage.setItem('dpopNonce', dpopNonce);
       }
+      if (pdsEndpoint) {
+        localStorage.setItem('pdsEndpoint', pdsEndpoint);
+      }
     }
   };
 
@@ -107,6 +118,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setHandle(null);
     setSerializedKeyPair(null);
     setDpopNonce(null);
+    setPdsEndpoint(null);
     setIsAuthenticated(false);
 
     // Clear auth data from localStorage (only on client)
@@ -117,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem('handle');
       localStorage.removeItem('keyPair');
       localStorage.removeItem('dpopNonce');
+      localStorage.removeItem('pdsEndpoint');
     }
   };
 
@@ -130,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         handle,
         serializedKeyPair,
         dpopNonce,
+        pdsEndpoint,
         setAuth,
         clearAuth
       }}

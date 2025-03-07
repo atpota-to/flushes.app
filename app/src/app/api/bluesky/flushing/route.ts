@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = 'https://bsky.social/xrpc';
+// This is the default API URL, but we'll use the user's PDS endpoint instead if available
+const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
 export async function POST(request: NextRequest) {
   try {
-    const { accessToken, dpopToken, did, text, emoji } = await request.json();
+    const { accessToken, dpopToken, did, text, emoji, pdsEndpoint } = await request.json();
     
     if (!accessToken || !dpopToken || !did || !text || !emoji) {
       return NextResponse.json(
@@ -13,6 +14,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Use the user's PDS endpoint if available
+    const apiUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
+    console.log('Using API URL:', apiUrl);
     
     // Create the record
     const record = {
@@ -31,8 +36,8 @@ export async function POST(request: NextRequest) {
     // Debug the request
     console.log('Creating record with body:', JSON.stringify(body));
     
-    // Make the request to Bluesky
-    const response = await fetch(`${API_URL}/com.atproto.repo.createRecord`, {
+    // Make the request to user's PDS
+    const response = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
