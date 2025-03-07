@@ -43,6 +43,33 @@ export async function POST(request: NextRequest) {
     // Debug the request
     console.log('Creating record with body:', JSON.stringify(body));
     
+    // Log the request headers for debugging
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `DPoP ${accessToken.substring(0, 10)}...`,
+      'DPoP': `${dpopToken.substring(0, 10)}...`,
+    };
+    console.log('Request headers:', JSON.stringify(requestHeaders));
+    
+    // Try to get a nonce with a HEAD request first
+    let nonce = null;
+    try {
+      console.log('Making HEAD request to get nonce...');
+      const headResponse = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
+        method: 'HEAD'
+      });
+      
+      nonce = headResponse.headers.get('DPoP-Nonce');
+      if (nonce) {
+        console.log('Got nonce from HEAD request:', nonce);
+        console.log('We cannot use this nonce directly in the server API route because we cannot generate a new DPoP token here.');
+      } else {
+        console.log('No nonce found in HEAD response');
+      }
+    } catch (error) {
+      console.warn('Error getting nonce via HEAD request:', error);
+    }
+    
     // Make the request to user's PDS
     const response = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
       method: 'POST',
@@ -53,6 +80,13 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body)
     });
+    
+    // Log response headers for debugging
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+    console.log('Response headers:', JSON.stringify(responseHeaders));
     
     // Debug the response
     console.log('Create record response status:', response.status);
@@ -80,11 +114,33 @@ export async function POST(request: NextRequest) {
       const newNonce = response.headers.get('DPoP-Nonce');
       
       if (newNonce) {
+        console.log('Received new DPoP nonce from PDS:', newNonce);
         return NextResponse.json({
           error: 'use_dpop_nonce',
           nonce: newNonce,
           originalError: responseData
         }, { status: 401 });
+      }
+      
+      // Try to extract nonce from error response body
+      if (typeof responseData === 'object' && responseData !== null) {
+        if (
+          responseData.error === 'InvalidDpop' || 
+          responseData.error === 'InvalidToken' ||
+          (responseData.message && responseData.message.includes('nonce'))
+        ) {
+          // Look for a nonce in the message
+          const nonceMatch = responseData.message?.match(/nonce: ([A-Za-z0-9_-]+)/);
+          if (nonceMatch && nonceMatch[1]) {
+            const extractedNonce = nonceMatch[1];
+            console.log('Extracted nonce from error message:', extractedNonce);
+            return NextResponse.json({
+              error: 'use_dpop_nonce',
+              nonce: extractedNonce,
+              originalError: responseData
+            }, { status: 401 });
+          }
+        }
       }
     }
     

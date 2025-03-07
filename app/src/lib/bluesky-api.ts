@@ -204,21 +204,44 @@ export async function createFlushingStatus(
   console.log('Using PDS endpoint:', pdsEndpoint || 'default');
   
   try {
-    // Generate a DPoP token for the create request
-    const publicKey = await exportJWK(keyPair.publicKey);
-    
     // Use the PDS endpoint if available
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     
-    console.log('Generating DPoP token for:', endpoint);
+    console.log('API endpoint:', endpoint);
     
     // Special handling for PDS endpoints
     if (pdsEndpoint) {
-      console.log('Using PDS endpoint for DPoP token generation');
+      console.log('Using PDS endpoint for status creation');
     } else {
       console.warn('No PDS endpoint specified, using default URL which will likely fail');
     }
+    
+    // If we don't have a nonce, try to get one first directly from the PDS
+    if (!dpopNonce) {
+      try {
+        console.log('No nonce provided, making HEAD request to get one');
+        const headResponse = await fetch(endpoint, {
+          method: 'HEAD',
+          headers: {
+            'Authorization': `DPoP ${accessToken}`
+          }
+        });
+        
+        const fetchedNonce = headResponse.headers.get('DPoP-Nonce');
+        if (fetchedNonce) {
+          console.log('Obtained nonce from HEAD request:', fetchedNonce);
+          dpopNonce = fetchedNonce;
+        }
+      } catch (error) {
+        console.warn('Failed to get nonce via HEAD request:', error);
+      }
+    }
+    
+    // Generate a DPoP token for the create request
+    const publicKey = await exportJWK(keyPair.publicKey);
+    
+    console.log('Generating DPoP token for:', endpoint, 'with nonce:', dpopNonce || 'none');
     
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
@@ -247,6 +270,23 @@ export async function createFlushingStatus(
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Status creation error:', errorData);
+      
+      // Check if this is a nonce error
+      if (response.status === 401 && errorData.error === 'use_dpop_nonce' && errorData.nonce) {
+        console.log('Received DPoP nonce error, retrying with nonce:', errorData.nonce);
+        
+        // Retry with the new nonce
+        return createFlushingStatus(
+          accessToken,
+          keyPair,
+          did,
+          text, 
+          emoji,
+          errorData.nonce,
+          pdsEndpoint
+        );
+      }
+      
       throw new Error(`Status creation failed: ${response.status}`);
     }
     
