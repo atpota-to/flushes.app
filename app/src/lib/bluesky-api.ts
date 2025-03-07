@@ -14,6 +14,66 @@ export interface FlushingRecord {
   createdAt: string;
 }
 
+// Check if authentication is valid by making a simple request
+export async function checkAuth(
+  accessToken: string,
+  keyPair: CryptoKeyPair,
+  dpopNonce: string | null = null,
+  pdsEndpoint: string | null = null
+): Promise<boolean> {
+  try {
+    if (!pdsEndpoint) {
+      console.error('No PDS endpoint provided for auth check');
+      return false;
+    }
+    
+    console.log('Checking auth with PDS endpoint:', pdsEndpoint);
+    
+    // Use the PDS endpoint for auth check
+    const baseUrl = `${pdsEndpoint}/xrpc`;
+    const endpoint = `${baseUrl}/com.atproto.repo.listRecords`;
+    
+    // Generate DPoP token
+    const publicKey = await exportJWK(keyPair.publicKey);
+    const dpopToken = await generateDPoPToken(
+      keyPair.privateKey,
+      publicKey,
+      'GET',
+      `${endpoint}?limit=1`,
+      dpopNonce || undefined
+    );
+    
+    // Make the request to check auth
+    const response = await fetch(`${endpoint}?limit=1`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `DPoP ${accessToken}`,
+        'DPoP': dpopToken
+      }
+    });
+    
+    if (response.ok) {
+      console.log('Auth check successful!');
+      return true;
+    }
+    
+    if (response.status === 401) {
+      const nonce = response.headers.get('DPoP-Nonce');
+      if (nonce) {
+        console.log('Got nonce during auth check:', nonce);
+        // Try again with the nonce
+        return checkAuth(accessToken, keyPair, nonce, pdsEndpoint);
+      }
+    }
+    
+    console.error('Auth check failed with status:', response.status);
+    return false;
+  } catch (error) {
+    console.error('Error checking auth:', error);
+    return false;
+  }
+}
+
 // Make an authenticated request to the Bluesky API
 export async function makeAuthenticatedRequest(
   endpoint: string,
@@ -198,45 +258,33 @@ export async function createFlushingStatus(
   text: string,
   emoji: string,
   dpopNonce: string | null = null,
-  pdsEndpoint: string | null = null
+  pdsEndpoint: string | null = null,
+  retryCount: number = 0 // Add retry counter
 ): Promise<any> {
-  console.log('Creating flushing status with nonce:', dpopNonce);
+  // Safety check: prevent infinite recursion
+  if (retryCount >= 3) {
+    throw new Error('Maximum retry attempts reached. Could not create status after 3 attempts.');
+  }
+  
+  console.log(`Creating flushing status (attempt ${retryCount + 1}/3) with nonce:`, dpopNonce);
   console.log('Using PDS endpoint:', pdsEndpoint || 'default');
   
   try {
+    // Validate inputs
+    if (!accessToken) throw new Error('Access token is required');
+    if (!did) throw new Error('DID is required');
+    if (!text) throw new Error('Text is required');
+    if (!emoji) throw new Error('Emoji is required');
+    
     // Use the PDS endpoint if available
+    if (!pdsEndpoint) {
+      console.error('Missing PDS endpoint. This will likely fail.');
+    }
+    
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     
     console.log('API endpoint:', endpoint);
-    
-    // Special handling for PDS endpoints
-    if (pdsEndpoint) {
-      console.log('Using PDS endpoint for status creation');
-    } else {
-      console.warn('No PDS endpoint specified, using default URL which will likely fail');
-    }
-    
-    // If we don't have a nonce, try to get one first directly from the PDS
-    if (!dpopNonce) {
-      try {
-        console.log('No nonce provided, making HEAD request to get one');
-        const headResponse = await fetch(endpoint, {
-          method: 'HEAD',
-          headers: {
-            'Authorization': `DPoP ${accessToken}`
-          }
-        });
-        
-        const fetchedNonce = headResponse.headers.get('DPoP-Nonce');
-        if (fetchedNonce) {
-          console.log('Obtained nonce from HEAD request:', fetchedNonce);
-          dpopNonce = fetchedNonce;
-        }
-      } catch (error) {
-        console.warn('Failed to get nonce via HEAD request:', error);
-      }
-    }
     
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
@@ -252,6 +300,7 @@ export async function createFlushingStatus(
     );
     
     // Make the request via our proxy API
+    console.log('Sending request to proxy API...');
     const response = await fetch('/api/bluesky/flushing', {
       method: 'POST',
       headers: {
@@ -267,30 +316,38 @@ export async function createFlushingStatus(
       })
     });
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Status creation error:', errorData);
-      
-      // Check if this is a nonce error
-      if (response.status === 401 && errorData.error === 'use_dpop_nonce' && errorData.nonce) {
-        console.log('Received DPoP nonce error, retrying with nonce:', errorData.nonce);
-        
-        // Retry with the new nonce
-        return createFlushingStatus(
-          accessToken,
-          keyPair,
-          did,
-          text, 
-          emoji,
-          errorData.nonce,
-          pdsEndpoint
-        );
-      }
-      
-      throw new Error(`Status creation failed: ${response.status}`);
+    // Handle response
+    if (response.ok) {
+      console.log('Status update successful!');
+      return await response.json();
     }
     
-    return await response.json();
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Status creation error:', errorData);
+    
+    // Handle nonce error with retry
+    if (response.status === 401 && errorData.error === 'use_dpop_nonce' && errorData.nonce) {
+      console.log('Received DPoP nonce error, retrying with nonce:', errorData.nonce);
+      
+      // Retry with the new nonce and increment retry counter
+      return createFlushingStatus(
+        accessToken,
+        keyPair,
+        did,
+        text, 
+        emoji,
+        errorData.nonce,
+        pdsEndpoint,
+        retryCount + 1
+      );
+    }
+    
+    // For other errors, throw with more details
+    if (errorData.message) {
+      throw new Error(`Status creation failed (${response.status}): ${errorData.message}`);
+    } else {
+      throw new Error(`Status creation failed with status ${response.status}`);
+    }
   } catch (error) {
     console.error('Error creating flushing status:', error);
     throw error;

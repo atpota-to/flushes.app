@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { createFlushingStatus } from '@/lib/bluesky-api';
+import { createFlushingStatus, checkAuth } from '@/lib/bluesky-api';
 import styles from './dashboard.module.css';
 
 // List of relevant emojis for flushing situations
@@ -48,6 +48,11 @@ export default function DashboardPage() {
       setError('Authentication information missing');
       return;
     }
+    
+    if (!pdsEndpoint) {
+      setError('PDS endpoint is missing. Cannot proceed without it.');
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -55,6 +60,7 @@ export default function DashboardPage() {
 
     try {
       console.log('Submitting status update with DID:', did);
+      console.log('Using PDS endpoint:', pdsEndpoint);
       
       // Deserialize key pair
       const keyPairData = JSON.parse(serializedKeyPair);
@@ -73,14 +79,23 @@ export default function DashboardPage() {
         ['sign']
       );
       const keyPair = { publicKey, privateKey };
-
-      // Create flushing status - use the stored DPoP nonce if available
-      console.log('Creating flushing status with DPoP nonce:', dpopNonce);
-      console.log('User PDS endpoint:', pdsEndpoint);
       
-      if (!pdsEndpoint) {
-        console.warn('WARNING: No PDS endpoint available. This will likely result in an error.');
+      // First, check if auth is valid
+      const isAuthValid = await checkAuth(
+        accessToken,
+        keyPair,
+        dpopNonce || null,
+        pdsEndpoint
+      );
+      
+      if (!isAuthValid) {
+        setError('Authentication check failed. Your login may have expired.');
+        setIsSubmitting(false);
+        return;
       }
+      
+      // If we're authenticated, proceed with creating the status
+      console.log('Authentication verified, creating status...');
       
       const result = await createFlushingStatus(
         accessToken, 

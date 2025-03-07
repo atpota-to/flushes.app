@@ -18,13 +18,15 @@ export async function POST(request: NextRequest) {
     }
     
     // Use the user's PDS endpoint if available
-    const apiUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
-    console.log('Using API URL:', apiUrl);
-    
-    // If we're still using the default URL, that's likely the issue
-    if (apiUrl === DEFAULT_API_URL) {
-      console.warn('WARNING: Using default API URL instead of PDS endpoint. This will likely fail with "OAuth tokens are meant for PDS access only"');
+    if (!pdsEndpoint) {
+      return NextResponse.json(
+        { error: 'MissingPDSEndpoint', message: 'PDS endpoint is required for OAuth tokens' },
+        { status: 400 }
+      );
     }
+    
+    const apiUrl = `${pdsEndpoint}/xrpc`;
+    console.log('Using API URL:', apiUrl);
     
     // Create the record
     const record = {
@@ -51,24 +53,7 @@ export async function POST(request: NextRequest) {
     };
     console.log('Request headers:', JSON.stringify(requestHeaders));
     
-    // Try to get a nonce with a HEAD request first
-    let nonce = null;
-    try {
-      console.log('Making HEAD request to get nonce...');
-      const headResponse = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
-        method: 'HEAD'
-      });
-      
-      nonce = headResponse.headers.get('DPoP-Nonce');
-      if (nonce) {
-        console.log('Got nonce from HEAD request:', nonce);
-        console.log('We cannot use this nonce directly in the server API route because we cannot generate a new DPoP token here.');
-      } else {
-        console.log('No nonce found in HEAD response');
-      }
-    } catch (error) {
-      console.warn('Error getting nonce via HEAD request:', error);
-    }
+    // We're now doing nonce handling on the client side
     
     // Make the request to user's PDS
     const response = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
