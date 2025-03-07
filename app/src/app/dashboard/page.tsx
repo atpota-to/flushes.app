@@ -72,8 +72,15 @@ export default function DashboardPage() {
       );
       const keyPair = { publicKey, privateKey };
 
-      // Create flushing status
-      await createFlushingStatus(accessToken, keyPair, did, text, selectedEmoji);
+      // Create flushing status - use the stored DPoP nonce if available
+      await createFlushingStatus(
+        accessToken, 
+        keyPair, 
+        did, 
+        text, 
+        selectedEmoji,
+        dpopNonce || null
+      );
       
       // Reset form and show success message
       setText('');

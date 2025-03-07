@@ -157,6 +157,45 @@ export async function getAuthorizationUrl(): Promise<{ url: string, state: strin
   };
 }
 
+// Helper function to get a DPoP nonce
+async function getNonce(endpoint: string): Promise<string | null> {
+  try {
+    // Try OPTIONS first as it's less likely to have side effects
+    const optionsResponse = await fetch(endpoint, {
+      method: 'OPTIONS',
+      headers: {
+        'Accept': '*/*'
+      }
+    });
+    
+    const nonceFromOptions = optionsResponse.headers.get('DPoP-Nonce');
+    if (nonceFromOptions) return nonceFromOptions;
+
+    // If OPTIONS doesn't work, try a HEAD request
+    const headResponse = await fetch(endpoint, {
+      method: 'HEAD'
+    });
+    
+    const nonceFromHead = headResponse.headers.get('DPoP-Nonce');
+    if (nonceFromHead) return nonceFromHead;
+    
+    // As a last resort, make a "probe" POST request that will fail but might give us a nonce
+    const probeResponse = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      // Empty body - this will fail but might return a nonce
+      body: new URLSearchParams({})
+    });
+    
+    return probeResponse.headers.get('DPoP-Nonce');
+  } catch (error) {
+    console.error('Error getting nonce:', error);
+    return null;
+  }
+}
+
 // Get access token from authorization code
 export async function getAccessToken(
   code: string,
@@ -166,27 +205,20 @@ export async function getAccessToken(
 ): Promise<any> {
   const tokenEndpoint = `${BLUESKY_AUTH_SERVER}/oauth/token`;
 
-  // If we don't have a nonce yet, make a request to get one
+  // ALWAYS get a fresh nonce first if we don't have one
   if (!dpopNonce) {
-    try {
-      // First, try to get the nonce through a HEAD request to avoid making a full token request
-      const headResponse = await fetch(tokenEndpoint, {
-        method: 'HEAD',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
-      
-      // Check if we got a DPoP-Nonce header
-      const nonce = headResponse.headers.get('DPoP-Nonce');
-      if (nonce) {
-        return getAccessToken(code, codeVerifier, keyPair, nonce);
-      }
-    } catch (err) {
-      console.warn('Failed to get nonce from HEAD request, will attempt normal flow', err);
+    console.log('No nonce provided, getting one...');
+    const nonce = await getNonce(tokenEndpoint);
+    if (nonce) {
+      console.log('Obtained nonce:', nonce);
+      return getAccessToken(code, codeVerifier, keyPair, nonce);
+    } else {
+      console.warn('Could not obtain a nonce, proceeding without one');
     }
   }
 
+  console.log('Creating DPoP token with nonce:', dpopNonce);
+  
   // Create DPoP token with nonce if we have one
   const publicKey = await exportJWK(keyPair.publicKey);
   const dpopToken = await generateDPoPToken(
@@ -197,6 +229,8 @@ export async function getAccessToken(
     dpopNonce
   );
 
+  console.log('Making token request with DPoP token');
+  
   // Make the token request
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
@@ -215,23 +249,26 @@ export async function getAccessToken(
 
   // Handle 401 errors which might contain a DPoP nonce
   if (response.status === 401) {
-    const responseJson = await response.json().catch(() => ({}));
-    const responseText = JSON.stringify(responseJson);
+    const newNonce = response.headers.get('DPoP-Nonce');
+    let responseBody;
     
-    // Check if this is a nonce-related error
-    if (
-      responseJson.error === 'use_dpop_nonce' || 
-      responseText.includes('nonce') || 
-      responseText.includes('DPoP')
-    ) {
-      // Try to get the nonce from headers
-      const newNonce = response.headers.get('DPoP-Nonce');
-      if (newNonce) {
-        console.log('Retrying with nonce:', newNonce);
-        return getAccessToken(code, codeVerifier, keyPair, newNonce);
-      }
+    try {
+      responseBody = await response.json();
+    } catch (e) {
+      responseBody = {};
     }
     
+    console.log('Received 401 response:', responseBody);
+    console.log('New nonce from response:', newNonce);
+    
+    // If we got a new nonce, retry with it
+    if (newNonce && newNonce !== dpopNonce) {
+      console.log('Retrying with new nonce:', newNonce);
+      return getAccessToken(code, codeVerifier, keyPair, newNonce);
+    }
+    
+    // Otherwise, throw an error
+    const responseText = JSON.stringify(responseBody);
     throw new Error(`Token request failed: ${response.status}, ${responseText}`);
   }
 
@@ -241,11 +278,20 @@ export async function getAccessToken(
     try {
       const errorJson = await response.json();
       errorText = JSON.stringify(errorJson);
-    } catch {
+    } catch (e) {
       errorText = await response.text();
     }
     throw new Error(`Token request failed: ${response.status}, ${errorText}`);
   }
 
-  return await response.json();
+  const responseData = await response.json();
+  console.log('Token request successful');
+  
+  // Store the nonce for future use if provided in the response
+  const returnedNonce = response.headers.get('DPoP-Nonce');
+  if (returnedNonce) {
+    responseData.dpop_nonce = returnedNonce;
+  }
+  
+  return responseData;
 }

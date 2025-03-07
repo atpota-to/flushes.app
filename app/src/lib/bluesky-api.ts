@@ -134,7 +134,14 @@ export async function getProfile(
   keyPair: CryptoKeyPair,
   dpopNonce: string | null = null
 ): Promise<any> {
-  return makeAuthenticatedRequest('com.atproto.identity.resolveHandle', 'GET', accessToken, keyPair, dpopNonce);
+  try {
+    return await makeAuthenticatedRequest('com.atproto.identity.resolveHandle', 'GET', accessToken, keyPair, dpopNonce);
+  } catch (error) {
+    console.error('Error resolving handle:', error);
+    // If we fail to get the profile, return a basic object to avoid breaking the flow
+    // The user can still use the app and we'll use the DID as the identifier
+    return { handle: 'unknown' };
+  }
 }
 
 // Create a flushing status record
@@ -146,6 +153,8 @@ export async function createFlushingStatus(
   emoji: string,
   dpopNonce: string | null = null
 ): Promise<any> {
+  console.log('Creating flushing status with nonce:', dpopNonce);
+
   const record: FlushingRecord = {
     $type: FLUSHING_STATUS_NSID,
     text,
@@ -159,5 +168,10 @@ export async function createFlushingStatus(
     record
   };
 
-  return makeAuthenticatedRequest('com.atproto.repo.createRecord', 'POST', accessToken, keyPair, dpopNonce, body);
+  try {
+    return await makeAuthenticatedRequest('com.atproto.repo.createRecord', 'POST', accessToken, keyPair, dpopNonce, body);
+  } catch (error) {
+    console.error('Error creating flushing status:', error);
+    throw error;
+  }
 }
