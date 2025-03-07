@@ -35,24 +35,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [handle, setHandle] = useState<string | null>(null);
   const [serializedKeyPair, setSerializedKeyPair] = useState<string | null>(null);
   const [dpopNonce, setDpopNonce] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Set isClient to true once the component mounts
+    setIsClient(true);
+    
     // Load auth data from localStorage on initial mount
-    const storedAccessToken = localStorage.getItem('accessToken');
-    const storedRefreshToken = localStorage.getItem('refreshToken');
-    const storedDid = localStorage.getItem('did');
-    const storedHandle = localStorage.getItem('handle');
-    const storedKeyPair = localStorage.getItem('keyPair');
-    const storedDpopNonce = localStorage.getItem('dpopNonce');
+    if (typeof window !== 'undefined') {
+      const storedAccessToken = localStorage.getItem('accessToken');
+      const storedRefreshToken = localStorage.getItem('refreshToken');
+      const storedDid = localStorage.getItem('did');
+      const storedHandle = localStorage.getItem('handle');
+      const storedKeyPair = localStorage.getItem('keyPair');
+      const storedDpopNonce = localStorage.getItem('dpopNonce');
 
-    if (storedAccessToken && storedDid && storedKeyPair) {
-      setAccessToken(storedAccessToken);
-      setRefreshToken(storedRefreshToken);
-      setDid(storedDid);
-      setHandle(storedHandle);
-      setSerializedKeyPair(storedKeyPair);
-      setDpopNonce(storedDpopNonce);
-      setIsAuthenticated(true);
+      if (storedAccessToken && storedDid && storedKeyPair) {
+        setAccessToken(storedAccessToken);
+        setRefreshToken(storedRefreshToken);
+        setDid(storedDid);
+        setHandle(storedHandle);
+        setSerializedKeyPair(storedKeyPair);
+        setDpopNonce(storedDpopNonce);
+        setIsAuthenticated(true);
+      }
     }
   }, []);
 
@@ -80,14 +86,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setDpopNonce(dpopNonce);
     setIsAuthenticated(true);
 
-    // Store auth data in localStorage
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('did', did);
-    localStorage.setItem('handle', handle);
-    localStorage.setItem('keyPair', serializedKeyPair);
-    if (dpopNonce) {
-      localStorage.setItem('dpopNonce', dpopNonce);
+    // Store auth data in localStorage (only on client)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('did', did);
+      localStorage.setItem('handle', handle);
+      localStorage.setItem('keyPair', serializedKeyPair);
+      if (dpopNonce) {
+        localStorage.setItem('dpopNonce', dpopNonce);
+      }
     }
   };
 
@@ -101,13 +109,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setDpopNonce(null);
     setIsAuthenticated(false);
 
-    // Clear auth data from localStorage
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('did');
-    localStorage.removeItem('handle');
-    localStorage.removeItem('keyPair');
-    localStorage.removeItem('dpopNonce');
+    // Clear auth data from localStorage (only on client)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('did');
+      localStorage.removeItem('handle');
+      localStorage.removeItem('keyPair');
+      localStorage.removeItem('dpopNonce');
+    }
   };
 
   return (

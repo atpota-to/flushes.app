@@ -9,10 +9,29 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Mark that we're on the client side
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    // Only run this effect on the client
+    if (!isClient) return;
+
     async function initiateLogin() {
       try {
+        // Check if we have access to required browser APIs
+        if (typeof window === 'undefined' || 
+            !window.crypto || 
+            !window.crypto.subtle || 
+            !window.sessionStorage) {
+          setError('Your browser does not support the required security features');
+          setIsLoading(false);
+          return;
+        }
+
         // Get authorization URL
         const { url, state, codeVerifier, keyPair } = await getAuthorizationUrl();
         
@@ -36,7 +55,7 @@ export default function LoginPage() {
     }
 
     initiateLogin();
-  }, []);
+  }, [isClient]);
 
   if (error) {
     return (

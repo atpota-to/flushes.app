@@ -1,20 +1,42 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken } from '@/lib/bluesky-auth';
 import { getProfile } from '@/lib/bluesky-api';
 import { useAuth } from '@/lib/auth-context';
 import styles from './callback.module.css';
 
-export default function CallbackPage() {
+// Loading component to show while waiting
+function CallbackLoader() {
+  return (
+    <div className={styles.container}>
+      <div className={styles.loaderContainer}>
+        <div className={styles.loader}></div>
+        <p>Processing login...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main callback handler component
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Processing login...');
+  const [isClient, setIsClient] = useState(false);
+
+  // Set isClient to true once component mounts
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
+    // Only proceed if we're on the client side
+    if (!isClient) return;
+
     async function handleCallback() {
       try {
         // Get parameters from URL
@@ -28,6 +50,11 @@ export default function CallbackPage() {
         }
 
         // Get stored values from session storage
+        if (typeof window === 'undefined' || !window.sessionStorage) {
+          setError('Browser storage not available');
+          return;
+        }
+
         const storedState = sessionStorage.getItem('oauth_state');
         const codeVerifier = sessionStorage.getItem('code_verifier');
         const serializedKeyPair = sessionStorage.getItem('key_pair');
@@ -44,6 +71,12 @@ export default function CallbackPage() {
         }
 
         setStatus('Exchanging authorization code...');
+
+        // Check if crypto is available
+        if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
+          setError('Web Crypto API not available');
+          return;
+        }
 
         // Deserialize key pair
         const keyPairData = JSON.parse(serializedKeyPair);
@@ -110,7 +143,7 @@ export default function CallbackPage() {
     }
 
     handleCallback();
-  }, [searchParams, router, setAuth]);
+  }, [searchParams, router, setAuth, isClient]);
 
   if (error) {
     return (
@@ -133,5 +166,14 @@ export default function CallbackPage() {
         <p>{status}</p>
       </div>
     </div>
+  );
+}
+
+// Main export with Suspense boundary
+export default function CallbackPage() {
+  return (
+    <Suspense fallback={<CallbackLoader />}>
+      <CallbackHandler />
+    </Suspense>
   );
 }
