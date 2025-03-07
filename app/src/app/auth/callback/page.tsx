@@ -133,7 +133,21 @@ function CallbackHandler() {
 
         setStatus('Getting user profile...');
 
-        // We'll extract the PDS endpoint from the decoded token
+        // Extract PDS endpoint from the token
+        let pdsEndpoint = null;
+        
+        // First, try to decode the access token
+        try {
+          const parts = tokenResponse.access_token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.aud && typeof payload.aud === 'string' && payload.aud.startsWith('did:web:')) {
+              pdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to extract PDS endpoint from token');
+        }
         
         // Get user profile
         let profileResponse;
@@ -143,7 +157,7 @@ function CallbackHandler() {
             keyPair,
             dpopNonce,
             undefined, // Use default handle
-            pdsEndpoint // Pass the PDS endpoint
+            pdsEndpoint // Pass the PDS endpoint if we have it
           );
         } catch (profileError: any) {
           console.error('Profile fetch error:', profileError);
@@ -161,38 +175,11 @@ function CallbackHandler() {
         const userDid = tokenResponse.sub;
         console.log('User DID from token:', userDid);
         
-        // Extract PDS endpoint from the token
-        let extractedPdsEndpoint = null;
-        
-        // Try to decode the access token to extract the audience
-        try {
-          if (tokenResponse.access_token) {
-            const parts = tokenResponse.access_token.split('.');
-            if (parts.length === 3) {
-              // Decode the payload (second part)
-              const payload = JSON.parse(atob(parts[1]));
-              
-              // Extract audience from the decoded token
-              if (payload.aud && typeof payload.aud === 'string') {
-                // Update the pdsEndpoint from the decoded token if available
-                if (payload.aud.startsWith('did:web:')) {
-                  // Convert did:web:example.com to https://example.com
-                  extractedPdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
-                  console.log('Extracted PDS endpoint from decoded token:', extractedPdsEndpoint);
-                  
-                  // Update our variable for use in the rest of the function
-                  pdsEndpoint = extractedPdsEndpoint;
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to decode token:', error);
-        }
-        
-        // If we couldn't extract the PDS endpoint, show an error
-        if (!pdsEndpoint) {
-          console.error('Failed to extract PDS endpoint from token. This will cause API calls to fail.');
+        // If we were able to extract the PDS endpoint, log it
+        if (pdsEndpoint) {
+          console.log('Extracted PDS endpoint from token:', pdsEndpoint);
+        } else {
+          console.warn('Could not extract PDS endpoint from token');
         }
         
         // Now that we have the PDS endpoint, try to get the user's handle directly
@@ -209,7 +196,7 @@ function CallbackHandler() {
               keyPair,
               dpopNonce,
               userDid, // Use the user's DID instead of default
-              pdsEndpoint
+              pdsEndpoint // Pass the PDS endpoint if we have it
             );
             
             if (handleResponse && handleResponse.handle) {
@@ -224,11 +211,7 @@ function CallbackHandler() {
           }
         }
         
-        // Log the PDS endpoint that will be used
-        console.log('Using PDS endpoint for API requests:', pdsEndpoint);
-        
         // Store auth data
-        console.log('Saving PDS endpoint to auth context:', pdsEndpoint);
         setAuth({
           accessToken: tokenResponse.access_token,
           refreshToken: tokenResponse.refresh_token,
