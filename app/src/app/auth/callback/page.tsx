@@ -171,7 +171,6 @@ function CallbackHandler() {
         });
 
         // Extract the DID from the token response
-        console.log('Token response:', tokenResponse);
         const userDid = tokenResponse.sub;
         console.log('User DID from token:', userDid);
         
@@ -185,12 +184,9 @@ function CallbackHandler() {
             if (parts.length === 3) {
               // Decode the payload (second part)
               const payload = JSON.parse(atob(parts[1]));
-              console.log('Decoded token payload:', payload);
               
               // Extract audience from the decoded token
               if (payload.aud && typeof payload.aud === 'string') {
-                console.log('Audience from decoded token:', payload.aud);
-                
                 // Update the pdsEndpoint from the decoded token if available
                 if (payload.aud.startsWith('did:web:')) {
                   // Convert did:web:example.com to https://example.com
@@ -212,8 +208,34 @@ function CallbackHandler() {
           console.error('Failed to extract PDS endpoint from token. This will cause API calls to fail.');
         }
         
-        // Try to resolve the user's own handle using the DID
-        let userHandle = profileResponse?.handle || 'unknown';
+        // Now that we have the PDS endpoint, try to get the user's handle directly
+        // First try to use the profileResponse we already have
+        let userHandle = profileResponse?.handle;
+        
+        // If we don't have a handle yet, try to resolve it using the user's DID
+        if (!userHandle || userHandle === 'unknown' || userHandle === 'unknown_user') {
+          try {
+            console.log('Getting user handle from DID...');
+            // Try to make a direct call to resolve the handle from the DID
+            const handleResponse = await getProfile(
+              tokenResponse.access_token,
+              keyPair,
+              dpopNonce,
+              userDid, // Use the user's DID instead of default
+              pdsEndpoint
+            );
+            
+            if (handleResponse && handleResponse.handle) {
+              userHandle = handleResponse.handle;
+              console.log('Successfully resolved user handle:', userHandle);
+            } else {
+              userHandle = 'unknown';
+            }
+          } catch (error) {
+            console.error('Failed to resolve user handle:', error);
+            userHandle = 'unknown';
+          }
+        }
         
         // Log the PDS endpoint that will be used
         console.log('Using PDS endpoint for API requests:', pdsEndpoint);
@@ -230,10 +252,17 @@ function CallbackHandler() {
           pdsEndpoint: pdsEndpoint // Store the PDS endpoint for later use
         });
 
-        // Clear storage
+        // Clear all auth-related storage items
         clearAuthData('oauth_state');
         clearAuthData('code_verifier');
         clearAuthData('key_pair');
+        
+        // Also try to clear any leftover sessionStorage items
+        try {
+          sessionStorage.clear();
+        } catch (e) {
+          console.warn('Failed to clear session storage:', e);
+        }
 
         // Redirect to dashboard
         router.push('/dashboard');

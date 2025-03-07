@@ -105,7 +105,7 @@ export async function generateDPoPToken(
   
   // Add access token hash (ath) if access token is provided
   if (accessToken) {
-    console.log('Adding ath claim to DPoP token');
+    // Adding ath claim is required when using access tokens with DPoP
     const tokenHash = await sha256(accessToken);
     payload.ath = arrayBufferToBase64Url(tokenHash);
   }

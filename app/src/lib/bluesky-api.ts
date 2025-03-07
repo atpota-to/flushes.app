@@ -231,8 +231,18 @@ export async function getProfile(
     const publicKey = await exportJWK(keyPair.publicKey);
     // Use the PDS endpoint if available
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
-    // Include the handle parameter in the URL for token creation
-    const endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
+    
+    // Determine the endpoint based on whether we're looking up a DID or handle
+    let endpoint;
+    if (handle && handle.startsWith('did:')) {
+      // If it's a DID, use the describeRepo endpoint
+      endpoint = `${baseUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(handle)}`;
+      console.log('Looking up profile by DID:', handle);
+    } else {
+      // Otherwise use resolveHandle for handles
+      endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
+      console.log('Looking up profile by handle:', handle);
+    }
     
     // Generate the DPoP token with the access token for the ath claim
     const dpopToken = await generateDPoPToken(
@@ -315,8 +325,7 @@ export async function createFlushingStatus(
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
     
-    console.log('Generating DPoP token for:', endpoint, 'with nonce:', dpopNonce || 'none');
-    console.log('Including access token hash (ath) in DPoP token');
+    // Generate token with appropriate claims for the request
     
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
