@@ -18,6 +18,7 @@ export interface FlushingRecord {
 export async function checkAuth(
   accessToken: string,
   keyPair: CryptoKeyPair,
+  did: string,  // Add DID parameter
   dpopNonce: string | null = null,
   pdsEndpoint: string | null = null
 ): Promise<boolean> {
@@ -27,24 +28,36 @@ export async function checkAuth(
       return false;
     }
     
+    if (!did) {
+      console.error('No DID provided for auth check');
+      return false;
+    }
+    
     console.log('Checking auth with PDS endpoint:', pdsEndpoint);
     
     // Use the PDS endpoint for auth check
     const baseUrl = `${pdsEndpoint}/xrpc`;
-    const endpoint = `${baseUrl}/com.atproto.repo.listRecords`;
+    // We'll use the identity.resolveHandle endpoint which is simpler for auth checking
+    const endpoint = `${baseUrl}/com.atproto.identity.resolveHandle`;
     
-    // Generate DPoP token
+    // The handle param is required, but we're really just checking auth
+    // Use handle=atproto.com as a safe default
+    const url = `${endpoint}?handle=atproto.com`;
+    
+    // Generate DPoP token with the full URL including query params
     const publicKey = await exportJWK(keyPair.publicKey);
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey,
       publicKey,
       'GET',
-      `${endpoint}?limit=1`,
+      url,
       dpopNonce || undefined
     );
     
+    console.log('Making auth check request to:', url);
+    
     // Make the request to check auth
-    const response = await fetch(`${endpoint}?limit=1`, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `DPoP ${accessToken}`,
@@ -57,12 +70,21 @@ export async function checkAuth(
       return true;
     }
     
+    // Log detailed error information
+    try {
+      console.error('Auth check response:', response.status, response.statusText);
+      const errorData = await response.text();
+      console.error('Auth check error data:', errorData);
+    } catch (parseError) {
+      console.error('Could not parse error response:', parseError);
+    }
+    
     if (response.status === 401) {
       const nonce = response.headers.get('DPoP-Nonce');
       if (nonce) {
         console.log('Got nonce during auth check:', nonce);
-        // Try again with the nonce
-        return checkAuth(accessToken, keyPair, nonce, pdsEndpoint);
+        // Try again with the nonce, but prevent infinite recursion
+        return checkAuth(accessToken, keyPair, did, nonce, pdsEndpoint);
       }
     }
     

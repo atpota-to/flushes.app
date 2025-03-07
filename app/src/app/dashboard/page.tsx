@@ -84,6 +84,7 @@ export default function DashboardPage() {
       const isAuthValid = await checkAuth(
         accessToken,
         keyPair,
+        did,
         dpopNonce || null,
         pdsEndpoint
       );

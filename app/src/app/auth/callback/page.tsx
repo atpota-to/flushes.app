@@ -58,10 +58,21 @@ function CallbackHandler() {
         const storedState = sessionStorage.getItem('oauth_state');
         const codeVerifier = sessionStorage.getItem('code_verifier');
         const serializedKeyPair = sessionStorage.getItem('key_pair');
+        
+        console.log('Callback received state:', state?.substring(0, 5) + '...');
+        console.log('Stored state:', storedState?.substring(0, 5) + '...');
+        
+        // Check if we have the stored values
+        if (!storedState) {
+          console.error('No stored OAuth state found. Session storage may have been cleared.');
+          setError('Session data lost. Please try logging in again.');
+          return;
+        }
 
         // Validate state
         if (state !== storedState) {
-          setError('Invalid state parameter');
+          console.error('State mismatch. Received:', state, 'Stored:', storedState);
+          setError('Invalid state parameter. This may be due to an expired session or a security issue.');
           return;
         }
 
@@ -163,7 +174,10 @@ function CallbackHandler() {
         const userDid = tokenResponse.sub;
         console.log('User DID from token:', userDid);
         
-        // Try to decode the access token to see if we can extract the audience
+        // Extract PDS endpoint from the token
+        let extractedPdsEndpoint = null;
+        
+        // Try to decode the access token to extract the audience
         try {
           if (tokenResponse.access_token) {
             const parts = tokenResponse.access_token.split('.');
@@ -179,14 +193,22 @@ function CallbackHandler() {
                 // Update the pdsEndpoint from the decoded token if available
                 if (payload.aud.startsWith('did:web:')) {
                   // Convert did:web:example.com to https://example.com
-                  pdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
-                  console.log('Updated PDS endpoint from decoded token:', pdsEndpoint);
+                  extractedPdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
+                  console.log('Extracted PDS endpoint from decoded token:', extractedPdsEndpoint);
+                  
+                  // Update our variable for use in the rest of the function
+                  pdsEndpoint = extractedPdsEndpoint;
                 }
               }
             }
           }
         } catch (error) {
           console.warn('Failed to decode token:', error);
+        }
+        
+        // If we couldn't extract the PDS endpoint, show an error
+        if (!pdsEndpoint) {
+          console.error('Failed to extract PDS endpoint from token. This will cause API calls to fail.');
         }
         
         // Try to resolve the user's own handle using the DID
@@ -196,6 +218,7 @@ function CallbackHandler() {
         console.log('Using PDS endpoint for API requests:', pdsEndpoint);
         
         // Store auth data
+        console.log('Saving PDS endpoint to auth context:', pdsEndpoint);
         setAuth({
           accessToken: tokenResponse.access_token,
           refreshToken: tokenResponse.refresh_token,
