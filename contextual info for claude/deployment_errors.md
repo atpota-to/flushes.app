@@ -1,2 +1,12 @@
-Error: The file "/vercel/path0/app/app/.next/routes-manifest.json" couldn't be found. This is often caused by a misconfiguration in your project.
-Learn More: https://err.sh/vercel/vercel/now-next-routes-manifest
+Failed to compile.
+./src/app/dashboard/page.tsx:82:9
+Type error: Cannot find name 'dpopNonce'.
+  80 |         text, 
+  81 |         selectedEmoji,
+> 82 |         dpopNonce || null
+     |         ^
+  83 |       );
+  84 |       
+  85 |       // Reset form and show success message
+Next.js build worker exited with code: 1 and signal: null
+Error: Command "npm run build" exited with 1

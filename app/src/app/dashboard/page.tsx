@@ -14,7 +14,7 @@ const EMOJIS = [
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, clearAuth } = useAuth();
+  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, clearAuth } = useAuth();
   
   const [text, setText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
