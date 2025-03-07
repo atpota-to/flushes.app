@@ -225,8 +225,6 @@ export async function getProfile(
   pdsEndpoint: string | null = null
 ): Promise<any> {
   try {
-    console.log('Getting profile via proxy API');
-    
     // Generate a DPoP token for the profile request
     const publicKey = await exportJWK(keyPair.publicKey);
     // Use the PDS endpoint if available
@@ -237,11 +235,9 @@ export async function getProfile(
     if (handle && handle.startsWith('did:')) {
       // If it's a DID, use the describeRepo endpoint
       endpoint = `${baseUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(handle)}`;
-      console.log('Looking up profile by DID:', handle);
     } else {
       // Otherwise use resolveHandle for handles
       endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
-      console.log('Looking up profile by handle:', handle);
     }
     
     // Generate the DPoP token with the access token for the ath claim
@@ -302,8 +298,7 @@ export async function createFlushingStatus(
     throw new Error('Maximum retry attempts reached. Could not create status after 3 attempts.');
   }
   
-  console.log(`Creating flushing status (attempt ${retryCount + 1}/3) with nonce:`, dpopNonce);
-  console.log('Using PDS endpoint:', pdsEndpoint || 'default');
+  // Preparing to create status record (attempt ${retryCount + 1})
   
   try {
     // Validate inputs
@@ -320,7 +315,7 @@ export async function createFlushingStatus(
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     
-    console.log('API endpoint:', endpoint);
+    // Endpoint is set
     
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
@@ -337,7 +332,7 @@ export async function createFlushingStatus(
     );
     
     // Make the request via our proxy API
-    console.log('Sending request to proxy API...');
+    // Sending request
     const response = await fetch('/api/bluesky/flushing', {
       method: 'POST',
       headers: {
@@ -355,16 +350,15 @@ export async function createFlushingStatus(
     
     // Handle response
     if (response.ok) {
-      console.log('Status update successful!');
       return await response.json();
     }
     
     const errorData = await response.json().catch(() => ({}));
-    console.error('Status creation error:', errorData);
     
     // Handle nonce error with retry
     if (response.status === 401 && errorData.error === 'use_dpop_nonce' && errorData.nonce) {
-      console.log('Received DPoP nonce error, retrying with nonce:', errorData.nonce);
+      // This is normal operation - DPoP requires a nonce exchange
+      console.log('Received nonce from server, retrying request');
       
       // Retry with the new nonce and increment retry counter
       return createFlushingStatus(

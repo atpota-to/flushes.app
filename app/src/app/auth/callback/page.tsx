@@ -28,6 +28,7 @@ function CallbackHandler() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('Processing login...');
   const [isClient, setIsClient] = useState(false);
+  const [processed, setProcessed] = useState(false); // Track if we've already processed the callback
 
   // Set isClient to true once component mounts
   useEffect(() => {
@@ -35,8 +36,11 @@ function CallbackHandler() {
   }, []);
 
   useEffect(() => {
-    // Only proceed if we're on the client side
-    if (!isClient) return;
+    // Only proceed if we're on the client side and haven't processed the callback yet
+    if (!isClient || processed) return;
+    
+    // Mark as processed immediately to prevent duplicate processing
+    setProcessed(true);
 
     async function handleCallback() {
       try {
@@ -60,12 +64,8 @@ function CallbackHandler() {
         const codeVerifier = retrieveAuthData('code_verifier');
         const serializedKeyPair = retrieveAuthData('key_pair');
         
-        console.log('Callback received state:', state?.substring(0, 5) + '...');
-        console.log('Stored state:', storedState?.substring(0, 5) + '...');
-        
         // Check if we have the stored values
         if (!storedState) {
-          console.error('No stored OAuth state found. Browser storage may have been cleared.');
           setError('Session data lost. Please try logging in again.');
           return;
         }
@@ -133,20 +133,7 @@ function CallbackHandler() {
 
         setStatus('Getting user profile...');
 
-        // Extract the PDS endpoint from the token audience
-        let pdsEndpoint = null;
-        console.log('Token audience:', tokenResponse.aud);
-        if (tokenResponse.aud && typeof tokenResponse.aud === 'string') {
-          if (tokenResponse.aud.startsWith('did:web:')) {
-            // Convert did:web:example.com to https://example.com
-            pdsEndpoint = 'https://' + tokenResponse.aud.replace('did:web:', '');
-            console.log('Extracted PDS endpoint from token:', pdsEndpoint);
-          } else {
-            console.warn('Token audience does not start with did:web:', tokenResponse.aud);
-          }
-        } else {
-          console.warn('Token audience missing or not a string:', tokenResponse.aud);
-        }
+        // We'll extract the PDS endpoint from the decoded token
         
         // Get user profile
         let profileResponse;

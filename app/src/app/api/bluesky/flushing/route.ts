@@ -8,8 +8,6 @@ export async function POST(request: NextRequest) {
   try {
     const { accessToken, dpopToken, did, text, emoji, pdsEndpoint } = await request.json();
     
-    console.log('API received pdsEndpoint:', pdsEndpoint);
-    
     if (!accessToken || !dpopToken || !did || !text || !emoji) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
@@ -26,7 +24,6 @@ export async function POST(request: NextRequest) {
     }
     
     const apiUrl = `${pdsEndpoint}/xrpc`;
-    console.log('Using API URL:', apiUrl);
     
     // Create the record
     const record = {
@@ -42,16 +39,7 @@ export async function POST(request: NextRequest) {
       record
     };
     
-    // Debug the request
-    console.log('Creating record with body:', JSON.stringify(body));
-    
-    // Log the request headers for debugging
-    const requestHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `DPoP ${accessToken.substring(0, 10)}...`,
-      'DPoP': `${dpopToken.substring(0, 10)}...`,
-    };
-    console.log('Request headers:', JSON.stringify(requestHeaders));
+    // We're creating a record with the user's credentials
     
     // We're now doing nonce handling on the client side
     
@@ -66,21 +54,12 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body)
     });
     
-    // Log response headers for debugging
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-    console.log('Response headers:', JSON.stringify(responseHeaders));
-    
-    // Debug the response
-    console.log('Create record response status:', response.status);
+    // Process the response
     let responseText = '';
     let responseData: Record<string, any> = {};
     
     try {
         responseText = await response.text();
-        console.log('Create record response:', responseText);
         
         // Try to parse the response as JSON if it's not empty
         if (responseText) {
@@ -99,7 +78,6 @@ export async function POST(request: NextRequest) {
       const newNonce = response.headers.get('DPoP-Nonce');
       
       if (newNonce) {
-        console.log('Received new DPoP nonce from PDS:', newNonce);
         return NextResponse.json({
           error: 'use_dpop_nonce',
           nonce: newNonce,

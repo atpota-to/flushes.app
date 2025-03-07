@@ -21,14 +21,11 @@ export async function POST(request: NextRequest) {
     if (handle && handle.startsWith('did:')) {
       // If it's a DID, use describeRepo to get details
       url = `${apiUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(handle)}`;
-      console.log('Looking up account info by DID:', handle);
     } else {
       // Otherwise treat it as a handle to resolve
       const userHandle = handle || 'atproto.com';
       url = `${apiUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(userHandle)}`;
-      console.log('Looking up account info by handle:', userHandle);
     }
-    console.log('Making request to:', url);
     
     const response = await fetch(url, {
       method: 'GET',
