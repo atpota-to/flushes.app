@@ -166,6 +166,28 @@ export async function getAccessToken(
 ): Promise<any> {
   const tokenEndpoint = `${BLUESKY_AUTH_SERVER}/oauth/token`;
 
+  // If we don't have a nonce yet, make a request to get one
+  if (!dpopNonce) {
+    try {
+      // First, try to get the nonce through a HEAD request to avoid making a full token request
+      const headResponse = await fetch(tokenEndpoint, {
+        method: 'HEAD',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      // Check if we got a DPoP-Nonce header
+      const nonce = headResponse.headers.get('DPoP-Nonce');
+      if (nonce) {
+        return getAccessToken(code, codeVerifier, keyPair, nonce);
+      }
+    } catch (err) {
+      console.warn('Failed to get nonce from HEAD request, will attempt normal flow', err);
+    }
+  }
+
+  // Create DPoP token with nonce if we have one
   const publicKey = await exportJWK(keyPair.publicKey);
   const dpopToken = await generateDPoPToken(
     keyPair.privateKey,
@@ -175,6 +197,7 @@ export async function getAccessToken(
     dpopNonce
   );
 
+  // Make the token request
   const response = await fetch(tokenEndpoint, {
     method: 'POST',
     headers: {
@@ -190,17 +213,38 @@ export async function getAccessToken(
     })
   });
 
+  // Handle 401 errors which might contain a DPoP nonce
   if (response.status === 401) {
-    // Handle DPoP nonce errors
-    const dpopNonce = response.headers.get('DPoP-Nonce');
-    if (dpopNonce) {
-      return getAccessToken(code, codeVerifier, keyPair, dpopNonce);
+    const responseJson = await response.json().catch(() => ({}));
+    const responseText = JSON.stringify(responseJson);
+    
+    // Check if this is a nonce-related error
+    if (
+      responseJson.error === 'use_dpop_nonce' || 
+      responseText.includes('nonce') || 
+      responseText.includes('DPoP')
+    ) {
+      // Try to get the nonce from headers
+      const newNonce = response.headers.get('DPoP-Nonce');
+      if (newNonce) {
+        console.log('Retrying with nonce:', newNonce);
+        return getAccessToken(code, codeVerifier, keyPair, newNonce);
+      }
     }
+    
+    throw new Error(`Token request failed: ${response.status}, ${responseText}`);
   }
 
+  // Handle other errors
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Token request failed: ${response.status} ${response.statusText}, ${errorText}`);
+    let errorText;
+    try {
+      const errorJson = await response.json();
+      errorText = JSON.stringify(errorJson);
+    } catch {
+      errorText = await response.text();
+    }
+    throw new Error(`Token request failed: ${response.status}, ${errorText}`);
   }
 
   return await response.json();

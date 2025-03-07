@@ -96,22 +96,44 @@ function CallbackHandler() {
         );
         const keyPair = { publicKey, privateKey };
 
-        // Exchange code for tokens
-        const tokenResponse = await getAccessToken(code, codeVerifier, keyPair);
+        // Exchange code for tokens - we may need several attempts
+        setStatus('Getting access token...');
+        console.log('Exchanging code for token...');
+        let tokenResponse;
+        try {
+          tokenResponse = await getAccessToken(code, codeVerifier, keyPair);
+        } catch (tokenError: any) {
+          console.error('Token exchange error:', tokenError);
+          setError(`Failed to get access token: ${tokenError.message}`);
+          return;
+        }
         
         if (!tokenResponse.access_token || !tokenResponse.refresh_token) {
-          setError('Failed to get access token');
+          setError('Token response missing required fields');
           return;
+        }
+
+        // Save the DPoP nonce from the response headers if present
+        let dpopNonce = null;
+        if (tokenResponse.dpop_nonce) {
+          dpopNonce = tokenResponse.dpop_nonce;
         }
 
         setStatus('Getting user profile...');
 
         // Get user profile
-        const profileResponse = await getProfile(
-          tokenResponse.access_token,
-          keyPair,
-          null
-        );
+        let profileResponse;
+        try {
+          profileResponse = await getProfile(
+            tokenResponse.access_token,
+            keyPair,
+            dpopNonce
+          );
+        } catch (profileError: any) {
+          console.error('Profile fetch error:', profileError);
+          // Continue anyway - we at least have the tokens
+          profileResponse = { handle: 'unknown_user' };
+        }
 
         // Serialize key pair for storage
         const serializedKeysForStorage = JSON.stringify({
@@ -126,7 +148,7 @@ function CallbackHandler() {
           did: tokenResponse.sub,
           handle: profileResponse?.handle || 'unknown',
           serializedKeyPair: serializedKeysForStorage,
-          dpopNonce: null
+          dpopNonce: dpopNonce
         });
 
         // Clear session storage
