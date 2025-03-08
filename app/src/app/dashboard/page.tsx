@@ -32,15 +32,16 @@ export default function DashboardPage() {
   
   const [text, setText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
-  const [isEmojiSelected, setIsEmojiSelected] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [statusOpen, setStatusOpen] = useState(false);
   
   // Feed state
   const [entries, setEntries] = useState<FlushingEntry[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [newEntryIds, setNewEntryIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Redirect to home if not authenticated
@@ -78,6 +79,23 @@ export default function DashboardPage() {
       }
       
       const data = await response.json();
+      
+      // Check for new entries
+      if (entries.length > 0) {
+        const currentIds = new Set(entries.map(entry => entry.id));
+        const newEntries = data.entries.filter(entry => !currentIds.has(entry.id));
+        
+        // Mark new entries for animation
+        if (newEntries.length > 0) {
+          setNewEntryIds(new Set(newEntries.map(entry => entry.id)));
+          
+          // Clear the animation markers after animation completes
+          setTimeout(() => {
+            setNewEntryIds(new Set());
+          }, 2000);
+        }
+      }
+      
       setEntries(data.entries);
     } catch (err: any) {
       console.error('Error fetching feed:', err);
@@ -93,15 +111,16 @@ export default function DashboardPage() {
     router.push('/');
   };
 
+  // Toggle status update form
+  const toggleStatusUpdate = () => {
+    setStatusOpen(!statusOpen);
+    setError(null);
+    setSuccess(null);
+  };
+  
   // Handle emoji selection
   const handleEmojiSelect = (emoji: string) => {
     setSelectedEmoji(emoji);
-    setIsEmojiSelected(true);
-  };
-  
-  // Go back to emoji selection
-  const handleBackToEmoji = () => {
-    setIsEmojiSelected(false);
   };
   
   // Submit flushing status
@@ -178,6 +197,11 @@ export default function DashboardPage() {
       setText('');
       setSuccess('Your flushing status has been updated!');
       
+      // Close status form after successful submission
+      setTimeout(() => {
+        setStatusOpen(false);
+      }, 2000);
+      
       // Refresh the feed to show the new status
       setTimeout(() => {
         fetchLatestEntries(true);
@@ -197,7 +221,7 @@ export default function DashboardPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>I&apos;m Flushing Dashboard</h1>
+        <h1>I&apos;m Flushing</h1>
         <div className={styles.userInfo}>
           <span>Logged in as: @{handle}</span>
           <div className={styles.actions}>
@@ -214,22 +238,26 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className={styles.card}>
-        <h2>Update Your Flushing Status</h2>
-        <p className={styles.description}>
-          Share what&apos;s happening in the bathroom right now. Your status 
-          will be saved to your Bluesky account with the custom schema: 
-          <code className={styles.code}>im.flushing.right.now</code>
-        </p>
+      {/* Status update toggle button */}
+      <button 
+        className={`${styles.toggleButton} ${statusOpen ? styles.toggleButtonActive : ''}`}
+        onClick={toggleStatusUpdate}
+      >
+        {statusOpen ? 'Close' : 'Update Your Status'} 
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 9L12 16L5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
 
-        {error && <div className={styles.error}>{error}</div>}
-        {success && <div className={styles.success}>{success}</div>}
+      {/* Collapsible status update form */}
+      <div className={`${styles.statusUpdateContainer} ${statusOpen ? styles.statusUpdateOpen : ''}`}>
+        <div className={styles.card}>
+          {error && <div className={styles.error}>{error}</div>}
+          {success && <div className={styles.success}>{success}</div>}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          {!isEmojiSelected ? (
-            // Step 1: Select emoji
+          <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGroup}>
-              <label>Step 1: Select an emoji for your status</label>
+              <label>Select an emoji for your status</label>
               <div className={styles.emojiGrid}>
                 {EMOJIS.map((emoji) => (
                   <button
@@ -246,52 +274,41 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          ) : (
-            // Step 2: Enter status (optional) and submit
-            <>
-              <div className={styles.formGroup}>
-                <label htmlFor="status">Step 2: What&apos;s your status? (optional)</label>
-                <input
-                  type="text"
-                  id="status"
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="What's happening in the bathroom... (optional)"
-                  maxLength={60}
-                  className={styles.input}
-                  disabled={isSubmitting}
-                />
-                <div className={styles.charCount}>
-                  {text.length}/60
-                </div>
-                <button 
-                  type="button" 
-                  onClick={handleBackToEmoji}
-                  className={styles.backButton}
-                  disabled={isSubmitting}
-                >
-                  ← Change emoji
-                </button>
-              </div>
 
-              <div className={styles.preview}>
-                <div className={styles.previewTitle}>Preview:</div>
-                <div className={styles.previewContent}>
-                  <span className={styles.previewEmoji}>{selectedEmoji}</span>
-                  <span>{text || 'is flushing'}</span>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className={styles.submitButton}
+            <div className={styles.formGroup}>
+              <label htmlFor="status">What&apos;s your status? (optional)</label>
+              <input
+                type="text"
+                id="status"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="What's happening in the bathroom... (optional)"
+                maxLength={60}
+                className={styles.input}
                 disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Updating...' : 'Update Status'}
-              </button>
-            </>
-          )}
-        </form>
+              />
+              <div className={styles.charCount}>
+                {text.length}/60
+              </div>
+            </div>
+
+            <div className={styles.preview}>
+              <div className={styles.previewTitle}>Preview:</div>
+              <div className={styles.previewContent}>
+                <span className={styles.previewEmoji}>{selectedEmoji}</span>
+                <span>{text || 'is flushing'}</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Updating...' : 'Update Status'}
+            </button>
+          </form>
+        </div>
       </div>
       
       {/* Feed Section */}
@@ -317,26 +334,29 @@ export default function DashboardPage() {
           <div className={styles.feedList}>
             {entries.length > 0 ? (
               entries.map((entry) => (
-                <div key={entry.id} className={styles.feedItem}>
-                  <div className={styles.feedHeader}>
+                <div 
+                  key={entry.id} 
+                  className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
+                >
+                  <div className={styles.content}>
+                    <div className={styles.contentLeft}>
+                      <span className={styles.emoji}>{entry.emoji}</span>
+                      <a 
+                        href={`https://bsky.app/profile/${entry.authorHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.authorLink}
+                      >
+                        @{entry.authorHandle}
+                      </a>
+                      <span className={styles.text}>
+                        {entry.text ? 
+                          (entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text) : 
+                          'is flushing'}
+                      </span>
+                    </div>
                     <span className={styles.timestamp}>
                       {new Date(entry.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className={styles.content}>
-                    <span className={styles.emoji}>{entry.emoji}</span>
-                    <a 
-                      href={`https://bsky.app/profile/${entry.authorHandle}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.authorLink}
-                    >
-                      @{entry.authorHandle}
-                    </a>
-                    <span className={styles.text}>
-                      {entry.text ? 
-                        (entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text) : 
-                        'is flushing'}
                     </span>
                   </div>
                 </div>

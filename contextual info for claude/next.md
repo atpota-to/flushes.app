@@ -1,13 +1,11 @@
-Okay let's make so more robust changes to the app..
+Let's make a few changes.
 
-1. Change the list of emojis to these: 🚽🧻💩💨🚾🧼🪠🚻🩸💧💦😌😣🤢🤮🥴😮‍💨😳😵🌾🍦📱📖💭1️⃣2️⃣🟡🟤
+1. I want the two steps to both be on the same page and not require a forward and backward button sort of flow.
 
-2. Reduce the character limit to 60 characters only (make sure the feed UI truncates all statuses to 60 characters as well)
+2. Let's make it so that when you go to flushing.im the home page *is* the feed of recent updates, and there's a login button on the top right similar to the dashboard UI that we have.
 
-3. When navigating back to the dashboard from the feed, it seems to log out the user and they have to log back in.
+3. Above the feed where the Status Update flow is, let's have it not appear by default and instead be some sort of button or simple UI that you can click and it then makes the full status UI appear, then once the status is set, it collapses again, but it can be opened back up to set a new status?
 
-4. Can we make the emoji picker UI take up less space and be a bit more intuitive?
+4. Let's make the status timestamp appear to the far right in the feed and the actual emoji and status appear on the far left.
 
-5. Maybe we should have the feed and the feed underneath the dashboard status section instead of having them be two separate screens, and when you post your status, it automatically appears below
-
-6. Let's change the site title and styles to not use gradients. Maybe we could make a UI that is somehow evokes a feeling or vibe/style of a bathroom? I dunno.
+5. Let's make some nice animations for things too. For instance, when the status update flow is invoked, it animates in, and the collapse is also animated smoothly. Then, when a new status is updated or shown on the feed, it animates into the top smoothly or something like that.
