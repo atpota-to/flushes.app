@@ -305,36 +305,45 @@
   }
   
   .contentLeft {
+    display: block;
     width: 100%;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-bottom: 0;
   }
   
-  .userLine {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    gap: 0.5rem;
+  /* First line: emoji and username */
+  .emoji {
+    display: inline-block;
+    font-size: 1.3rem;
+    vertical-align: middle;
+    margin-right: 0.5rem;
   }
   
+  .author {
+    display: inline-block;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+  }
+  
+  /* Second line: status text */
   .text {
+    display: block;
     font-size: 0.95rem;
     line-height: 1.3;
-    padding-left: 0.5rem;
-    width: 100%;
+    margin-top: 0.3rem;
+    margin-left: 0.5rem;
+    padding-bottom: 0.2rem;
   }
   
+  /* Third line: timestamp */
   .timestamp {
+    display: block;
     width: 100%;
     text-align: left;
-    margin-top: 0;
-    padding-left: 0.25rem;
     font-size: 0.8rem;
-  }
-  
-  .emoji {
-    font-size: 1.3rem;
+    color: #888;
+    padding-left: 0.5rem;
   }
 }
 

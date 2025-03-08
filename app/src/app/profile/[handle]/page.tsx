@@ -135,7 +135,7 @@ export default function ProfilePage() {
             rel="noopener noreferrer" 
             className={styles.viewOnBluesky}
           >
-            View on Bluesky
+            View account on Bluesky
           </a>
         </div>
       </div>
@@ -182,7 +182,7 @@ export default function ProfilePage() {
                 className={styles.shareStatsButton}
                 onClick={() => {
                   // Open a new window to compose a post on Bluesky
-                  const statsText = `I've made ${totalCount} total ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` or ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per day` : ''} on im.flushing. Flush with me here: https://flushing.im/profile/${handle}`;
+                  const statsText = `I've made ${totalCount} total ${totalCount === 1 ? 'flush' : 'flushes'} on the network${flushesPerDay > 0 ? ` (${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per day)` : ''} via @flushing.im. Flush with me here: https://flushing.im/profile/${handle}`;
                   window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
                 }}
               >
