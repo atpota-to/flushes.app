@@ -361,15 +361,13 @@ export default function Home() {
                 >
                   <div className={styles.content}>
                     <div className={styles.contentLeft}>
-                      <div className={styles.userLine}>
-                        <span className={styles.emoji}>{entry.emoji}</span>
-                        <Link 
-                          href={`/profile/${entry.authorHandle}`}
-                          className={styles.authorLink}
-                        >
-                          @{entry.authorHandle}
-                        </Link>
-                      </div>
+                      <span className={styles.emoji}>{entry.emoji}</span>
+                      <Link 
+                        href={`/profile/${entry.authorHandle}`}
+                        className={styles.authorLink}
+                      >
+                        @{entry.authorHandle}
+                      </Link>
                       <span className={styles.text}>
                         {entry.text ? (
                           entry.authorHandle && entry.authorHandle.endsWith('.is') ? 

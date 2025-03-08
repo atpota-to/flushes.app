@@ -129,9 +129,6 @@ export default function ProfilePage() {
       <div className={styles.profileHeader}>
         <div className={styles.profileInfo}>
           <h2 className={styles.profileTitle}>@{handle}</h2>
-          <p className={styles.profileStats}>
-            {totalCount} bathroom {totalCount === 1 ? 'status' : 'statuses'}
-          </p>
           <a 
             href={`https://bsky.app/profile/${handle}`} 
             target="_blank" 
@@ -155,7 +152,6 @@ export default function ProfilePage() {
           
           {chartData.length > 0 ? (
             <>
-              <h4 className={styles.statsHeader}>Flush Activity</h4>
               <div className={styles.chartContainer}>
                 {chartData.map((dataPoint, index) => {
                   // Calculate height percentage (max of 100%)
@@ -181,6 +177,17 @@ export default function ProfilePage() {
                   {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                 </span>
               </div>
+              
+              <button 
+                className={styles.shareStatsButton}
+                onClick={() => {
+                  // Open a new window to compose a post on Bluesky
+                  const statsText = `I've made ${totalCount} total ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` or ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per day` : ''} on im.flushing. Flush with me here: https://flushing.im/profile/${handle}`;
+                  window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
+                }}
+              >
+                Share My Stats
+              </button>
             </>
           ) : (
             <p className={styles.noDataMessage}>Not enough data to display activity chart</p>
@@ -203,10 +210,8 @@ export default function ProfilePage() {
               >
                 <div className={styles.content}>
                   <div className={styles.contentLeft}>
-                    <div className={styles.userLine}>
-                      <span className={styles.emoji}>{entry.emoji}</span>
-                      <span className={styles.author}>@{handle}</span>
-                    </div>
+                    <span className={styles.emoji}>{entry.emoji}</span>
+                    <span className={styles.author}>@{handle}</span>
                     <span className={styles.text}>
                       {entry.text ? (
                         handle && handle.endsWith('.is') ? 
