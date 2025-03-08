@@ -149,7 +149,7 @@
 }
 
 .statusUpdateOpen {
-  max-height: 1000px; /* Large enough to contain all content */
+  max-height: 1200px; /* Large enough to contain all content */
   opacity: 1;
   transform: translateY(0);
   margin-bottom: 2rem;
@@ -191,6 +191,12 @@
   padding: 2rem;
 }
 
+@media (max-width: 600px) {
+  .card {
+    padding: 1.5rem 1rem;
+  }
+}
+
 .form {
   margin-top: 1rem;
 }
@@ -203,6 +209,13 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
+}
+
+.emojiNote {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
 }
 
 .input {
@@ -269,17 +282,29 @@
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background-color: #fcfcfc;
 }
 
 @media (max-width: 600px) {
   .emojiGrid {
     grid-template-columns: repeat(6, 1fr);
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    gap: 0.6rem;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
   }
 }
 
 @media (max-width: 400px) {
   .emojiGrid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
+    max-height: 240px;
   }
 }
 
@@ -294,6 +319,14 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 8px;
+}
+
+@media (max-width: 600px) {
+  .emojiButton {
+    font-size: 1.5rem;
+    padding: 6px;
+  }
 }
 
 .emojiButton:hover {

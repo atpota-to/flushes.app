@@ -223,7 +223,8 @@ export default function Home() {
   const EMOJIS = [
     '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
     '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
-    '1️⃣', '2️⃣', '🟡', '🟤'
+    '1️⃣', '2️⃣', '🟡', '🟤', '🫧', '🧽', '📲', '🫥', '🌊', '💤', '👀', '💎',
+    '⏱️', '⏰', '🫠', '🤔', '👻', '🧘', '👍', '🙌', '🎮', '🍔', '🥂', '🧠'
   ];
 
   return (
@@ -279,6 +280,7 @@ export default function Home() {
               <form onSubmit={handleSubmit} className={styles.form}>
                 <div className={styles.formGroup}>
                   <label>Select an emoji for your status</label>
+                  <p className={styles.emojiNote}>Scroll to see all options</p>
                   <div className={styles.emojiGrid}>
                     {EMOJIS.map((emoji) => (
                       <button
@@ -289,6 +291,7 @@ export default function Home() {
                         }`}
                         onClick={() => handleEmojiSelect(emoji)}
                         disabled={isSubmitting}
+                        aria-label={`Select emoji ${emoji}`}
                       >
                         {emoji}
                       </button>
