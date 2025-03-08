@@ -32,6 +32,27 @@
 .headerActions {
   display: flex;
   gap: 1rem;
+  align-items: center;
+}
+
+.userInfo {
+  color: #555;
+  font-weight: 500;
+}
+
+.logoutButton {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logoutButton:hover {
+  background-color: rgba(91, 173, 240, 0.1);
 }
 
 .loginButton {
@@ -52,9 +73,202 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Status form styles */
+.statusUpdateContainer {
+  overflow: hidden;
+  transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out, transform 0.3s ease;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-20px);
+  margin-bottom: 0;
+}
+
+.statusUpdateOpen {
+  max-height: 1000px; /* Large enough to contain all content */
+  opacity: 1;
+  transform: translateY(0);
+  margin-bottom: 2rem;
+}
+
+.toggleButton {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.toggleButton:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+}
+
+.toggleButton svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+.toggleButtonActive svg {
+  transform: rotate(180deg);
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.form {
+  margin-top: 1rem;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(91, 173, 240, 0.2);
+}
+
+.charCount {
+  text-align: right;
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .emojiGrid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.emojiButton {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1.5rem;
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.emojiButton:hover {
+  background: #eaeaea;
+  transform: scale(1.05);
+}
+
+.selectedEmoji {
+  background: rgba(91, 173, 240, 0.2);
+  border-color: var(--primary-color);
+}
+
+.preview {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.previewTitle {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #666;
+}
+
+.previewContent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.previewEmoji {
+  font-size: 1.5rem;
+}
+
+.submitButton {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.submitButton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.success {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
 /* Feed styles */
 .feedSection {
   margin-top: 1rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.newFeedItem {
+  animation: slideIn 0.5s ease-out;
 }
 
 .feedHeader {

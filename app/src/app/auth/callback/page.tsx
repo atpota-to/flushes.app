@@ -234,8 +234,8 @@ function CallbackHandler() {
           console.warn('Failed to clear session storage:', e);
         }
 
-        // Redirect to dashboard
-        router.push('/dashboard');
+        // Redirect to home page
+        router.push('/');
       } catch (err: any) {
         console.error('Login callback error:', err);
         setError(`Login failed: ${err.message || 'Unknown error'}`);

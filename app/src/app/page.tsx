@@ -18,15 +18,111 @@ interface FlushingEntry {
 }
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
+  
+  // Status update state
+  const [text, setText] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState('🚽');
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  // Feed state
   const [entries, setEntries] = useState<FlushingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [newEntryIds, setNewEntryIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     // Fetch the latest entries when the component mounts
     fetchLatestEntries();
   }, []);
+
+  // Toggle status update form
+  const toggleStatusUpdate = () => {
+    setStatusOpen(!statusOpen);
+    setStatusError(null);
+    setSuccess(null);
+  };
+  
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: string) => {
+    setSelectedEmoji(emoji);
+  };
+  
+  // Submit flushing status
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!accessToken || !did || !serializedKeyPair) {
+      setStatusError('Authentication information missing');
+      return;
+    }
+    
+    if (!pdsEndpoint) {
+      setStatusError('PDS endpoint is missing. Cannot proceed without it.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusError(null);
+    setSuccess(null);
+
+    try {
+      // Use import to dynamically load the bluesky-api module
+      const { createFlushingStatus, checkAuth } = await import('@/lib/bluesky-api');
+      
+      // First, check if auth is valid
+      const isAuthValid = await checkAuth(
+        accessToken,
+        JSON.parse(serializedKeyPair),
+        did,
+        dpopNonce || null,
+        pdsEndpoint
+      );
+      
+      if (!isAuthValid) {
+        setStatusError('Authentication check failed. Your login may have expired.');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // If we're authenticated, proceed with creating the status
+      console.log('Authentication verified, creating status...');
+      
+      const result = await createFlushingStatus(
+        accessToken, 
+        JSON.parse(serializedKeyPair), 
+        did, 
+        text, 
+        selectedEmoji,
+        dpopNonce || null,
+        pdsEndpoint
+      );
+      
+      console.log('Status update result:', result);
+      
+      // Reset form and show success message
+      setText('');
+      setSuccess('Your flushing status has been updated!');
+      
+      // Close status form after successful submission
+      setTimeout(() => {
+        setStatusOpen(false);
+      }, 2000);
+      
+      // Refresh the feed to show the new status
+      setTimeout(() => {
+        fetchLatestEntries(true);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Failed to update status:', err);
+      setStatusError(`Failed to update status: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Function to fetch the latest entries
   const fetchLatestEntries = async (forceRefresh = false) => {
@@ -52,6 +148,23 @@ export default function Home() {
       }
       
       const data = await response.json();
+      
+      // Check for new entries
+      if (entries.length > 0) {
+        const currentIds = new Set(entries.map((entry: FlushingEntry) => entry.id));
+        const newEntries = data.entries.filter((entry: FlushingEntry) => !currentIds.has(entry.id));
+        
+        // Mark new entries for animation
+        if (newEntries.length > 0) {
+          setNewEntryIds(new Set(newEntries.map((entry: FlushingEntry) => entry.id)));
+          
+          // Clear the animation markers after animation completes
+          setTimeout(() => {
+            setNewEntryIds(new Set());
+          }, 2000);
+        }
+      }
+      
       setEntries(data.entries);
     } catch (err: any) {
       console.error('Error fetching feed:', err);
@@ -60,6 +173,18 @@ export default function Home() {
       setLoading(false);
     }
   };
+
+  // Function to handle logout
+  const handleLogout = () => {
+    clearAuth();
+  };
+
+  // List of emojis for status selection
+  const EMOJIS = [
+    '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+    '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+    '1️⃣', '2️⃣', '🟡', '🟤'
+  ];
 
   return (
     <div className={styles.container}>
@@ -72,9 +197,12 @@ export default function Home() {
         </div>
         <div className={styles.headerActions}>
           {isAuthenticated ? (
-            <Link href="/dashboard" className={styles.loginButton}>
-              Go to Dashboard
-            </Link>
+            <>
+              <span className={styles.userInfo}>@{handle}</span>
+              <button onClick={handleLogout} className={styles.logoutButton}>
+                Logout
+              </button>
+            </>
           ) : (
             <Link href="/auth/login" className={styles.loginButton}>
               Login with Bluesky
@@ -83,6 +211,85 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Status update section - only visible when logged in */}
+      {isAuthenticated && (
+        <>
+          {/* Status update toggle button */}
+          <button 
+            className={`${styles.toggleButton} ${statusOpen ? styles.toggleButtonActive : ''}`}
+            onClick={toggleStatusUpdate}
+          >
+            {statusOpen ? 'Close' : 'Update Your Status'} 
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 9L12 16L5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {/* Collapsible status update form */}
+          <div className={`${styles.statusUpdateContainer} ${statusOpen ? styles.statusUpdateOpen : ''}`}>
+            <div className={styles.card}>
+              {statusError && <div className={styles.error}>{statusError}</div>}
+              {success && <div className={styles.success}>{success}</div>}
+
+              <form onSubmit={handleSubmit} className={styles.form}>
+                <div className={styles.formGroup}>
+                  <label>Select an emoji for your status</label>
+                  <div className={styles.emojiGrid}>
+                    {EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={`${styles.emojiButton} ${
+                          emoji === selectedEmoji ? styles.selectedEmoji : ''
+                        }`}
+                        onClick={() => handleEmojiSelect(emoji)}
+                        disabled={isSubmitting}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="status">What&apos;s your status? (optional)</label>
+                  <input
+                    type="text"
+                    id="status"
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    placeholder="What's happening in the bathroom... (optional)"
+                    maxLength={60}
+                    className={styles.input}
+                    disabled={isSubmitting}
+                  />
+                  <div className={styles.charCount}>
+                    {text.length}/60
+                  </div>
+                </div>
+
+                <div className={styles.preview}>
+                  <div className={styles.previewTitle}>Preview:</div>
+                  <div className={styles.previewContent}>
+                    <span className={styles.previewEmoji}>{selectedEmoji}</span>
+                    <span>{text || 'is flushing'}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className={styles.submitButton}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Updating...' : 'Update Status'}
+                </button>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Feed Section */}
       <div className={styles.feedSection}>
         <div className={styles.feedHeader}>
           <h2>Recent Bathroom Updates</h2>
@@ -106,7 +313,10 @@ export default function Home() {
           <div className={styles.feedList}>
             {entries.length > 0 ? (
               entries.map((entry) => (
-                <div key={entry.id} className={styles.feedItem}>
+                <div 
+                  key={entry.id} 
+                  className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
+                >
                   <div className={styles.content}>
                     <div className={styles.contentLeft}>
                       <span className={styles.emoji}>{entry.emoji}</span>
