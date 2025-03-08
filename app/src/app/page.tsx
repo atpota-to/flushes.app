@@ -229,10 +229,10 @@ export default function Home() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>im.flushing.right.now 🧻</h1>
+          <h1 className={styles.title}>im.flushing 🧻</h1>
           <p className={styles.subtitle}>https://flushing.im 🚽</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
               <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>
@@ -331,7 +331,10 @@ export default function Home() {
       {/* Feed Section */}
       <div className={styles.feedSection}>
         <div className={styles.feedHeader}>
-          <h2>Recent Bathroom Updates</h2>
+          <div className={styles.feedHeaderLeft}>
+            <h2>Recent flushes</h2>
+            <p className={styles.feedSubheader}>Click on a username to see their custom flushing profile.</p>
+          </div>
           <button 
             onClick={() => fetchLatestEntries(true)}
             className={styles.refreshButton}

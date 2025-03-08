@@ -390,9 +390,21 @@
   border-bottom: 1px solid #e1e1e1;
 }
 
+.feedHeaderLeft {
+  display: flex;
+  flex-direction: column;
+}
+
 .feedHeader h2 {
   font-size: 1.5rem;
   line-height: 1.2;
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.feedSubheader {
+  font-size: 0.9rem;
+  color: #666;
   margin: 0;
 }
 
