@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             id,
             uri,
             cid,
-            author_did as did,
+            author_did,
             author_handle,
             text,
             emoji,
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       const processedEntries = await Promise.all((entries || []).map(async entry => {
         // For the new table, we need to resolve handles from DIDs
         // For the old table, we might already have handles
-        const authorDid = entry.did;
+        const authorDid = !checkError ? entry.did : entry.author_did;
         let authorHandle = entry.author_handle || null;
         
         // If we don't have a handle (which will always be the case for the new table), resolve it
