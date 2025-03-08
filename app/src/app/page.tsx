@@ -121,8 +121,8 @@ export default function Home() {
       // Format status text to ensure it begins with "is"
       let formattedText = text.trim();
       
-      // If text is empty, use default "is flushing"
-      if (!formattedText) {
+      // If text is empty or just "is", use default "is flushing"
+      if (!formattedText || formattedText === "is") {
         formattedText = "is flushing";
       } 
       // If text doesn't start with "is", add it

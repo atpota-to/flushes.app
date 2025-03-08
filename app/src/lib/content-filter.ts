@@ -32,6 +32,18 @@ const BANNED_WORDS: string[] = [
   'discord.gg', 'telegram.me'
 ];
 
+// Special regexes for detecting slurs - adapted from https://github.com/Blank-Cheque/Slurs
+/* eslint-disable no-misleading-character-class */
+const EXPLICIT_SLUR_REGEXES = [
+  /\bc[hH][iIl1][nN][kKsS]?\b/,                    // Anti-Asian slur
+  /\bc[oO]{2}[nN][sS]?\b/,                         // Anti-Black slur
+  /\bf[aA][gG]{1,2}([oOeE][tT]?|[iIyY][nNeE]?)?s?\b/, // Anti-LGBTQ+ slur
+  /\bk[iIyY][kK][eE][sS]?\b/,                      // Anti-Semitic slur
+  /\bn[iIl1oO][gG]{2}([aAeE][rR]?|[lL][eE][tT]|[nNoO][gG])?s?\b/, // Anti-Black slur
+  /\bn[iIl1oO][gG]{2}[aAeE][sS]\b/,                // Anti-Black slur variation
+  /\bt[rR][aA][nN][nN][iIyY][eE]?[sS]?\b/,         // Anti-transgender slur
+];
+
 /**
  * Checks if a text contains any banned words
  * @param text The text to check
@@ -56,7 +68,14 @@ export function containsBannedWords(text: string): boolean {
     .replace(/_/g, '')
     .replace(/\s+/g, ' ');   // Normalize whitespace
   
-  // Check for exact matches and partial matches
+  // Check explicit slur regexes (specialized pattern matching)
+  for (const regex of EXPLICIT_SLUR_REGEXES) {
+    if (regex.test(text)) {
+      return true;
+    }
+  }
+  
+  // Check for exact matches and partial matches in the banned words list
   return BANNED_WORDS.some(word => {
     // Check for exact word match with word boundaries
     const exactRegex = new RegExp(`\\b${word}\\b`, 'i');
@@ -115,4 +134,15 @@ export function sanitizeText(text: string): string {
   });
   
   return sanitized;
+}
+
+/**
+ * Specialized function to check for explicit slurs using the advanced regex patterns
+ * @param text The text to check
+ * @returns True if the text contains any explicit slurs
+ */
+export function containsExplicitSlurs(text: string): boolean {
+  if (!text) return false;
+  
+  return EXPLICIT_SLUR_REGEXES.some(regex => regex.test(text));
 }
