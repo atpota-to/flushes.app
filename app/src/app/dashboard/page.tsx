@@ -32,6 +32,7 @@ export default function DashboardPage() {
   
   const [text, setText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
+  const [isEmojiSelected, setIsEmojiSelected] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -92,15 +93,21 @@ export default function DashboardPage() {
     router.push('/');
   };
 
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: string) => {
+    setSelectedEmoji(emoji);
+    setIsEmojiSelected(true);
+  };
+  
+  // Go back to emoji selection
+  const handleBackToEmoji = () => {
+    setIsEmojiSelected(false);
+  };
+  
   // Submit flushing status
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!text) {
-      setError('Please enter a status message');
-      return;
-    }
-
     if (!accessToken || !did || !serializedKeyPair) {
       setError('Authentication information missing');
       return;
@@ -219,57 +226,71 @@ export default function DashboardPage() {
         {success && <div className={styles.success}>{success}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.formGroup}>
-            <label htmlFor="status">What&apos;s your status?</label>
-            <input
-              type="text"
-              id="status"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="What's happening in the bathroom..."
-              maxLength={60}
-              className={styles.input}
-              disabled={isSubmitting}
-            />
-            <div className={styles.charCount}>
-              {text.length}/60
+          {!isEmojiSelected ? (
+            // Step 1: Select emoji
+            <div className={styles.formGroup}>
+              <label>Step 1: Select an emoji for your status</label>
+              <div className={styles.emojiGrid}>
+                {EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className={`${styles.emojiButton} ${
+                      emoji === selectedEmoji ? styles.selectedEmoji : ''
+                    }`}
+                    onClick={() => handleEmojiSelect(emoji)}
+                    disabled={isSubmitting}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Select an emoji</label>
-            <div className={styles.emojiGrid}>
-              {EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  className={`${styles.emojiButton} ${
-                    emoji === selectedEmoji ? styles.selectedEmoji : ''
-                  }`}
-                  onClick={() => setSelectedEmoji(emoji)}
+          ) : (
+            // Step 2: Enter status (optional) and submit
+            <>
+              <div className={styles.formGroup}>
+                <label htmlFor="status">Step 2: What&apos;s your status? (optional)</label>
+                <input
+                  type="text"
+                  id="status"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="What's happening in the bathroom... (optional)"
+                  maxLength={60}
+                  className={styles.input}
+                  disabled={isSubmitting}
+                />
+                <div className={styles.charCount}>
+                  {text.length}/60
+                </div>
+                <button 
+                  type="button" 
+                  onClick={handleBackToEmoji}
+                  className={styles.backButton}
                   disabled={isSubmitting}
                 >
-                  {emoji}
+                  ← Change emoji
                 </button>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className={styles.preview}>
-            <div className={styles.previewTitle}>Preview:</div>
-            <div className={styles.previewContent}>
-              <span className={styles.previewEmoji}>{selectedEmoji}</span>
-              <span>{text || 'Your status will appear here'}</span>
-            </div>
-          </div>
+              <div className={styles.preview}>
+                <div className={styles.previewTitle}>Preview:</div>
+                <div className={styles.previewContent}>
+                  <span className={styles.previewEmoji}>{selectedEmoji}</span>
+                  <span>{text || 'is flushing'}</span>
+                </div>
+              </div>
 
-          <button
-            type="submit"
-            className={styles.submitButton}
-            disabled={isSubmitting || !text}
-          >
-            {isSubmitting ? 'Updating...' : 'Update Status'}
-          </button>
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Updating...' : 'Update Status'}
+              </button>
+            </>
+          )}
         </form>
       </div>
       
@@ -298,6 +319,12 @@ export default function DashboardPage() {
               entries.map((entry) => (
                 <div key={entry.id} className={styles.feedItem}>
                   <div className={styles.feedHeader}>
+                    <span className={styles.timestamp}>
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className={styles.content}>
+                    <span className={styles.emoji}>{entry.emoji}</span>
                     <a 
                       href={`https://bsky.app/profile/${entry.authorHandle}`}
                       target="_blank"
@@ -306,14 +333,10 @@ export default function DashboardPage() {
                     >
                       @{entry.authorHandle}
                     </a>
-                    <span className={styles.timestamp}>
-                      {new Date(entry.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className={styles.content}>
-                    <span className={styles.emoji}>{entry.emoji}</span>
                     <span className={styles.text}>
-                      {entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text}
+                      {entry.text ? 
+                        (entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text) : 
+                        'is flushing'}
                     </span>
                   </div>
                 </div>

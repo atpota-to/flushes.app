@@ -304,8 +304,10 @@ export async function createFlushingStatus(
     // Validate inputs
     if (!accessToken) throw new Error('Access token is required');
     if (!did) throw new Error('DID is required');
-    if (!text) throw new Error('Text is required');
     if (!emoji) throw new Error('Emoji is required');
+    
+    // Use default text if none provided
+    const statusText = text || 'is flushing';
     
     // Use the PDS endpoint if available
     if (!pdsEndpoint) {
@@ -342,7 +344,7 @@ export async function createFlushingStatus(
         accessToken,
         dpopToken,
         did,
-        text,
+        text: statusText, // Use statusText which includes default if needed
         emoji,
         pdsEndpoint // Include the PDS endpoint
       })
@@ -365,7 +367,7 @@ export async function createFlushingStatus(
         accessToken,
         keyPair,
         did,
-        text, 
+        statusText, // Use statusText which includes default if needed
         emoji,
         errorData.nonce,
         pdsEndpoint,
