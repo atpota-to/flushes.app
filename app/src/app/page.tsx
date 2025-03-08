@@ -24,7 +24,7 @@ export default function Home() {
   const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
   
   // Status update state
-  const [text, setText] = useState('');
+  const [text, setText] = useState('is ');
   const [selectedEmoji, setSelectedEmoji] = useState('🚽');
   const [statusOpen, setStatusOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -143,7 +143,7 @@ export default function Home() {
       console.log('Status update result:', result);
       
       // Reset form and show success message
-      setText('');
+      setText('is ');
       setSuccess('Your flushing status has been updated!');
       
       // Close status form after successful submission
@@ -229,10 +229,10 @@ export default function Home() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>im.flushing.right.now</h1>
-          <p className={styles.subtitle}>https://flushing.im</p>
+          <h1 className={styles.title}>im.flushing.right.now 🧻</h1>
+          <p className={styles.subtitle}>https://flushing.im 🚽</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet and connecting with other bathroom enjoyers all over the world. Powered by the AT Protocol.<br />
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
               <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>
@@ -297,16 +297,19 @@ export default function Home() {
 
                 <div className={styles.formGroup}>
                   <label htmlFor="status">What&apos;s your status? (optional)</label>
-                  <input
-                    type="text"
-                    id="status"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="is flushing (all statuses start with 'is')"
-                    maxLength={60}
-                    className={styles.input}
-                    disabled={isSubmitting}
-                  />
+                  <div className={styles.inputWrapper}>
+                    <span className={styles.inputPrefix}>is </span>
+                    <input
+                      type="text"
+                      id="status"
+                      value={text.startsWith("is ") ? text.substring(3) : text}
+                      onChange={(e) => setText(`is ${e.target.value}`)}
+                      placeholder="flushing"
+                      maxLength={57} {/* 60 - 3 for "is " */}
+                      className={styles.inputWithPrefix}
+                      disabled={isSubmitting}
+                    />
+                  </div>
                   <div className={styles.charCount}>
                     {text.length}/60
                   </div>

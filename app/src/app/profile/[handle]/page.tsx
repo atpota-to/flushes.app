@@ -65,10 +65,10 @@ export default function ProfilePage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>im.flushing.right.now</h1>
-          <p className={styles.subtitle}>https://flushing.im</p>
+          <h1 className={styles.title}>im.flushing.right.now 🧻</h1>
+          <p className={styles.subtitle}>https://flushing.im 🚽</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet and connecting with other bathroom enjoyers all over the world. Powered by the AT Protocol.
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.
           </p>
         </div>
         <div className={styles.headerActions}>
