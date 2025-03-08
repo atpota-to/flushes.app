@@ -82,6 +82,74 @@
   transform: translateX(3px);
 }
 
+/* Stats section and chart */
+.statsSection {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e1e1e1;
+}
+
+.statsHeader {
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0 0 1rem 0;
+  color: #444;
+}
+
+.statDetails {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.chartContainer {
+  height: 150px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  border-bottom: 1px solid #e1e1e1;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  position: relative;
+}
+
+.chartBar {
+  background-color: var(--primary-color);
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s ease;
+}
+
+.chartAxis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  color: #999;
+  font-size: 0.8rem;
+}
+
+.chartLegend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.chartLegendItem {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.noDataMessage {
+  color: #888;
+  text-align: center;
+  padding: 2rem 0;
+  font-style: italic;
+}
+
 .headerActions {
   display: flex;
   gap: 1rem;
@@ -222,11 +290,16 @@
 
 .contentLeft {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+
+.userLine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .emoji {
@@ -248,11 +321,11 @@
   font-size: 1.1rem;
   line-height: 1.4;
   color: #333;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
+  padding-left: 0.5rem;
 }
 
 .timestamp {

@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
+  const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
 
   useEffect(() => {
     // Fetch the user's statuses when the component mounts
@@ -51,8 +53,52 @@ export default function ProfilePage() {
       }
       
       const data = await response.json();
-      setEntries(data.entries || []);
+      const userEntries = data.entries || [];
+      setEntries(userEntries);
       setTotalCount(data.count || 0);
+      
+      // Calculate statistics and chart data
+      if (userEntries.length > 0) {
+        // Calculate flushes per day
+        const sortedEntries = [...userEntries].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        
+        if (sortedEntries.length > 1) {
+          const firstDate = new Date(sortedEntries[0].created_at);
+          const lastDate = new Date(sortedEntries[sortedEntries.length - 1].created_at);
+          const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
+          const perDay = parseFloat((sortedEntries.length / daysDiff).toFixed(1));
+          setFlushesPerDay(perDay);
+        } else {
+          setFlushesPerDay(1); // Just one flush on a single day
+        }
+        
+        // Generate chart data (group by day)
+        const chartDataMap = new Map<string, number>();
+        
+        // Group entries by day
+        userEntries.forEach(entry => {
+          const date = new Date(entry.created_at);
+          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          
+          if (chartDataMap.has(dateKey)) {
+            chartDataMap.set(dateKey, chartDataMap.get(dateKey)! + 1);
+          } else {
+            chartDataMap.set(dateKey, 1);
+          }
+        });
+        
+        // Convert map to array and sort by date
+        const chartDataArray = Array.from(chartDataMap.entries())
+          .map(([date, count]) => ({ date, count }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        
+        // Limit to last 30 days for chart readability
+        const limitedData = chartDataArray.slice(-30);
+        setChartData(limitedData);
+      } else {
+        setFlushesPerDay(0);
+        setChartData([]);
+      }
     } catch (err: any) {
       console.error('Error fetching profile:', err);
       setError(err.message || 'Failed to load profile');
@@ -96,6 +142,49 @@ export default function ProfilePage() {
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
+      
+      {!loading && !error && (
+        <section className={styles.statsSection}>
+          <h3 className={styles.statsHeader}>Flushing Statistics</h3>
+          <p className={styles.statDetails}>
+            {totalCount} total {totalCount === 1 ? 'flush' : 'flushes'}
+            {flushesPerDay > 0 && `, ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per day`}
+          </p>
+          
+          {chartData.length > 0 ? (
+            <>
+              <h4 className={styles.statsHeader}>Flush Activity</h4>
+              <div className={styles.chartContainer}>
+                {chartData.map((dataPoint, index) => {
+                  // Calculate height percentage (max of 100%)
+                  const maxCount = Math.max(...chartData.map(d => d.count));
+                  const heightPercent = Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100));
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={styles.chartBar}
+                      style={{ height: `${heightPercent}%` }}
+                      title={`${dataPoint.date}: ${dataPoint.count} flushes`}
+                    />
+                  );
+                })}
+              </div>
+              
+              <div className={styles.chartLegend}>
+                <span className={styles.chartLegendItem}>
+                  {chartData.length > 0 ? new Date(chartData[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                </span>
+                <span className={styles.chartLegendItem}>
+                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className={styles.noDataMessage}>Not enough data to display activity chart</p>
+          )}
+        </section>
+      )}
 
       {loading ? (
         <div className={styles.loadingContainer}>
@@ -112,8 +201,10 @@ export default function ProfilePage() {
               >
                 <div className={styles.content}>
                   <div className={styles.contentLeft}>
-                    <span className={styles.emoji}>{entry.emoji}</span>
-                    <span className={styles.author}>@{handle}</span>
+                    <div className={styles.userLine}>
+                      <span className={styles.emoji}>{entry.emoji}</span>
+                      <span className={styles.author}>@{handle}</span>
+                    </div>
                     <span className={styles.text}>
                       {entry.text ? (
                         handle && handle.endsWith('.is') ? 

@@ -235,7 +235,7 @@ export default function Home() {
             The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
-              <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>
+              Like the app? Consider contributing to <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>my toilet paper fund</a>.
             </span>
           </p>
         </div>
@@ -361,13 +361,15 @@ export default function Home() {
                 >
                   <div className={styles.content}>
                     <div className={styles.contentLeft}>
-                      <span className={styles.emoji}>{entry.emoji}</span>
-                      <Link 
-                        href={`/profile/${entry.authorHandle}`}
-                        className={styles.authorLink}
-                      >
-                        @{entry.authorHandle}
-                      </Link>
+                      <div className={styles.userLine}>
+                        <span className={styles.emoji}>{entry.emoji}</span>
+                        <Link 
+                          href={`/profile/${entry.authorHandle}`}
+                          className={styles.authorLink}
+                        >
+                          @{entry.authorHandle}
+                        </Link>
+                      </div>
                       <span className={styles.text}>
                         {entry.text ? (
                           entry.authorHandle && entry.authorHandle.endsWith('.is') ? 

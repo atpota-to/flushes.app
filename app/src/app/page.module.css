@@ -478,11 +478,16 @@
 
 .contentLeft {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
   flex: 1;
   min-width: 0;
+}
+
+.userLine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .emoji {
@@ -508,11 +513,11 @@
   font-size: 1.1rem;
   line-height: 1.4;
   color: #333;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
+  padding-left: 0.5rem;
 }
 
 .timestamp {
