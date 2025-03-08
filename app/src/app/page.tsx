@@ -82,10 +82,28 @@ export default function Home() {
       // Use import to dynamically load the bluesky-api module
       const { createFlushingStatus, checkAuth } = await import('@/lib/bluesky-api');
       
+      // Deserialize keypair properly
+      const keyPairData = JSON.parse(serializedKeyPair);
+      const publicKey = await window.crypto.subtle.importKey(
+        'jwk',
+        keyPairData.publicKey,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['verify']
+      );
+      const privateKey = await window.crypto.subtle.importKey(
+        'jwk',
+        keyPairData.privateKey,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign']
+      );
+      const keyPair = { publicKey, privateKey };
+      
       // First, check if auth is valid
       const isAuthValid = await checkAuth(
         accessToken,
-        JSON.parse(serializedKeyPair),
+        keyPair,
         did,
         dpopNonce || null,
         pdsEndpoint
@@ -102,7 +120,7 @@ export default function Home() {
       
       const result = await createFlushingStatus(
         accessToken, 
-        JSON.parse(serializedKeyPair), 
+        keyPair, 
         did, 
         text, 
         selectedEmoji,
