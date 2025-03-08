@@ -90,18 +90,18 @@
 @media (max-width: 600px) {
   /* Header styles */
   .header {
-    justify-content: center;
-    text-align: center;
+    flex-direction: column;
+    align-items: flex-start;
   }
   
   .headerContent {
     flex: 1 1 100%;
-    text-align: center;
+    text-align: left;
   }
   
   .headerActions {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
   }
   
   .title {
@@ -109,11 +109,11 @@
   }
   
   .profileHeader {
-    text-align: center;
+    text-align: left;
   }
   
   .profileInfo {
-    align-items: center;
+    align-items: flex-start;
   }
   
   /* Content alignment for feed items */
