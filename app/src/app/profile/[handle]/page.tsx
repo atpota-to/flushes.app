@@ -60,7 +60,9 @@ export default function ProfilePage() {
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
         // Calculate flushes per day
-        const sortedEntries = [...userEntries].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const sortedEntries = [...userEntries].sort((a: FlushingEntry, b: FlushingEntry) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
         
         if (sortedEntries.length > 1) {
           const firstDate = new Date(sortedEntries[0].created_at);
@@ -76,7 +78,7 @@ export default function ProfilePage() {
         const chartDataMap = new Map<string, number>();
         
         // Group entries by day
-        userEntries.forEach(entry => {
+        userEntries.forEach((entry: FlushingEntry) => {
           const date = new Date(entry.created_at);
           const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
           
@@ -89,7 +91,7 @@ export default function ProfilePage() {
         
         // Convert map to array and sort by date
         const chartDataArray = Array.from(chartDataMap.entries())
-          .map(([date, count]) => ({ date, count }))
+          .map(([date, count]): {date: string, count: number} => ({ date, count }))
           .sort((a, b) => a.date.localeCompare(b.date));
         
         // Limit to last 30 days for chart readability
