@@ -369,9 +369,19 @@ export default function Home() {
                         @{entry.authorHandle}
                       </Link>
                       <span className={styles.text}>
-                        {entry.text ? 
-                          (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text)) : 
-                          'is flushing'}
+                        {entry.text ? (
+                          entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                            // For handles ending with .is, remove the "is" prefix if it exists
+                            (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
+                              (entry.text.length > 63 ? `${sanitizeText(entry.text.substring(3, 63))}...` : sanitizeText(entry.text.substring(3))) : 
+                              (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
+                            ) :
+                            // For regular handles, display normal text
+                            (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
+                        ) : (
+                          entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                            'flushing' : 'is flushing'
+                        )}
                       </span>
                     </div>
                     <span className={styles.timestamp}>
