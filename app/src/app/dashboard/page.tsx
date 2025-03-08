@@ -82,12 +82,12 @@ export default function DashboardPage() {
       
       // Check for new entries
       if (entries.length > 0) {
-        const currentIds = new Set(entries.map(entry => entry.id));
-        const newEntries = data.entries.filter(entry => !currentIds.has(entry.id));
+        const currentIds = new Set(entries.map((entry: FlushingEntry) => entry.id));
+        const newEntries = data.entries.filter((entry: FlushingEntry) => !currentIds.has(entry.id));
         
         // Mark new entries for animation
         if (newEntries.length > 0) {
-          setNewEntryIds(new Set(newEntries.map(entry => entry.id)));
+          setNewEntryIds(new Set(newEntries.map((entry: FlushingEntry) => entry.id)));
           
           // Clear the animation markers after animation completes
           setTimeout(() => {
