@@ -2,13 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { BskyAgent } from '@atproto/api';
 
+// Define type for our database entry
+interface FlushingRecord {
+  id: string | number;
+  uri: string;
+  cid: string;
+  did: string;
+  text: string;
+  emoji: string;
+  created_at: string;
+}
+
+// Type for the processed entry for the client
+interface ProcessedEntry {
+  id: string | number;
+  uri: string;
+  cid: string;
+  authorDid: string;
+  authorHandle: string;
+  text: string;
+  emoji: string;
+  createdAt: string;
+}
+
 // Constants
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 const MAX_ENTRIES = 20;
 
 // Cache settings to avoid hitting the database too frequently
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-let cachedEntries: any[] = [];
+let cachedEntries: ProcessedEntry[] = [];
 let lastFetchTime = 0;
 
 // Supabase client - using environment variables
@@ -36,66 +59,32 @@ export async function GET(request: NextRequest) {
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // First check if we're using the new flushing_records table
-      const { data: recordsExists, error: checkError } = await supabase
+      // Fetch entries from the flushing_records table
+      const { data: entries, error } = await supabase
         .from('flushing_records')
-        .select('id', { count: 'exact', head: true });
-      
-      let entries;
-      let error;
-      
-      if (!checkError) {
-        // Use the new flushing_records table
-        console.log('Using flushing_records table');
-        ({ data: entries, error } = await supabase
-          .from('flushing_records')
-          .select(`
-            id,
-            uri,
-            cid,
-            did,
-            text,
-            emoji,
-            created_at
-          `)
-          .order('created_at', { ascending: false })
-          .limit(MAX_ENTRIES));
-      } else {
-        // Fall back to the old flushing_entries table
-        console.log('Falling back to flushing_entries table');
-        ({ data: entries, error } = await supabase
-          .from('flushing_entries')
-          .select(`
-            id,
-            uri,
-            cid,
-            author_did,
-            author_handle,
-            text,
-            emoji,
-            created_at
-          `)
-          .order('created_at', { ascending: false })
-          .limit(MAX_ENTRIES));
-      }
+        .select(`
+          id,
+          uri,
+          cid,
+          did,
+          text,
+          emoji,
+          created_at
+        `)
+        .order('created_at', { ascending: false })
+        .limit(MAX_ENTRIES);
       
       if (error) {
         throw new Error(`Supabase error: ${error.message}`);
       }
       
       // Transform the data to match our client-side model
-      const processedEntries = await Promise.all((entries || []).map(async entry => {
-        // For the new table, we need to resolve handles from DIDs
-        // For the old table, we might already have handles
-        const authorDid = !checkError ? entry.did : entry.author_did;
-        let authorHandle = entry.author_handle || null;
+      const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
+        // Resolve handle from DID
+        const authorDid = entry.did;
+        const authorHandle = await resolveDidToHandle(authorDid) || 'unknown';
         
-        // If we don't have a handle (which will always be the case for the new table), resolve it
-        if (!authorHandle) {
-          const resolvedHandle = await resolveDidToHandle(authorDid);
-          authorHandle = resolvedHandle || 'unknown';
-        }
-        
+        // Return the processed entry in the format the client expects
         return {
           id: entry.id,
           uri: entry.uri,
@@ -105,7 +94,7 @@ export async function GET(request: NextRequest) {
           text: entry.text,
           emoji: entry.emoji,
           createdAt: entry.created_at
-        };
+        } as ProcessedEntry;
       }));
       
       // Update the cache
@@ -135,9 +124,9 @@ export async function GET(request: NextRequest) {
 
 // Function to generate mock entries for testing
 // This is used when Supabase is not configured
-function getMockEntries() {
+function getMockEntries(): ProcessedEntry[] {
   // Create some mock entries for testing
-  const mockEntries = [
+  const mockEntries: ProcessedEntry[] = [
     {
       id: '1',
       uri: 'at://did:plc:12345/im.flushing.right.now/1',
