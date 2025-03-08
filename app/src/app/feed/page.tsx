@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './feed.module.css';
+import { formatRelativeTime } from '@/lib/time-utils';
 
 // Types for our feed entries
 interface FlushingEntry {
@@ -61,11 +62,7 @@ export default function FeedPage() {
     }
   };
 
-  // Format date to a readable string
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
+  // No longer needed - using formatRelativeTime from time-utils
 
   return (
     <div className={styles.container}>
@@ -116,7 +113,7 @@ export default function FeedPage() {
                   @{entry.authorHandle}
                 </a>
                 <span className={styles.timestamp}>
-                  {formatDate(entry.createdAt)}
+                  {formatRelativeTime(entry.createdAt)}
                 </span>
               </div>
               <div className={styles.content}>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import styles from './profile.module.css';
 import { sanitizeText } from '@/lib/content-filter';
+import { formatRelativeTime } from '@/lib/time-utils';
 
 // Types for feed entries
 interface FlushingEntry {
@@ -229,7 +230,7 @@ export default function ProfilePage() {
                     </span>
                   </div>
                   <span className={styles.timestamp}>
-                    {new Date(entry.created_at).toLocaleString()}
+                    {formatRelativeTime(entry.created_at)}
                   </span>
                 </div>
               </div>

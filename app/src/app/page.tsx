@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useAuth } from '@/lib/auth-context';
-import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
+import { containsBannedWords, sanitizeText, formatRelativeTime } from '@/lib/content-filter';
 
 // Types for feed entries
 interface FlushingEntry {
