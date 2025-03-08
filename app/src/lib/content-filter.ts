@@ -147,4 +147,17 @@ export function containsExplicitSlurs(text: string): boolean {
   return EXPLICIT_SLUR_REGEXES.some(regex => regex.test(text));
 }
 
-// Function removed and moved to time-utils.ts
+/**
+ * Checks if a character is one of our allowed emojis
+ * @param emoji The emoji character to check
+ * @returns True if the emoji is in our allowed list
+ */
+export function isAllowedEmoji(emoji: string): boolean {
+  const ALLOWED_EMOJIS = [
+    '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+    '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+    '1️⃣', '2️⃣', '🟡', '🟤'
+  ];
+  
+  return ALLOWED_EMOJIS.includes(emoji);
+}

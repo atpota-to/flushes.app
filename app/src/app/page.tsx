@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useAuth } from '@/lib/auth-context';
-import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
+import { containsBannedWords, sanitizeText, isAllowedEmoji } from '@/lib/content-filter';
 import { formatRelativeTime } from '@/lib/time-utils';
 
 // Types for feed entries
@@ -357,42 +357,51 @@ export default function Home() {
         ) : (
           <div className={styles.feedList}>
             {entries.length > 0 ? (
-              entries.map((entry) => (
-                <div 
-                  key={entry.id} 
-                  className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
-                >
-                  <div className={styles.content}>
-                    <div className={styles.contentLeft}>
-                      <span className={styles.emoji}>{entry.emoji}</span>
-                      <Link 
-                        href={`/profile/${entry.authorHandle}`}
-                        className={styles.authorLink}
-                      >
-                        @{entry.authorHandle}
-                      </Link>
-                      <span className={styles.text}>
-                        {entry.text ? (
-                          entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
-                            // For handles ending with .is, remove the "is" prefix if it exists
-                            (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
-                              (entry.text.length > 63 ? `${sanitizeText(entry.text.substring(3, 63))}...` : sanitizeText(entry.text.substring(3))) : 
+              // Filter first to determine if we have any valid entries
+              (() => {
+                const validEntries = entries.filter(entry => isAllowedEmoji(entry.emoji));
+                return validEntries.length > 0 ? 
+                  validEntries.map((entry) => (
+                  <div 
+                    key={entry.id} 
+                    className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
+                  >
+                    <div className={styles.content}>
+                      <div className={styles.contentLeft}>
+                        <span className={styles.emoji}>{entry.emoji}</span>
+                        <Link 
+                          href={`/profile/${entry.authorHandle}`}
+                          className={styles.authorLink}
+                        >
+                          @{entry.authorHandle}
+                        </Link>
+                        <span className={styles.text}>
+                          {entry.text ? (
+                            entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                              // For handles ending with .is, remove the "is" prefix if it exists
+                              (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
+                                (entry.text.length > 63 ? `${sanitizeText(entry.text.substring(3, 63))}...` : sanitizeText(entry.text.substring(3))) : 
+                                (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
+                              ) :
+                              // For regular handles, display normal text
                               (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
-                            ) :
-                            // For regular handles, display normal text
-                            (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
-                        ) : (
-                          entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
-                            'flushing' : 'is flushing'
-                        )}
+                          ) : (
+                            entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                              'flushing' : 'is flushing'
+                          )}
+                        </span>
+                      </div>
+                      <span className={styles.timestamp}>
+                        {formatRelativeTime(entry.createdAt)}
                       </span>
                     </div>
-                    <span className={styles.timestamp}>
-                      {formatRelativeTime(entry.createdAt)}
-                    </span>
                   </div>
-                </div>
-              ))
+                )) : (
+                  <div className={styles.emptyState}>
+                    <p>No valid entries found. Login and be the first to share your status!</p>
+                  </div>
+                );
+              })()
             ) : (
               <div className={styles.emptyState}>
                 <p>No entries found. Login and be the first to share your status!</p>
