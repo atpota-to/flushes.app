@@ -36,36 +36,76 @@ export async function GET(request: NextRequest) {
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // Fetch the latest entries from Supabase
-      const { data: entries, error } = await supabase
-        .from('flushing_entries')
-        .select(`
-          id,
-          uri,
-          cid,
-          author_did,
-          author_handle,
-          text,
-          emoji,
-          created_at
-        `)
-        .order('created_at', { ascending: false })
-        .limit(MAX_ENTRIES);
+      // First check if we're using the new flushing_records table
+      const { data: recordsExists, error: checkError } = await supabase
+        .from('flushing_records')
+        .select('id', { count: 'exact', head: true });
+      
+      let entries;
+      let error;
+      
+      if (!checkError) {
+        // Use the new flushing_records table
+        console.log('Using flushing_records table');
+        ({ data: entries, error } = await supabase
+          .from('flushing_records')
+          .select(`
+            id,
+            uri,
+            cid,
+            did,
+            text,
+            emoji,
+            created_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(MAX_ENTRIES));
+      } else {
+        // Fall back to the old flushing_entries table
+        console.log('Falling back to flushing_entries table');
+        ({ data: entries, error } = await supabase
+          .from('flushing_entries')
+          .select(`
+            id,
+            uri,
+            cid,
+            author_did as did,
+            author_handle,
+            text,
+            emoji,
+            created_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(MAX_ENTRIES));
+      }
       
       if (error) {
         throw new Error(`Supabase error: ${error.message}`);
       }
       
       // Transform the data to match our client-side model
-      const processedEntries = (entries || []).map(entry => ({
-        id: entry.id,
-        uri: entry.uri,
-        cid: entry.cid,
-        authorDid: entry.author_did,
-        authorHandle: entry.author_handle || 'unknown',
-        text: entry.text,
-        emoji: entry.emoji,
-        createdAt: entry.created_at
+      const processedEntries = await Promise.all((entries || []).map(async entry => {
+        // For the new table, we need to resolve handles from DIDs
+        // For the old table, we might already have handles
+        const authorDid = entry.did;
+        let authorHandle = entry.author_handle || null;
+        
+        // If we don't have a handle (which will always be the case for the new table), resolve it
+        if (!authorHandle) {
+          const resolvedHandle = await resolveDidToHandle(authorDid);
+          authorHandle = resolvedHandle || 'unknown';
+        }
+        
+        return {
+          id: entry.id,
+          uri: entry.uri,
+          cid: entry.cid,
+          authorDid: authorDid,
+          authorHandle: authorHandle,
+          text: entry.text,
+          emoji: entry.emoji,
+          createdAt: entry.created_at
+        };
       }));
       
       // Update the cache
@@ -76,7 +116,7 @@ export async function GET(request: NextRequest) {
     } else {
       // If no Supabase credentials, fall back to mock data
       console.log('No Supabase credentials, using mock data');
-      const mockEntries = await getMockEntries();
+      const mockEntries = getMockEntries();
       
       // Update cache
       cachedEntries = mockEntries;
@@ -95,7 +135,7 @@ export async function GET(request: NextRequest) {
 
 // Function to generate mock entries for testing
 // This is used when Supabase is not configured
-async function getMockEntries() {
+function getMockEntries() {
   // Create some mock entries for testing
   const mockEntries = [
     {
@@ -133,13 +173,34 @@ async function getMockEntries() {
   return mockEntries;
 }
 
-// Function to attempt to resolve a DID to a handle using the Bluesky API
-// This is used when we have a record with an author_did but no author_handle
+// Function to attempt to resolve a DID to a handle
+// First tries PLC directory, then falls back to Bluesky API if needed
 async function resolveDidToHandle(did: string): Promise<string | null> {
   try {
-    await agent.login({ identifier: 'user.bsky.social', password: 'none' });
-    const response = await agent.getProfile({ actor: did });
-    return response.data.handle;
+    // Try PLC directory first (faster and doesn't require auth)
+    if (did && did.startsWith('did:plc:')) {
+      const plcResponse = await fetch(`https://plc.directory/${did}/data`);
+      if (plcResponse.ok) {
+        const plcData = await plcResponse.json();
+        if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+          // alsoKnownAs contains values like 'at://user.bsky.social'
+          const handle = plcData.alsoKnownAs[0].split('//')[1];
+          if (handle) return handle;
+        }
+      }
+    }
+    
+    // Fall back to Bluesky API
+    console.log(`Falling back to Bluesky API for DID: ${did}`);
+    try {
+      // Try to resolve DID directly with Bluesky API
+      await agent.login({ identifier: 'user.bsky.social', password: 'none' });
+      const response = await agent.getProfile({ actor: did });
+      return response.data.handle;
+    } catch (apiError) {
+      console.error(`Failed to resolve handle with Bluesky API for DID ${did}:`, apiError);
+      return null;
+    }
   } catch (error) {
     console.error(`Failed to resolve handle for DID ${did}:`, error);
     return null;
