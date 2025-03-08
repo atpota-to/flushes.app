@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
+// Define interfaces for type safety
+interface ProfileEntry {
+  id: string;
+  uri: string;
+  cid: string;
+  did: string;
+  text: string;
+  emoji: string;
+  created_at: string;
+}
+
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const MAX_ENTRIES = 50;
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
@@ -123,7 +134,7 @@ export async function GET(request: NextRequest) {
                 created_at: record.value.createdAt
               };
             })
-            .filter((entry): entry is any => entry !== null); // Remove filtered entries
+            .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null); // Remove filtered entries
           
           return NextResponse.json({
             entries: transformedEntries,
@@ -160,7 +171,7 @@ export async function GET(request: NextRequest) {
             created_at: record.value.createdAt
           };
         })
-        .filter((entry): entry is any => entry !== null); // Remove filtered entries
+        .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null); // Remove filtered entries
       
       return NextResponse.json({
         entries: transformedEntries,
@@ -203,7 +214,7 @@ export async function GET(request: NextRequest) {
               text: sanitizeText(entry.text || '')
             };
           })
-          .filter((entry): entry is any => entry !== null);
+          .filter((entry: any): entry is any => entry !== null);
         
         return NextResponse.json({
           entries: filteredEntries,
