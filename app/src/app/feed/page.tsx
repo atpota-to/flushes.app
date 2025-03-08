@@ -27,13 +27,25 @@ export default function FeedPage() {
   }, []);
 
   // Function to fetch the latest entries
-  const fetchLatestEntries = async () => {
+  const fetchLatestEntries = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
       
       // Call our API endpoint to get the latest entries
-      const response = await fetch('/api/bluesky/feed');
+      // Add refresh parameter to bypass cache if needed
+      const url = forceRefresh 
+        ? '/api/bluesky/feed?refresh=true'
+        : '/api/bluesky/feed';
+        
+      const response = await fetch(url, {
+        // Prevent browser caching
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch feed: ${response.status}`);
@@ -66,7 +78,7 @@ export default function FeedPage() {
 
       <div className={styles.controls}>
         <button 
-          onClick={fetchLatestEntries} 
+          onClick={() => fetchLatestEntries(true)} 
           className={styles.refreshButton}
           disabled={loading}
         >

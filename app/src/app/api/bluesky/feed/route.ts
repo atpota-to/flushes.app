@@ -46,9 +46,11 @@ const agent = new BskyAgent({
 export async function GET(request: NextRequest) {
   try {
     const now = Date.now();
+    const url = new URL(request.url);
+    const forceRefresh = url.searchParams.get('refresh') === 'true';
     
-    // Check if cache is still valid
-    if (now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
+    // Check if cache is still valid and no force refresh is requested
+    if (!forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
       console.log('Returning cached entries');
       return NextResponse.json({ entries: cachedEntries });
     }
