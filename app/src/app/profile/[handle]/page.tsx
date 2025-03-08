@@ -65,9 +65,10 @@ export default function ProfilePage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>@{handle}</h1>
+          <h1 className={styles.title}>im.flushing.right.now</h1>
+          <p className={styles.subtitle}>https://flushing.im</p>
           <p className={styles.description}>
-            {totalCount} bathroom {totalCount === 1 ? 'status' : 'statuses'}
+            The world&apos;s first decentralized bathroom status social media app. Powered by the AT Protocol.
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -76,6 +77,23 @@ export default function ProfilePage() {
           </Link>
         </div>
       </header>
+      
+      <div className={styles.profileHeader}>
+        <div className={styles.profileInfo}>
+          <h2 className={styles.profileTitle}>@{handle}</h2>
+          <p className={styles.profileStats}>
+            {totalCount} bathroom {totalCount === 1 ? 'status' : 'statuses'}
+          </p>
+          <a 
+            href={`https://bsky.app/profile/${handle}`} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className={styles.viewOnBluesky}
+          >
+            View on Bluesky
+          </a>
+        </div>
+      </div>
 
       {error && <div className={styles.error}>{error}</div>}
 

@@ -217,9 +217,10 @@ export default function Home() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>I&apos;m Flushing</h1>
+          <h1 className={styles.title}>im.flushing.right.now</h1>
+          <p className={styles.subtitle}>https://flushing.im</p>
           <p className={styles.description}>
-            Share your bathroom status with the Bluesky community<br />
+            The world&apos;s first decentralized bathroom status social media app. Powered by the AT Protocol.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
               <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>
@@ -250,7 +251,7 @@ export default function Home() {
             className={`${styles.toggleButton} ${statusOpen ? styles.toggleButtonActive : ''}`}
             onClick={toggleStatusUpdate}
           >
-            {statusOpen ? 'Close' : 'Update Your Status'} 
+            {statusOpen ? 'Close' : 'Update your status'} 
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 9L12 16L5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
