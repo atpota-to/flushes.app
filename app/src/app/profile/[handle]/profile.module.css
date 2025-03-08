@@ -247,22 +247,26 @@
 }
 
 @media (max-width: 480px) {
+  .content {
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
+  }
+  
   .contentLeft {
-    margin-bottom: 0.5rem;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    margin-bottom: 0;
   }
   
   .timestamp {
     width: 100%;
-    text-align: right;
-    margin-top: 0.25rem;
-  }
-  
-  .content {
-    gap: 0.5rem;
-  }
-  
-  .contentLeft {
-    gap: 0.5rem;
+    text-align: left;
+    margin-top: 0;
+    padding-left: 0.25rem;
+    font-size: 0.8rem;
   }
   
   .emoji {
