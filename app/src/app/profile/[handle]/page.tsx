@@ -113,6 +113,7 @@ export default function ProfilePage() {
                 <div className={styles.content}>
                   <div className={styles.contentLeft}>
                     <span className={styles.emoji}>{entry.emoji}</span>
+                    <span className={styles.author}>@{handle}</span>
                     <span className={styles.text}>
                       {entry.text ? 
                         (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text)) : 

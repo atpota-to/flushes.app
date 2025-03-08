@@ -67,6 +67,7 @@
 }
 
 @media (max-width: 600px) {
+  /* Header styles */
   .header {
     justify-content: center;
     text-align: center;
@@ -84,6 +85,11 @@
   
   .title {
     font-size: 2rem;
+  }
+  
+  /* Content alignment for feed items */
+  .contentLeft {
+    align-items: center;
   }
 }
 
@@ -421,7 +427,7 @@
 
 .contentLeft {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
   flex: 1;
@@ -431,6 +437,9 @@
 .emoji {
   font-size: 1.5rem;
   flex-shrink: 0;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .authorLink {
