@@ -306,8 +306,17 @@ export async function createFlushingStatus(
     if (!did) throw new Error('DID is required');
     if (!emoji) throw new Error('Emoji is required');
     
-    // Use default text if none provided
-    const statusText = text || 'is flushing';
+    // Format text to ensure it starts with "is"
+    let statusText = text ? text.trim() : '';
+    
+    // If text is empty, use default "is flushing"
+    if (!statusText) {
+      statusText = "is flushing";
+    } 
+    // If text doesn't start with "is", add it
+    else if (!statusText.toLowerCase().startsWith("is ")) {
+      statusText = `is ${statusText}`;
+    }
     
     // Use the PDS endpoint if available
     if (!pdsEndpoint) {

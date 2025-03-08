@@ -118,11 +118,23 @@ export default function Home() {
       // If we're authenticated, proceed with creating the status
       console.log('Authentication verified, creating status...');
       
+      // Format status text to ensure it begins with "is"
+      let formattedText = text.trim();
+      
+      // If text is empty, use default "is flushing"
+      if (!formattedText) {
+        formattedText = "is flushing";
+      } 
+      // If text doesn't start with "is", add it
+      else if (!formattedText.toLowerCase().startsWith("is ")) {
+        formattedText = `is ${formattedText}`;
+      }
+      
       const result = await createFlushingStatus(
         accessToken, 
         keyPair, 
         did, 
-        text, 
+        formattedText, 
         selectedEmoji,
         dpopNonce || null,
         pdsEndpoint
@@ -290,7 +302,7 @@ export default function Home() {
                     id="status"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="is flushing"
+                    placeholder="is flushing (all statuses start with 'is')"
                     maxLength={60}
                     className={styles.input}
                     disabled={isSubmitting}
