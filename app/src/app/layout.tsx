@@ -3,8 +3,8 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
-  title: "I'm Flushing",
-  description: 'Share your flushing status with the Bluesky community',
+  title: "Bathroom Status | I'm Flushing",
+  description: 'Share what you\'re doing in the bathroom right now with the Bluesky community',
 };
 
 export default function RootLayout({

@@ -14,11 +14,9 @@
 }
 
 .header h1 {
-  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--primary-color);
   margin: 0;
+  font-weight: bold;
 }
 
 .userInfo {
@@ -66,6 +64,8 @@
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 2rem;
+  border: 1px solid var(--tile-border);
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .description {
@@ -134,27 +134,34 @@
 
 .emojiGrid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.25rem;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: var(--tile-color);
+  border-radius: 8px;
+  border: 1px solid var(--tile-border);
 }
 
 @media (max-width: 600px) {
   .emojiGrid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(8, 1fr);
   }
 }
 
 .emojiButton {
-  background: #f5f5f5;
+  background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   aspect-ratio: 1/1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 0;
 }
 
 .emojiButton:hover {
@@ -163,7 +170,8 @@
 }
 
 .selectedEmoji {
-  background: rgba(91, 173, 240, 0.2);
+  background: var(--secondary-color);
+  color: white;
   border-color: var(--primary-color);
 }
 
@@ -212,4 +220,102 @@
 .submitButton:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
+}
+
+/* Feed styles */
+.feedSection {
+  margin-top: 2rem;
+}
+
+.feedTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--tile-border);
+}
+
+.feedList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.feedItem {
+  background-color: white;
+  border: 1px solid var(--tile-border);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
+}
+
+.feedItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.feedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.authorLink {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.authorLink:hover {
+  text-decoration: underline;
+}
+
+.timestamp {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.emoji {
+  font-size: 1.5rem;
+}
+
+.text {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: #333;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.loader {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin-right: 0.75rem;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

@@ -22,7 +22,7 @@
 }
 
 .refreshButton {
-  background-color: #3897f0;
+  background-color: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
@@ -33,7 +33,7 @@
 }
 
 .refreshButton:hover {
-  background-color: #1877f2;
+  background-color: var(--secondary-color);
 }
 
 .refreshButton:disabled {
@@ -95,11 +95,12 @@
 
 .feedItem {
   background-color: white;
-  border: 1px solid #e1e1e1;
+  border: 1px solid var(--tile-border);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   transition: transform 0.2s, box-shadow 0.2s;
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .feedItem:hover {
@@ -115,7 +116,7 @@
 }
 
 .authorLink {
-  color: #3897f0;
+  color: var(--primary-color);
   font-weight: 600;
   text-decoration: none;
 }
@@ -156,7 +157,7 @@
 .createButton {
   display: inline-block;
   margin-top: 1rem;
-  background-color: #3897f0;
+  background-color: var(--primary-color);
   color: white;
   text-decoration: none;
   border-radius: 4px;
@@ -166,5 +167,5 @@
 }
 
 .createButton:hover {
-  background-color: #1877f2;
+  background-color: var(--secondary-color);
 }

@@ -5,12 +5,26 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { createFlushingStatus, checkAuth } from '@/lib/bluesky-api';
 import styles from './dashboard.module.css';
+import Link from 'next/link';
 
 // List of relevant emojis for flushing situations
 const EMOJIS = [
-  '🚽', '💩', '🧻', '📱', '💧', '🚿', '🛁', '📚', '💭', '💦', '🔊', '🤫', 
-  '⏱️', '⌛', '🧠', '💨', '🙈', '🙉', '😬', '😌', '😓', '😳', '😅', '🥴'
+  '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+  '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+  '1️⃣', '2️⃣', '🟡', '🟤'
 ];
+
+// Types for our feed entries
+interface FlushingEntry {
+  id: string;
+  uri: string;
+  cid: string;
+  authorDid: string;
+  authorHandle: string;
+  text: string;
+  emoji: string;
+  createdAt: string;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,13 +35,56 @@ export default function DashboardPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Feed state
+  const [entries, setEntries] = useState<FlushingEntry[]>([]);
+  const [loadingFeed, setLoadingFeed] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
 
   useEffect(() => {
     // Redirect to home if not authenticated
     if (!isAuthenticated) {
       router.push('/');
+    } else {
+      // Fetch feed when component mounts
+      fetchLatestEntries();
     }
   }, [isAuthenticated, router]);
+  
+  // Function to fetch the latest entries
+  const fetchLatestEntries = async (forceRefresh = false) => {
+    try {
+      setLoadingFeed(true);
+      setFeedError(null);
+      
+      // Call our API endpoint to get the latest entries
+      // Add refresh parameter to bypass cache if needed
+      const url = forceRefresh 
+        ? '/api/bluesky/feed?refresh=true'
+        : '/api/bluesky/feed';
+        
+      const response = await fetch(url, {
+        // Prevent browser caching
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch feed: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setEntries(data.entries);
+    } catch (err: any) {
+      console.error('Error fetching feed:', err);
+      setFeedError(err.message || 'Failed to load feed');
+    } finally {
+      setLoadingFeed(false);
+    }
+  };
 
   // Logout handler
   const handleLogout = () => {
@@ -113,6 +170,11 @@ export default function DashboardPage() {
       // Reset form and show success message
       setText('');
       setSuccess('Your flushing status has been updated!');
+      
+      // Refresh the feed to show the new status
+      setTimeout(() => {
+        fetchLatestEntries(true);
+      }, 1000);
     } catch (err: any) {
       console.error('Failed to update status:', err);
       setError(`Failed to update status: ${err.message || 'Unknown error'}`);
@@ -133,10 +195,10 @@ export default function DashboardPage() {
           <span>Logged in as: @{handle}</span>
           <div className={styles.actions}>
             <button 
-              onClick={() => router.push('/feed')} 
+              onClick={() => fetchLatestEntries(true)} 
               className={styles.feedButton}
             >
-              View Feed
+              Refresh Feed
             </button>
             <button onClick={handleLogout} className={styles.logoutButton}>
               Logout
@@ -165,12 +227,12 @@ export default function DashboardPage() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="What's happening in the bathroom..."
-              maxLength={280}
+              maxLength={60}
               className={styles.input}
               disabled={isSubmitting}
             />
             <div className={styles.charCount}>
-              {text.length}/280
+              {text.length}/60
             </div>
           </div>
 
@@ -209,6 +271,60 @@ export default function DashboardPage() {
             {isSubmitting ? 'Updating...' : 'Update Status'}
           </button>
         </form>
+      </div>
+      
+      {/* Feed Section */}
+      <div className={styles.feedSection}>
+        <div className={styles.feedTitle}>
+          <h2>Recent Bathroom Updates</h2>
+          <button 
+            onClick={() => fetchLatestEntries(true)}
+            disabled={loadingFeed}
+          >
+            {loadingFeed ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        
+        {feedError && <div className={styles.error}>{feedError}</div>}
+        
+        {loadingFeed ? (
+          <div className={styles.loadingContainer}>
+            <div className={styles.loader}></div>
+            <span>Loading feed...</span>
+          </div>
+        ) : (
+          <div className={styles.feedList}>
+            {entries.length > 0 ? (
+              entries.map((entry) => (
+                <div key={entry.id} className={styles.feedItem}>
+                  <div className={styles.feedHeader}>
+                    <a 
+                      href={`https://bsky.app/profile/${entry.authorHandle}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.authorLink}
+                    >
+                      @{entry.authorHandle}
+                    </a>
+                    <span className={styles.timestamp}>
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className={styles.content}>
+                    <span className={styles.emoji}>{entry.emoji}</span>
+                    <span className={styles.text}>
+                      {entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className={styles.emptyState}>
+                <p>No entries found. Be the first to share your status!</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
