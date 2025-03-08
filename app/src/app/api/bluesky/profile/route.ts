@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const MAX_ENTRIES = 50;
+const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
 // Supabase client - using environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -21,43 +22,158 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // If we have Supabase credentials, query the database
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
+    // Step 1: Get the user's DID from their handle
+    let did = handle;
+    // If the handle doesn't look like a DID, resolve it
+    if (!handle.startsWith('did:')) {
       try {
-        let query = supabase
+        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+        
+        if (!resolveResponse.ok) {
+          return NextResponse.json(
+            { error: `Failed to resolve handle: ${resolveResponse.statusText}` },
+            { status: resolveResponse.status }
+          );
+        }
+        
+        const resolveData = await resolveResponse.json();
+        did = resolveData.did;
+      } catch (error: any) {
+        return NextResponse.json(
+          { error: `Failed to resolve handle: ${error.message}` },
+          { status: 500 }
+        );
+      }
+    }
+    
+    // Step 2: Get the PDS service endpoint from PLC directory
+    let serviceEndpoint = 'https://bsky.social'; // Default fallback
+    try {
+      const plcResponse = await fetch(`https://plc.directory/${did}/data`);
+      
+      if (plcResponse.ok) {
+        const plcData = await plcResponse.json();
+        
+        // Extract service endpoint from PLC data
+        if (plcData && plcData.service) {
+          // Find the atproto PDS service
+          const pdsService = plcData.service.find((s: any) => 
+            s.type === 'AtprotoPersonalDataServer' || s.type === 'AtprotoDataServer'
+          );
+          
+          if (pdsService && pdsService.endpoint) {
+            serviceEndpoint = pdsService.endpoint;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.warn(`Failed to get service endpoint from PLC directory: ${error.message}`);
+      // Continue with default endpoint
+    }
+    
+    // Step 3: Call the repo.listRecords API to get the user's flushing statuses
+    try {
+      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+      
+      const recordsResponse = await fetch(listRecordsUrl, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!recordsResponse.ok) {
+        // If failed with one endpoint, try with the default endpoint
+        if (serviceEndpoint !== 'https://bsky.social') {
+          console.warn(`Failed to get records from ${serviceEndpoint}, trying default endpoint`);
+          const fallbackUrl = `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+          
+          const fallbackResponse = await fetch(fallbackUrl, {
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (!fallbackResponse.ok) {
+            return NextResponse.json(
+              { error: `Failed to fetch records: ${fallbackResponse.statusText}` },
+              { status: fallbackResponse.status }
+            );
+          }
+          
+          const fallbackData = await fallbackResponse.json();
+          
+          // Transform the records into our format
+          const transformedEntries = fallbackData.records.map((record: any) => ({
+            id: record.uri,
+            uri: record.uri,
+            cid: record.cid,
+            did: did,
+            text: record.value.text || '',
+            emoji: record.value.emoji || '🚽',
+            created_at: record.value.createdAt
+          }));
+          
+          return NextResponse.json({
+            entries: transformedEntries,
+            count: transformedEntries.length,
+            cursor: fallbackData.cursor
+          });
+        }
+        
+        return NextResponse.json(
+          { error: `Failed to fetch records: ${recordsResponse.statusText}` },
+          { status: recordsResponse.status }
+        );
+      }
+      
+      const recordsData = await recordsResponse.json();
+      
+      // Transform the records into our format
+      const transformedEntries = recordsData.records.map((record: any) => ({
+        id: record.uri,
+        uri: record.uri,
+        cid: record.cid,
+        did: did,
+        text: record.value.text || '',
+        emoji: record.value.emoji || '🚽',
+        created_at: record.value.createdAt
+      }));
+      
+      return NextResponse.json({
+        entries: transformedEntries,
+        count: transformedEntries.length,
+        cursor: recordsData.cursor
+      });
+    } catch (error: any) {
+      console.error('Error fetching records:', error);
+      
+      // If we have Supabase as a fallback, try that
+      if (supabaseUrl && supabaseKey) {
+        console.log('Falling back to Supabase records');
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        const { data: entries, error: dbError, count } = await supabase
           .from('flushing_records')
-          .select('*', { count: 'exact' });
-          
-        // Handle can be either a handle or a DID
-        // First try with the handle as is
-        query = query.eq('did', handle);
-          
-        // Order by created_at descending and limit
-        const { data: entries, error, count } = await query
+          .select('*', { count: 'exact' })
+          .eq('did', did)
           .order('created_at', { ascending: false })
           .limit(MAX_ENTRIES);
         
-        if (error) {
-          console.error('Supabase query error:', error);
-          throw new Error(`Failed to fetch profile statuses: ${error.message}`);
+        if (dbError) {
+          return NextResponse.json(
+            { error: `Database error: ${dbError.message}` },
+            { status: 500 }
+          );
         }
         
         return NextResponse.json({
           entries: entries || [],
           count: count || 0
         });
-      } catch (dbError: any) {
-        console.error('Database error:', dbError);
-        return NextResponse.json(
-          { error: 'Failed to fetch profile statuses', details: dbError.message },
-          { status: 500 }
-        );
       }
-    } else {
+      
       return NextResponse.json(
-        { error: 'Supabase credentials not configured' },
+        { error: `Failed to fetch records: ${error.message}` },
         { status: 500 }
       );
     }
