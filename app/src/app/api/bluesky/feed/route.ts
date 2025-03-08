@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { BskyAgent } from '@atproto/api';
+import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 // Define type for our database entry
 interface FlushingRecord {
@@ -86,6 +87,14 @@ export async function GET(request: NextRequest) {
         const authorDid = entry.did;
         const authorHandle = await resolveDidToHandle(authorDid) || 'unknown';
         
+        // Skip entries with banned content
+        if (containsBannedWords(entry.text)) {
+          return null;
+        }
+        
+        // Sanitize text just in case
+        const sanitizedText = sanitizeText(entry.text);
+        
         // Return the processed entry in the format the client expects
         return {
           id: entry.id,
@@ -93,17 +102,18 @@ export async function GET(request: NextRequest) {
           cid: entry.cid,
           authorDid: authorDid,
           authorHandle: authorHandle,
-          text: entry.text,
+          text: sanitizedText, // Use sanitized text
           emoji: entry.emoji,
           createdAt: entry.created_at
         } as ProcessedEntry;
       }));
       
-      // Update the cache
-      cachedEntries = processedEntries;
+      // Filter out null entries (those with banned content) and update the cache
+      const filteredEntries = processedEntries.filter(entry => entry !== null) as ProcessedEntry[];
+      cachedEntries = filteredEntries;
       lastFetchTime = now;
       
-      return NextResponse.json({ entries: processedEntries });
+      return NextResponse.json({ entries: filteredEntries });
     } else {
       // If no Supabase credentials, fall back to mock data
       console.log('No Supabase credentials, using mock data');
@@ -128,38 +138,40 @@ export async function GET(request: NextRequest) {
 // This is used when Supabase is not configured
 function getMockEntries(): ProcessedEntry[] {
   // Create some mock entries for testing
-  const mockEntries: ProcessedEntry[] = [
-    {
-      id: '1',
-      uri: 'at://did:plc:12345/im.flushing.right.now/1',
-      cid: 'bafyreiabc123',
-      authorDid: 'did:plc:12345',
-      authorHandle: 'alice.bsky.social',
-      text: 'Taking a quick break at work',
-      emoji: '🚽',
-      createdAt: new Date(Date.now() - 15 * 60000).toISOString() // 15 minutes ago
-    },
-    {
-      id: '2',
-      uri: 'at://did:plc:67890/im.flushing.right.now/2',
-      cid: 'bafyreiabc456',
-      authorDid: 'did:plc:67890',
-      authorHandle: 'bob.bsky.social',
-      text: 'Reading the news on my phone',
-      emoji: '📱',
-      createdAt: new Date(Date.now() - 45 * 60000).toISOString() // 45 minutes ago
-    },
-    {
-      id: '3',
-      uri: 'at://did:plc:abcdef/im.flushing.right.now/3',
-      cid: 'bafyreiabc789',
-      authorDid: 'did:plc:abcdef',
-      authorHandle: 'charlie.bsky.social',
-      text: 'Just finished a great book chapter',
-      emoji: '📚',
-      createdAt: new Date(Date.now() - 120 * 60000).toISOString() // 2 hours ago
-    }
+  const mockTexts = [
+    'is taking a quick break at work',
+    'is reading the news on my phone',
+    'is scrolling through bluesky',
+    'is just finished a great book chapter',
+    'is getting some alone time',
+    'is answering nature\'s call',
+    'is contemplating life decisions'
   ];
+  
+  // Create and filter mock entries
+  const mockEntries: ProcessedEntry[] = [];
+  const handles = ['alice.bsky.social', 'bob.bsky.social', 'charlie.bsky.social', 'dana.bsky.social'];
+  const emojis = ['🚽', '📱', '📚', '💩', '🧻', '💭', '😌'];
+  
+  for (let i = 0; i < 6; i++) {
+    const text = mockTexts[i % mockTexts.length];
+    
+    // Skip any mock entries that might contain banned words
+    if (containsBannedWords(text)) {
+      continue;
+    }
+    
+    mockEntries.push({
+      id: `mock${i + 1}`,
+      uri: `at://did:plc:mock${i + 1}/im.flushing.right.now/${i + 1}`,
+      cid: `bafyreiabc${i + 100}`,
+      authorDid: `did:plc:mock${i + 1}`,
+      authorHandle: handles[i % handles.length],
+      text: sanitizeText(text), // Apply sanitization to be extra safe
+      emoji: emojis[i % emojis.length],
+      createdAt: new Date(Date.now() - (i + 1) * 15 * 60000).toISOString() // Staggered times
+    });
+  }
   
   return mockEntries;
 }

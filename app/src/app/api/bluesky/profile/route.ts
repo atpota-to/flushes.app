@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const MAX_ENTRIES = 50;
@@ -102,16 +103,27 @@ export async function GET(request: NextRequest) {
           
           const fallbackData = await fallbackResponse.json();
           
-          // Transform the records into our format
-          const transformedEntries = fallbackData.records.map((record: any) => ({
-            id: record.uri,
-            uri: record.uri,
-            cid: record.cid,
-            did: did,
-            text: record.value.text || '',
-            emoji: record.value.emoji || '🚽',
-            created_at: record.value.createdAt
-          }));
+          // Transform the records into our format and filter out banned content
+          const transformedEntries = fallbackData.records
+            .map((record: any) => {
+              const text = record.value.text || '';
+              
+              // Skip entries with banned content
+              if (containsBannedWords(text)) {
+                return null;
+              }
+              
+              return {
+                id: record.uri,
+                uri: record.uri,
+                cid: record.cid,
+                did: did,
+                text: sanitizeText(text), // Sanitize text
+                emoji: record.value.emoji || '🚽',
+                created_at: record.value.createdAt
+              };
+            })
+            .filter(entry => entry !== null); // Remove filtered entries
           
           return NextResponse.json({
             entries: transformedEntries,
@@ -128,16 +140,27 @@ export async function GET(request: NextRequest) {
       
       const recordsData = await recordsResponse.json();
       
-      // Transform the records into our format
-      const transformedEntries = recordsData.records.map((record: any) => ({
-        id: record.uri,
-        uri: record.uri,
-        cid: record.cid,
-        did: did,
-        text: record.value.text || '',
-        emoji: record.value.emoji || '🚽',
-        created_at: record.value.createdAt
-      }));
+      // Transform the records into our format and filter out banned content
+      const transformedEntries = recordsData.records
+        .map((record: any) => {
+          const text = record.value.text || '';
+          
+          // Skip entries with banned content
+          if (containsBannedWords(text)) {
+            return null;
+          }
+          
+          return {
+            id: record.uri,
+            uri: record.uri,
+            cid: record.cid,
+            did: did,
+            text: sanitizeText(text), // Sanitize text
+            emoji: record.value.emoji || '🚽',
+            created_at: record.value.createdAt
+          };
+        })
+        .filter(entry => entry !== null); // Remove filtered entries
       
       return NextResponse.json({
         entries: transformedEntries,
@@ -166,9 +189,25 @@ export async function GET(request: NextRequest) {
           );
         }
         
+        // Filter and sanitize entries from Supabase
+        const filteredEntries = (entries || [])
+          .map((entry: any) => {
+            // Skip entries with banned content
+            if (containsBannedWords(entry.text)) {
+              return null;
+            }
+            
+            // Return sanitized entry
+            return {
+              ...entry,
+              text: sanitizeText(entry.text || '')
+            };
+          })
+          .filter(entry => entry !== null);
+        
         return NextResponse.json({
-          entries: entries || [],
-          count: count || 0
+          entries: filteredEntries,
+          count: filteredEntries.length // Update count to reflect filtered entries
         });
       }
       

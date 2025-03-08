@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 // This is the default API URL, but we'll use the user's PDS endpoint instead if available
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
@@ -23,12 +24,26 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Check for banned words in the text
+    if (containsBannedWords(text)) {
+      return NextResponse.json(
+        { 
+          error: 'ContentViolation', 
+          message: 'Your post contains inappropriate content that violates our community guidelines.' 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Sanitize the text just in case (defensive programming)
+    const sanitizedText = sanitizeText(text);
+    
     const apiUrl = `${pdsEndpoint}/xrpc`;
     
     // Create the record
     const record = {
       $type: FLUSHING_STATUS_NSID,
-      text,
+      text: sanitizedText, // Use the sanitized text
       emoji,
       createdAt: new Date().toISOString()
     };
