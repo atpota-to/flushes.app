@@ -29,6 +29,23 @@
   margin: 0;
 }
 
+.creditLine {
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  color: #888;
+}
+
+.kofiLink {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.kofiLink:hover {
+  text-decoration: underline;
+}
+
 .headerActions {
   display: flex;
   gap: 1rem;
@@ -38,6 +55,13 @@
 .userInfo {
   color: #555;
   font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.userInfo:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
 }
 
 .logoutButton {

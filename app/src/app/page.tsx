@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { useAuth } from '@/lib/auth-context';
+import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 // Types for feed entries
 interface FlushingEntry {
@@ -18,6 +20,7 @@ interface FlushingEntry {
 }
 
 export default function Home() {
+  const router = useRouter();
   const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
   
   // Status update state
@@ -62,6 +65,12 @@ export default function Home() {
     
     if (!pdsEndpoint) {
       setStatusError('PDS endpoint is missing. Cannot proceed without it.');
+      return;
+    }
+    
+    // Check for banned words
+    if (text && containsBannedWords(text)) {
+      setStatusError('Your status contains inappropriate language. Please revise it.');
       return;
     }
 
@@ -192,13 +201,17 @@ export default function Home() {
         <div className={styles.headerContent}>
           <h1 className={styles.title}>I&apos;m Flushing</h1>
           <p className={styles.description}>
-            Share your bathroom status with the Bluesky community
+            Share your bathroom status with the Bluesky community<br />
+            <span className={styles.creditLine}>
+              Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
+              <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>
+            </span>
           </p>
         </div>
         <div className={styles.headerActions}>
           {isAuthenticated ? (
             <>
-              <span className={styles.userInfo}>@{handle}</span>
+              <Link href={`/profile/${handle}`} className={styles.userInfo}>@{handle}</Link>
               <button onClick={handleLogout} className={styles.logoutButton}>
                 Logout
               </button>
@@ -258,21 +271,13 @@ export default function Home() {
                     id="status"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="What's happening in the bathroom... (optional)"
+                    placeholder="is flushing"
                     maxLength={60}
                     className={styles.input}
                     disabled={isSubmitting}
                   />
                   <div className={styles.charCount}>
                     {text.length}/60
-                  </div>
-                </div>
-
-                <div className={styles.preview}>
-                  <div className={styles.previewTitle}>Preview:</div>
-                  <div className={styles.previewContent}>
-                    <span className={styles.previewEmoji}>{selectedEmoji}</span>
-                    <span>{text || 'is flushing'}</span>
                   </div>
                 </div>
 
@@ -320,17 +325,15 @@ export default function Home() {
                   <div className={styles.content}>
                     <div className={styles.contentLeft}>
                       <span className={styles.emoji}>{entry.emoji}</span>
-                      <a 
-                        href={`https://bsky.app/profile/${entry.authorHandle}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link 
+                        href={`/profile/${entry.authorHandle}`}
                         className={styles.authorLink}
                       >
                         @{entry.authorHandle}
-                      </a>
+                      </Link>
                       <span className={styles.text}>
                         {entry.text ? 
-                          (entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text) : 
+                          (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text)) : 
                           'is flushing'}
                       </span>
                     </div>

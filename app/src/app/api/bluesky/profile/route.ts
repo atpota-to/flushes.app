@@ -1,7 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
+const MAX_ENTRIES = 50;
 
+// Supabase client - using environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// GET user's flushing statuses
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const handle = searchParams.get('handle');
+    
+    if (!handle) {
+      return NextResponse.json(
+        { error: 'Missing handle parameter' },
+        { status: 400 }
+      );
+    }
+    
+    // If we have Supabase credentials, query the database
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      try {
+        let query = supabase
+          .from('flushing_records')
+          .select('*', { count: 'exact' });
+          
+        // Handle can be either a handle or a DID
+        // First try with the handle as is
+        query = query.eq('did', handle);
+          
+        // Order by created_at descending and limit
+        const { data: entries, error, count } = await query
+          .order('created_at', { ascending: false })
+          .limit(MAX_ENTRIES);
+        
+        if (error) {
+          console.error('Supabase query error:', error);
+          throw new Error(`Failed to fetch profile statuses: ${error.message}`);
+        }
+        
+        return NextResponse.json({
+          entries: entries || [],
+          count: count || 0
+        });
+      } catch (dbError: any) {
+        console.error('Database error:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to fetch profile statuses', details: dbError.message },
+          { status: 500 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Supabase credentials not configured' },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('Profile statuses API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch profile statuses', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// POST for authenticated profile information
 export async function POST(request: NextRequest) {
   try {
     const { accessToken, dpopToken, handle, pdsEndpoint } = await request.json();
@@ -102,7 +171,7 @@ export async function OPTIONS() {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, DPoP',
     },
   });
