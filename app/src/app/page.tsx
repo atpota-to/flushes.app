@@ -55,6 +55,21 @@ export default function Home() {
     setSelectedEmoji(emoji);
   };
   
+  // Check rate limit - 2 posts per 30 minutes
+  const checkRateLimit = (): boolean => {
+    const now = Date.now();
+    const thirtyMinutesAgo = now - 30 * 60 * 1000; // 30 minutes in milliseconds
+    
+    // Filter entries to get only the user's entries from the last 30 minutes
+    const userRecentEntries = entries.filter(entry => 
+      entry.authorDid === did && 
+      new Date(entry.createdAt).getTime() > thirtyMinutesAgo
+    );
+    
+    // Return true if under limit, false if over limit
+    return userRecentEntries.length < 2;
+  };
+  
   // Submit flushing status
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +87,12 @@ export default function Home() {
     // Check for banned words
     if (text && containsBannedWords(text)) {
       setStatusError('Your status contains inappropriate language. Please revise it.');
+      return;
+    }
+    
+    // Check rate limit - 2 posts per 30 minutes
+    if (!checkRateLimit()) {
+      setStatusError("Trying to make more than 2 flushes in 30 minutes?? Might be time to get the plunger. 🪠");
       return;
     }
 

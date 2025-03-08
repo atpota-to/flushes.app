@@ -590,7 +590,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px; /* Smaller on mobile */
+    max-width: 180px; /* Increased width on mobile */
   }
   
   /* Second line: status text */
@@ -652,4 +652,5 @@
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
+  line-height: 1.5;
 }
