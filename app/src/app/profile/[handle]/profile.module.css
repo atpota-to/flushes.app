@@ -246,7 +246,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .content {
     flex-direction: column;
     gap: 0.25rem;
