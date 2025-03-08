@@ -4,10 +4,10 @@ import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
   title: "im.flushing",
-  description: 'The world\'s first decentralized social media app for sharing when you\'re on the toilet. Connect with other bathroom enjoyers all over the world by posting "flushes"!',
+  description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
   openGraph: {
     title: 'im.flushing',
-    description: 'The world\'s first decentralized bathroom status network. Post your flushes and connect with other bathroom enjoyers.',
+    description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
     url: 'https://flushing.im',
     siteName: 'im.flushing',
     images: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'im.flushing',
-    description: 'The world\'s first decentralized bathroom status network. Post your flushes and connect with other bathroom enjoyers.',
+    description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
     images: ['https://flushing.im/og-image.png'],
   }
 };
