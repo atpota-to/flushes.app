@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       }));
       
       // Filter out null entries (those with banned content) and update the cache
-      const filteredEntries = processedEntries.filter(entry => entry !== null) as ProcessedEntry[];
+      const filteredEntries = processedEntries.filter((entry): entry is ProcessedEntry => entry !== null);
       cachedEntries = filteredEntries;
       lastFetchTime = now;
       

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
                 created_at: record.value.createdAt
               };
             })
-            .filter(entry => entry !== null); // Remove filtered entries
+            .filter((entry): entry is any => entry !== null); // Remove filtered entries
           
           return NextResponse.json({
             entries: transformedEntries,
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
             created_at: record.value.createdAt
           };
         })
-        .filter(entry => entry !== null); // Remove filtered entries
+        .filter((entry): entry is any => entry !== null); // Remove filtered entries
       
       return NextResponse.json({
         entries: transformedEntries,
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
               text: sanitizeText(entry.text || '')
             };
           })
-          .filter(entry => entry !== null);
+          .filter((entry): entry is any => entry !== null);
         
         return NextResponse.json({
           entries: filteredEntries,
