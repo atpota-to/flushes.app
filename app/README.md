@@ -6,8 +6,9 @@ A React/Next.js application that allows users to login with their Bluesky accoun
 
 - Bluesky OAuth authentication
 - Custom lexicon schema for status updates
-- Emoji selection
+- Emoji selection 
 - Responsive design
+- Feed of all users' flushing status updates
 
 ## Tech Stack
 
@@ -15,6 +16,8 @@ A React/Next.js application that allows users to login with their Bluesky accoun
 - React
 - TypeScript
 - Bluesky AT Protocol
+- Supabase (for feed storage)
+- WebSockets (for firehose connection)
 
 ## Local Development
 
@@ -25,13 +28,23 @@ A React/Next.js application that allows users to login with their Bluesky accoun
 npm install
 ```
 
-3. Start the development server:
+3. Create a `.env.local` file based on `.env.example` and add your Supabase credentials
+
+4. Start the development server:
 
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+6. For the firehose connection (optional, for feed functionality):
+   - Set up a Supabase project with the SQL in the `sql/setup.sql` file
+   - Run the firehose worker script on a server:
+
+```bash
+node scripts/firehose-worker.js
+```
 
 ## Deployment
 

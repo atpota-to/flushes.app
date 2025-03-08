@@ -14,6 +14,9 @@ export default function Home() {
           <Link href="/auth/login" className={styles.loginButton}>
             Login with Bluesky
           </Link>
+          <Link href="/feed" className={styles.feedButton}>
+            View Feed
+          </Link>
         </div>
       </div>
     </div>

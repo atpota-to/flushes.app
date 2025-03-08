@@ -131,9 +131,17 @@ export default function DashboardPage() {
         <h1>I&apos;m Flushing Dashboard</h1>
         <div className={styles.userInfo}>
           <span>Logged in as: @{handle}</span>
-          <button onClick={handleLogout} className={styles.logoutButton}>
-            Logout
-          </button>
+          <div className={styles.actions}>
+            <button 
+              onClick={() => router.push('/feed')} 
+              className={styles.feedButton}
+            >
+              View Feed
+            </button>
+            <button onClick={handleLogout} className={styles.logoutButton}>
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 

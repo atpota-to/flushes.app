@@ -29,6 +29,10 @@
 
 .btnContainer {
   margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
 }
 
 .loginButton {
@@ -46,5 +50,23 @@
   background-color: var(--secondary-color);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  text-decoration: none;
+}
+
+.feedButton {
+  display: inline-block;
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.8rem 1.5rem;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.feedButton:hover {
+  background-color: rgba(91, 173, 240, 0.1);
+  transform: translateY(-2px);
   text-decoration: none;
 }
