@@ -7,20 +7,23 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
 .headerContent {
-  flex: 1;
+  flex: 1 1 300px;
+  min-width: 0;
 }
 
 .title {
   font-size: 2.5rem;
   margin-bottom: 0.25rem;
   color: var(--primary-color);
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 .subtitle {
@@ -28,12 +31,15 @@
   color: #888;
   margin: 0 0 0.5rem 0;
   font-weight: normal;
+  word-wrap: break-word;
 }
 
 .description {
   font-size: 1.1rem;
   color: #666;
   margin: 0;
+  line-height: 1.5;
+  word-wrap: break-word;
 }
 
 .creditLine {
@@ -57,6 +63,27 @@
   display: flex;
   gap: 1rem;
   align-items: center;
+}
+
+@media (max-width: 600px) {
+  .header {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .headerContent {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+  
+  .headerActions {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
 }
 
 .userInfo {
@@ -201,6 +228,12 @@
 @media (max-width: 600px) {
   .emojiGrid {
     grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 400px) {
+  .emojiGrid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -354,26 +387,32 @@
 
 .content {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   justify-content: space-between;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .contentLeft {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .emoji {
   font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .authorLink {
   color: var(--primary-color);
   font-weight: 600;
   text-decoration: none;
+  word-break: break-all;
 }
 
 .authorLink:hover {
@@ -384,11 +423,30 @@
   font-size: 1.1rem;
   line-height: 1.4;
   color: #333;
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .timestamp {
   font-size: 0.85rem;
   color: #888;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .contentLeft {
+    margin-bottom: 0.5rem;
+  }
+  
+  .timestamp {
+    width: 100%;
+    text-align: right;
+    margin-top: 0.25rem;
+  }
 }
 
 .loadingContainer {

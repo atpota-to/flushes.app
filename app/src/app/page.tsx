@@ -220,7 +220,7 @@ export default function Home() {
           <h1 className={styles.title}>im.flushing.right.now</h1>
           <p className={styles.subtitle}>https://flushing.im</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized bathroom status social media app. Powered by the AT Protocol.<br />
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet and connecting with other bathroom enjoyers all over the world. Powered by the AT Protocol.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
               <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> Contribute to my toilet paper fund here.</a>

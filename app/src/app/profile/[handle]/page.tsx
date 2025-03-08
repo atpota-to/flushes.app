@@ -68,7 +68,7 @@ export default function ProfilePage() {
           <h1 className={styles.title}>im.flushing.right.now</h1>
           <p className={styles.subtitle}>https://flushing.im</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized bathroom status social media app. Powered by the AT Protocol.
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet and connecting with other bathroom enjoyers all over the world. Powered by the AT Protocol.
           </p>
         </div>
         <div className={styles.headerActions}>
