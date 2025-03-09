@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         // Process and return older entries (skip caching)
         const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
           const authorDid = entry.did;
-          const authorHandle = await resolveDidToHandle(authorDid) || 'unknown';
+          const authorHandle = await resolveDidToHandle(authorDid);
           
           if (containsBannedWords(entry.text)) {
             return null;
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
       const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
         // Resolve handle from DID
         const authorDid = entry.did;
-        const authorHandle = await resolveDidToHandle(authorDid) || 'unknown';
+        const authorHandle = await resolveDidToHandle(authorDid);
         
         // Skip entries with banned content
         if (containsBannedWords(entry.text)) {
@@ -250,19 +250,55 @@ function getMockEntries(): ProcessedEntry[] {
 }
 
 // Function to attempt to resolve a DID to a handle
-// First tries PLC directory, then falls back to Bluesky API if needed
-async function resolveDidToHandle(did: string): Promise<string | null> {
+// First tries PLC directory, then tries Bluesky API as a fallback
+async function resolveDidToHandle(did: string): Promise<string> {
   try {
-    // Try PLC directory first (faster and doesn't require auth)
+    // Create a fallback shortened DID to use if all else fails
+    const shortDid = did.startsWith('did:plc:') ? 
+      `${did.substring(0, 13)}...` : 
+      `${did.substring(0, 10)}...`;
+    
+    // Try PLC directory first - most reliable and doesn't require auth
     if (did && did.startsWith('did:plc:')) {
-      const plcResponse = await fetch(`https://plc.directory/${did}/data`);
-      if (plcResponse.ok) {
-        const plcData = await plcResponse.json();
-        if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
-          // alsoKnownAs contains values like 'at://user.bsky.social'
-          const handle = plcData.alsoKnownAs[0].split('//')[1];
-          if (handle) return handle;
+      try {
+        console.log(`Trying PLC directory for DID: ${did}`);
+        const plcResponse = await fetch(`https://plc.directory/${did}`);
+        
+        if (plcResponse.ok) {
+          const plcData = await plcResponse.json();
+          if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+            // alsoKnownAs contains values like 'at://user.bsky.social'
+            for (const aka of plcData.alsoKnownAs) {
+              if (aka.startsWith('at://')) {
+                const handle = aka.split('//')[1];
+                if (handle) {
+                  console.log(`Resolved ${did} to handle ${handle} via PLC directory`);
+                  return handle;
+                }
+              }
+            }
+          }
         }
+        
+        // Try alternate PLC directory endpoint format
+        const altPlcResponse = await fetch(`https://plc.directory/${did}/data`);
+        if (altPlcResponse.ok) {
+          const altPlcData = await altPlcResponse.json();
+          if (altPlcData && altPlcData.alsoKnownAs && altPlcData.alsoKnownAs.length > 0) {
+            for (const aka of altPlcData.alsoKnownAs) {
+              if (aka.startsWith('at://')) {
+                const handle = aka.split('//')[1];
+                if (handle) {
+                  console.log(`Resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
+                  return handle;
+                }
+              }
+            }
+          }
+        }
+      } catch (plcError) {
+        console.warn(`Failed to resolve handle from PLC directory for DID ${did}:`, plcError);
+        // Continue to next method
       }
     }
     
@@ -270,15 +306,25 @@ async function resolveDidToHandle(did: string): Promise<string | null> {
     console.log(`Falling back to Bluesky API for DID: ${did}`);
     try {
       // Try to resolve DID directly with Bluesky API
-      await agent.login({ identifier: 'user.bsky.social', password: 'none' });
+      await agent.login({ identifier: '', password: '' });
       const response = await agent.getProfile({ actor: did });
-      return response.data.handle;
+      if (response?.data?.handle) {
+        console.log(`Resolved ${did} to handle ${response.data.handle} via Bluesky API`);
+        return response.data.handle;
+      }
     } catch (apiError) {
       console.error(`Failed to resolve handle with Bluesky API for DID ${did}:`, apiError);
-      return null;
     }
+    
+    // If we get here, all resolution methods failed
+    console.log(`All resolution methods failed for ${did}, using shortened DID: ${shortDid}`);
+    return shortDid;
   } catch (error) {
     console.error(`Failed to resolve handle for DID ${did}:`, error);
-    return null;
+    // Last resort fallback is the shortened DID
+    const shortDid = did.startsWith('did:plc:') ? 
+      `${did.substring(0, 13)}...` : 
+      `${did.substring(0, 10)}...`;
+    return shortDid;
   }
 }

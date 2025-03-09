@@ -30,9 +30,9 @@
   max-width: 500px;
   width: 100%;
   padding: 2rem;
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--shadow-color);
   text-align: center;
 }
 
@@ -42,14 +42,14 @@
 }
 
 .subtitle {
-  color: #666;
+  color: var(--timestamp-color);
   font-size: 1.1rem;
   margin: 0 0 1rem 0;
   font-style: italic;
 }
 
 .description {
-  color: #666;
+  color: var(--text-color);
   margin-bottom: 1.5rem;
   line-height: 1.5;
 }
@@ -62,15 +62,17 @@
 .input {
   flex: 1;
   padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-right: none;
   border-radius: 4px 0 0 4px;
   font-size: 1rem;
+  background-color: var(--input-background);
+  color: var(--text-color);
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--primary-color);
+  border-color: var(--input-focus-border);
 }
 
 .loginButton {
@@ -94,7 +96,7 @@
 }
 
 .helpText {
-  color: #888;
+  color: var(--timestamp-color);
   font-size: 0.9rem;
   margin-top: 0.5rem;
 }
@@ -133,7 +135,7 @@
   }
   
   .input {
-    border-right: 1px solid #ccc;
+    border-right: 1px solid var(--input-border);
     border-radius: 4px;
     margin-bottom: 0.5rem;
   }

@@ -62,15 +62,23 @@ export default function ProfileSearch() {
           ? query.trim().substring(1) 
           : query.trim();
 
+        console.log('Fetching suggestions for:', searchTerm);
         const response = await fetch(`/api/bluesky/search?q=${encodeURIComponent(searchTerm)}`);
         
+        const data = await response.json();
+        
         if (response.ok) {
-          const data = await response.json();
+          console.log('Search suggestions:', data.suggestions);
           setSuggestions(data.suggestions);
+          setShowSuggestions(true);
+        } else {
+          console.error('Search API error:', data.error, data.message);
+          setSuggestions([]);
           setShowSuggestions(true);
         }
       } catch (error) {
         console.error('Failed to fetch suggestions:', error);
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }

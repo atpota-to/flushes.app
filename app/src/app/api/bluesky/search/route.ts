@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { BskyAgent } from '@atproto/api';
 
 // Configure this route as dynamic to fix static generation issues
 export const dynamic = 'force-dynamic';
@@ -15,27 +14,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] }, { status: 200 });
     }
     
-    // Create a Bluesky agent instance
-    const agent = new BskyAgent({
-      service: 'https://bsky.social'
+    // Make a direct fetch request to the Bluesky API endpoint
+    const apiUrl = `https://bsky.social/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(term)}&limit=5`;
+    
+    console.log('Fetching from API:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      }
     });
     
-    // The Bluesky API requires login even for public APIs,
-    // but we can use a fake login with empty credentials for this purpose
-    await agent.login({ identifier: '', password: '' });
-    
-    // Make a request to the typeahead API
-    const response = await agent.app.bsky.actor.searchActorsTypeahead({
-      term,
-      limit: 5
-    });
-    
-    if (!response.success) {
-      throw new Error('Failed to fetch user suggestions');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API response error:', response.status, errorText);
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
+    const data = await response.json();
+    
     // Format the response for the client
-    const suggestions = response.data.actors.map(actor => ({
+    const suggestions = data.actors.map((actor: any) => ({
       did: actor.did,
       handle: actor.handle,
       displayName: actor.displayName,

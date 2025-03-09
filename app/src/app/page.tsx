@@ -461,6 +461,7 @@ export default function Home() {
                             </Link>
                             <span className={styles.text}>
                               {entry.text ? (
+                                // Check if handle ends with .is
                                 entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
                                   // For handles ending with .is, remove the "is" prefix if it exists
                                   (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
@@ -470,6 +471,7 @@ export default function Home() {
                                   // For regular handles, display normal text
                                   (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
                               ) : (
+                                // If no text, show default message
                                 entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
                                   'flushing' : 'is flushing'
                               )}
