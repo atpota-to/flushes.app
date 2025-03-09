@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
       service: 'https://bsky.social'
     });
     
-    // Make an unauthenticated request to the typeahead API
+    // The Bluesky API requires login even for public APIs,
+    // but we can use a fake login with empty credentials for this purpose
+    await agent.login({ identifier: '', password: '' });
+    
+    // Make a request to the typeahead API
     const response = await agent.app.bsky.actor.searchActorsTypeahead({
       term,
       limit: 5
