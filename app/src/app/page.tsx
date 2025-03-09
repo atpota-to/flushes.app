@@ -199,18 +199,21 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      // Call our API endpoint to get the latest entries
+      // Add a timestamp to the URL to ensure we bypass any caching
+      const timestamp = Date.now();
       const url = forceRefresh 
-        ? '/api/bluesky/feed?refresh=true'
-        : '/api/bluesky/feed';
+        ? `/api/bluesky/feed?refresh=true&_t=${timestamp}`
+        : `/api/bluesky/feed?_t=${timestamp}`;
         
       console.log(`Fetching feed from ${url} at ${new Date().toISOString()}`);
       
       const response = await fetch(url, {
+        method: 'GET',
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
@@ -462,30 +465,51 @@ export default function Home() {
                 // Request with a unique timestamp to completely bypass any caching
                 const timestamp = Date.now();
                 const url = `/api/bluesky/feed?refresh=true&_t=${timestamp}`;
-                console.log(`MANUAL REFRESH @ ${new Date().toISOString()}`);
+                console.log(`🔄 MANUAL REFRESH @ ${new Date().toISOString()}`);
                 console.log(`Using URL: ${url}`);
                 
+                // Use strong no-cache headers to ensure browsers don't use cached responses
                 const response = await fetch(url, {
                   method: 'GET',
                   cache: 'no-store',
                   headers: {
                     'Cache-Control': 'no-cache, no-store, must-revalidate',
                     'Pragma': 'no-cache',
-                    'Expires': '0'
+                    'Expires': '0',
+                    'X-Force-Fresh-Data': 'true' // Custom header to signal intent
                   }
                 });
                 
                 if (!response.ok) {
+                  console.error(`API error: ${response.status}, ${response.statusText}`);
                   throw new Error(`API error: ${response.status}`);
                 }
+                
+                // Attempt to extract response headers for debugging
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
                 
                 const data = await response.json();
                 console.log(`Refresh received ${data.entries?.length || 0} entries`);
                 
                 if (data.entries && data.entries.length > 0) {
-                  console.log(`Highest ID from refresh: ${data.entries[0].id}`);
+                  console.log(`🔍 Highest ID from refresh: ${data.entries[0].id}`);
                   for (let i = 0; i < Math.min(5, data.entries.length); i++) {
                     console.log(`  ${i+1}. ID: ${data.entries[i].id}, Handle: @${data.entries[i].authorHandle}, Text: "${data.entries[i].text.substring(0, 20)}..."`);
+                  }
+                  
+                  // Compare with current entries
+                  if (entries.length > 0) {
+                    const currentHighestId = entries[0].id;
+                    const newHighestId = data.entries[0].id;
+                    console.log(`📊 Comparison - Current highest ID: ${currentHighestId}, New highest ID: ${newHighestId}`);
+                    
+                    if (newHighestId > currentHighestId) {
+                      console.log('✅ Refresh successful! New entries are more recent.');
+                    } else if (newHighestId === currentHighestId) {
+                      console.log('⚠️ Refresh returned same highest ID - no newer entries available.');
+                    } else {
+                      console.warn('❌ WARNING: New entries have lower IDs than existing ones!');
+                    }
                   }
                 } else {
                   console.log('No entries returned from refresh');

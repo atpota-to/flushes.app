@@ -202,9 +202,10 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // IMPORTANT: We're disabling the cache completely to ensure we always get fresh data
-    // This is because we're having issues with stale data
-    if (false && !forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
+    // We're completely disabling server-side caching to ensure we always get fresh data
+    // This is because we've been having issues with stale data
+    // In a future update, we may re-enable caching with proper invalidation
+    if (false) { // This condition will never be true
       console.log('Returning cached entries');
       return NextResponse.json({ entries: cachedEntries });
     }
@@ -223,7 +224,7 @@ export async function GET(request: NextRequest) {
       console.log(`Querying database for latest ${MAX_ENTRIES} entries at ${new Date().toISOString()}...`);
       
       // Debug log the SQL query we're about to execute
-      console.log('SQL Query: SELECT id, uri, cid, did, text, emoji, created_at, handle FROM flushing_records ORDER BY created_at DESC LIMIT 20');
+      console.log('SQL Query: SELECT id, uri, cid, did, text, emoji, created_at, handle FROM flushing_records ORDER BY id DESC LIMIT 20');
       
       // First, let's check what's the highest ID in the database to debug
       const { data: maxIdResult } = await supabase
@@ -252,26 +253,46 @@ export async function GET(request: NextRequest) {
       let entries;
       
       try {
-        // First try: Get entries with highest IDs
-        const { data: idSortedEntries, error: idSortError } = await supabase
+        // Direct SQL query to get the most recent entries by ID
+        const { data: directSqlEntries, error: directSqlError } = await supabase
           .from('flushing_records')
           .select('*')
           .order('id', { ascending: false })
           .limit(MAX_ENTRIES);
-        
-        if (idSortError) {
-          throw idSortError;
+          
+        if (directSqlError) {
+          console.error('❌ Direct SQL query failed:', directSqlError);
+        } else if (directSqlEntries && directSqlEntries.length > 0) {
+          console.log('✅ Direct SQL query successful');
+          console.log(`Direct SQL query found entries with IDs: ${directSqlEntries.slice(0, 5).map(e => e.id).join(', ')}...`);
+          entries = directSqlEntries;
         }
         
-        if (idSortedEntries && idSortedEntries.length > 0) {
-          console.log('✅ ID-sorted query successful');
-          console.log(`ID-sorted query found entries with IDs: ${idSortedEntries.slice(0, 5).map(e => e.id).join(', ')}...`);
-          entries = idSortedEntries;
+        // If we already have results, no need to try other approaches
+        if (entries && entries.length > 0) {
+          console.log('Using entries from direct SQL query');
         } else {
-          console.warn('⚠️ ID-sorted query returned no entries');
+          // Regular approach: Get entries with highest IDs
+          const { data: idSortedEntries, error: idSortError } = await supabase
+            .from('flushing_records')
+            .select('*')
+            .order('id', { ascending: false })
+            .limit(MAX_ENTRIES);
+          
+          if (idSortError) {
+            throw idSortError;
+          }
+          
+          if (idSortedEntries && idSortedEntries.length > 0) {
+            console.log('✅ ID-sorted query successful');
+            console.log(`ID-sorted query found entries with IDs: ${idSortedEntries.slice(0, 5).map(e => e.id).join(', ')}...`);
+            entries = idSortedEntries;
+          } else {
+            console.warn('⚠️ ID-sorted query returned no entries');
+          }
         }
       } catch (err) {
-        console.error('❌ Error with ID-sorted query:', err);
+        console.error('❌ Error with queries:', err);
       }
       
       // If first query failed, try a different approach
