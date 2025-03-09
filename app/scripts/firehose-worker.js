@@ -1,63 +1,65 @@
 const WebSocket = require("ws");
-const { createClient } = require("@supabase/supabase-js");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") }); // Load environment variables from .env file in app root
 
 const JETSTREAM_URL = "wss://jetstream2.us-west.bsky.network/subscribe";
 const FLUSHING_STATUS_NSID = "im.flushing.right.now";
+const LOG_FILE = path.resolve(__dirname, "flushing-logs.jsonl");
 
-// Supabase setup from .env file
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+console.log("Starting firehose worker with file storage");
+console.log(`Will save records to: ${LOG_FILE}`);
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error("Missing Supabase credentials. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env file");
-    process.exit(1);
+// Create log directory if needed
+const logDir = path.dirname(LOG_FILE);
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Function to append records to a log file
+function saveRecord(record) {
+    return new Promise((resolve, reject) => {
+        const logEntry = JSON.stringify(record) + "\n";
+        fs.appendFile(LOG_FILE, logEntry, (err) => {
+            if (err) {
+                console.error("Error writing to log file:", err);
+                reject(err);
+            } else {
+                resolve({ success: true });
+            }
+        });
+    });
+}
 
-// Ensure the table exists
-async function setupDatabase() {
+// Test file writing on startup
+async function setupSystem() {
     try {
-        console.log("Setting up database...");
+        console.log("Testing file logging system...");
         
-        // Check if the table already exists
-        const { error: queryError } = await supabase
-            .from('flushing_records')
-            .select('id', { count: 'exact', head: true });
+        // Test if we can write to the log file
+        const testRecord = {
+            type: "startup",
+            timestamp: new Date().toISOString(),
+            message: "Firehose worker started"
+        };
         
-        // If no error, table exists
-        if (!queryError) {
-            console.log("Table 'flushing_records' already exists");
-            return;
+        await saveRecord(testRecord);
+        console.log("✅ File logging test successful");
+        
+        // Create stats counter file if it doesn't exist
+        const statsFile = path.resolve(__dirname, "flushing-stats.json");
+        if (!fs.existsSync(statsFile)) {
+            const initialStats = {
+                total_records: 0,
+                start_time: new Date().toISOString(),
+                last_update: new Date().toISOString()
+            };
+            fs.writeFileSync(statsFile, JSON.stringify(initialStats, null, 2));
+            console.log("Created new stats file");
         }
         
-        // Create the table using SQL
-        const { error: sqlError } = await supabase.sql`
-            CREATE TABLE IF NOT EXISTS flushing_records (
-                id SERIAL PRIMARY KEY,
-                did TEXT NOT NULL,
-                collection TEXT NOT NULL,
-                type TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-                emoji TEXT,
-                text TEXT,
-                cid TEXT NOT NULL,
-                uri TEXT UNIQUE NOT NULL,
-                indexed_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-            );
-            
-            CREATE INDEX IF NOT EXISTS flushing_records_did_idx ON flushing_records(did);
-        `;
-        
-        if (sqlError) {
-            console.error("Error creating table:", sqlError);
-            process.exit(1);
-        }
-        console.log("Table created successfully");
     } catch (err) {
-        console.error("Error setting up database:", err);
+        console.error("Error setting up file logging:", err);
         process.exit(1);
     }
 }
@@ -125,27 +127,10 @@ function connect() {
                 const uri = "at://" + authorDid + "/" + recordPath;
                 console.log("URI:", uri);
 
-                // Save to Supabase
+                // Save to log file
                 try {
-                    // Check if record already exists
-                    const { data: existingData, error: checkError } = await supabase
-                        .from("flushing_records")
-                        .select("id")
-                        .eq("uri", uri)
-                        .limit(1);
-
-                    if (checkError) {
-                        console.error("Error checking for existing record:", checkError.message);
-                        return;
-                    }
-
-                    if (existingData && existingData.length > 0) {
-                        console.log("Record already exists, skipping");
-                        return;
-                    }
-
-                    // Insert new record
-                    const newRecord = {
+                    // Create a record with all the info we need - matching structure
+                    const flushingRecord = {
                         did: authorDid,
                         collection: message.commit.collection,
                         type: recordType,
@@ -153,20 +138,50 @@ function connect() {
                         emoji: recordEmoji,
                         text: recordText,
                         cid: cid,
-                        uri: uri
+                        uri: uri,
+                        handle: "unknown", // We'll add real handle resolution later
+                        indexed_at: new Date().toISOString()
                     };
-
-                    const { error: insertError } = await supabase
-                        .from("flushing_records")
-                        .insert(newRecord);
-
-                    if (insertError) {
-                        console.error("Error saving record:", insertError.message);
+                    
+                    // Save to file
+                    console.log("Saving record to log file...");
+                    const result = await saveRecord(flushingRecord);
+                    
+                    if (result.success) {
+                        console.log("Record saved successfully!");
+                        
+                        // Update stats counter
+                        try {
+                            const statsFile = path.resolve(__dirname, "flushing-stats.json");
+                            let stats = { total_records: 0 };
+                            
+                            if (fs.existsSync(statsFile)) {
+                                stats = JSON.parse(fs.readFileSync(statsFile, 'utf8'));
+                            }
+                            
+                            stats.total_records++;
+                            stats.last_update = new Date().toISOString();
+                            
+                            fs.writeFileSync(statsFile, JSON.stringify(stats, null, 2));
+                            
+                            // Only log every 10 records to reduce noise
+                            if (flushingFoundCount % 10 === 0) {
+                                console.log(`Total records processed: ${stats.total_records}`);
+                            }
+                        } catch (statsErr) {
+                            console.error("Error updating stats:", statsErr.message);
+                        }
                     } else {
-                        console.log("Record saved successfully");
+                        console.error("Failed to save record to file");
                     }
+                    
+                    // Keep track of how many records we've processed
+                    if (flushingFoundCount % 50 === 0) {
+                        console.log(`Processed ${flushingFoundCount} flushing records in this session`);
+                    }
+                    
                 } catch (err) {
-                    console.error("Error interacting with database:", err.message);
+                    console.error("Error processing record:", err.message);
                 }
             }
         } catch (err) {
@@ -186,7 +201,7 @@ function connect() {
 
 // Start the worker
 async function start() {
-    await setupDatabase();
+    await setupSystem();
     connect();
 }
 

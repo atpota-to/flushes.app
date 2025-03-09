@@ -73,6 +73,10 @@ export default function FeedPage() {
         </p>
       </header>
 
+      <div className={styles.notice}>
+        ⚠️ The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
+      </div>
+      
       <div className={styles.controls}>
         <button 
           onClick={() => fetchLatestEntries(true)} 

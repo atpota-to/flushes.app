@@ -64,6 +64,17 @@
   margin-bottom: 1rem;
 }
 
+.notice {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #ff9800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
 .loadingContainer {
   display: flex;
   flex-direction: column;
