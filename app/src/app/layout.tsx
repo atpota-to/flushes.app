@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
+import { ThemeProvider } from '@/lib/theme-context';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export const metadata: Metadata = {
   title: "im.flushing",
@@ -38,7 +40,18 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <main>{children}</main>
+          <ThemeProvider>
+            <header style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              padding: '0.5rem 1rem',
+              backgroundColor: 'var(--card-background)',
+              borderBottom: '1px solid var(--tile-border)'
+            }}>
+              <ThemeToggle />
+            </header>
+            <main>{children}</main>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

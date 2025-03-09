@@ -1,9 +1,109 @@
+/* Light mode variables */
 :root {
   --primary-color: #5badf0;
-  --secondary-color: #6d4aff;
+  --secondary-color: #1968a8;
   --background-color: #f9f9f9;
+  --card-background: #ffffff;
   --text-color: #333;
+  --title-color: #272727;
   --error-color: #ff5252;
+  --error-background: #ffebee;
+  --success-background: rgba(76, 175, 80, 0.1);
+  --success-text: #4caf50;
+  --notice-background: #fff3e0;
+  --notice-text: #e65100;
+  --notice-border: #ff9800;
+  --input-background: #ffffff;
+  --input-border: #ddd;
+  --input-focus-border: #5badf0;
+  --input-prefix-background: #f8f8f8;
+  --button-background: #f1f1f1;
+  --button-text: #444;
+  --button-hover: #e5e5e5;
+  --button-disabled: #f5f5f5;
+  --button-disabled-text: #aaa;
+  --chart-bar: #5badf0;
+  --chart-background: #f8f9fa;
+  --timestamp-color: #888;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --emoji-button-bg: #f5f5f5;
+  --emoji-button-border: #ddd;
+  --emoji-grid-bg: #fcfcfc;
+  --tile-border: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode variables */
+[data-theme="dark"] {
+  --primary-color: #5badf0;
+  --secondary-color: #69c0ff;
+  --background-color: #121212;
+  --card-background: #1e1e1e;
+  --text-color: #dddddd;
+  --title-color: #e0e0e0;
+  --error-color: #ff7070;
+  --error-background: #4a161a;
+  --success-background: rgba(76, 175, 80, 0.2);
+  --success-text: #7dff83;
+  --notice-background: #3d2e15;
+  --notice-text: #ffae5e;
+  --notice-border: #ff9800;
+  --input-background: #2d2d2d;
+  --input-border: #444;
+  --input-focus-border: #5badf0;
+  --input-prefix-background: #252525;
+  --button-background: #2d2d2d;
+  --button-text: #e0e0e0;
+  --button-hover: #3a3a3a;
+  --button-disabled: #252525;
+  --button-disabled-text: #666;
+  --chart-bar: #5badf0;
+  --chart-background: #252525;
+  --timestamp-color: #aaa;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --emoji-button-bg: #2d2d2d;
+  --emoji-button-border: #444;
+  --emoji-grid-bg: #252525;
+  --tile-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Automatically use dark mode if user prefers it */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --primary-color: #5badf0;
+    --secondary-color: #69c0ff;
+    --background-color: #121212;
+    --card-background: #1e1e1e;
+    --text-color: #dddddd;
+    --title-color: #e0e0e0;
+    --error-color: #ff7070;
+    --error-background: #4a161a;
+    --success-background: rgba(76, 175, 80, 0.2);
+    --success-text: #7dff83;
+    --notice-background: #3d2e15;
+    --notice-text: #ffae5e;
+    --notice-border: #ff9800;
+    --input-background: #2d2d2d;
+    --input-border: #444;
+    --input-focus-border: #5badf0;
+    --input-prefix-background: #252525;
+    --button-background: #2d2d2d;
+    --button-text: #e0e0e0;
+    --button-hover: #3a3a3a;
+    --button-disabled: #252525;
+    --button-disabled-text: #666;
+    --chart-bar: #5badf0;
+    --chart-background: #252525;
+    --timestamp-color: #aaa;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --emoji-button-bg: #2d2d2d;
+    --emoji-button-border: #444;
+    --emoji-grid-bg: #252525;
+    --tile-border: rgba(255, 255, 255, 0.1);
+  }
+  
+  body {
+    color-scheme: dark;
+  }
 }
 
 * {
@@ -61,9 +161,9 @@ button:hover {
 }
 
 .card {
-  background: white;
+  background: var(--card-background);
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px var(--shadow-color);
   padding: 2rem;
   margin: 1rem 0;
   width: 100%;
@@ -84,9 +184,11 @@ button:hover {
 .form-group select {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   font-size: 1rem;
+  background-color: var(--input-background);
+  color: var(--text-color);
 }
 
 .error {

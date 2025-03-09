@@ -60,20 +60,18 @@ export default function ProfilePage() {
       
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
-        // Calculate flushes per day
-        const sortedEntries = [...userEntries].sort((a: FlushingEntry, b: FlushingEntry) => 
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
+        // Calculate actual active days count (days with at least one flush)
+        const dateSet = new Set<string>();
+        userEntries.forEach((entry: FlushingEntry) => {
+          const date = new Date(entry.created_at);
+          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          dateSet.add(dateKey);
+        });
         
-        if (sortedEntries.length > 1) {
-          const firstDate = new Date(sortedEntries[0].created_at);
-          const lastDate = new Date(sortedEntries[sortedEntries.length - 1].created_at);
-          const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
-          const perDay = parseFloat((sortedEntries.length / daysDiff).toFixed(1));
-          setFlushesPerDay(perDay);
-        } else {
-          setFlushesPerDay(1); // Just one flush on a single day
-        }
+        // Calculate true average: total flushes divided by number of active days
+        const activeDaysCount = Math.max(1, dateSet.size);
+        const perDay = parseFloat((userEntries.length / activeDaysCount).toFixed(1));
+        setFlushesPerDay(perDay);
         
         // Generate chart data (group by day)
         const chartDataMap = new Map<string, number>();
@@ -148,7 +146,7 @@ export default function ProfilePage() {
           <h3 className={styles.statsHeader}>Flushing Statistics</h3>
           <p className={styles.statDetails}>
             {totalCount} total {totalCount === 1 ? 'flush' : 'flushes'}
-            {flushesPerDay > 0 && `, ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per day`}
+            {flushesPerDay > 0 && `, averaging ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per active day`}
           </p>
           
           {chartData.length > 0 ? (
@@ -183,7 +181,7 @@ export default function ProfilePage() {
                 className={styles.shareStatsButton}
                 onClick={() => {
                   // Open a new window to compose a post on Bluesky
-                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (or ${flushesPerDay} per day)` : ''} on @flushing.im. Flush with me here: https://flushing.im/profile/${handle}`;
+                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (averaging ${flushesPerDay} per active day)` : ''} on @flushing.im. Flush with me here: https://flushing.im/profile/${handle}`;
                   window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
                 }}
               >

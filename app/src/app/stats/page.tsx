@@ -157,7 +157,7 @@ export default function StatsPage() {
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.flushesPerDay}</div>
-                <div className={styles.statLabel}>Flushes Per Day</div>
+                <div className={styles.statLabel}>Flushes Per Active Day</div>
               </div>
             </div>
           </section>
@@ -236,7 +236,7 @@ export default function StatsPage() {
               className={styles.shareButton}
               onClick={() => {
                 // Generate share text
-                const statsText = `There have been ${statsData.totalCount} flushes on @flushing.im! That's ${statsData.flushesPerDay} flushes per day. Check out the stats and leaderboard: https://flushing.im/stats`;
+                const statsText = `There have been ${statsData.totalCount} flushes on @flushing.im! That's averaging ${statsData.flushesPerDay} flushes per active day. Check out the stats and leaderboard: https://flushing.im/stats`;
                 window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
               }}
             >

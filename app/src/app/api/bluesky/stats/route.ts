@@ -50,14 +50,13 @@ export async function GET(request: NextRequest) {
         .map(([date, count]): {date: string, count: number} => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
       
-      // Calculate flushes per day
+      // Calculate flushes per day based on actual active days
       let flushesPerDay = 0;
       if (chartData.length > 0 && totalCount !== null) {
-        // Calculate days between first and last flush
-        const firstDate = new Date(chartData[0].date);
-        const lastDate = new Date(chartData[chartData.length - 1].date);
-        const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
-        flushesPerDay = parseFloat(((totalCount || 0) / daysDiff).toFixed(1));
+        // Use the number of days with at least one flush (which is the length of chartData)
+        // This gives us the actual active days count
+        const activeDaysCount = chartData.length;
+        flushesPerDay = parseFloat(((totalCount || 0) / activeDaysCount).toFixed(1));
       }
       
       // 3. Get top flushers (leaderboard)

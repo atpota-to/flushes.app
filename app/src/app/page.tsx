@@ -55,8 +55,14 @@ export default function Home() {
     setSelectedEmoji(emoji);
   };
   
-  // Check rate limit - 2 posts per 30 minutes
+  // Check rate limit - 2 posts per 30 minutes, except for the plumber account
   const checkRateLimit = (): boolean => {
+    // Exempt the plumber account from rate limiting
+    if (did === 'did:plc:fouf3svmcxzn6bpiw3lgwz22') {
+      console.log('Plumber account detected - bypassing rate limits');
+      return true; // Always return true (under limit) for the plumber account
+    }
+    
     const now = Date.now();
     const thirtyMinutesAgo = now - 30 * 60 * 1000; // 30 minutes in milliseconds
     
@@ -86,13 +92,13 @@ export default function Home() {
     
     // Check for banned words
     if (text && containsBannedWords(text)) {
-      setStatusError('Your status contains inappropriate language. Please revise it.');
+      setStatusError('Uh oh, looks like you have a potty mouth. Try flushing again, but go a bit easier on the language please... this is a semi-family-friendly restroom');
       return;
     }
     
-    // Check rate limit - 2 posts per 30 minutes
+    // Check rate limit - 2 posts per 30 minutes (except for the plumber account)
     if (!checkRateLimit()) {
-      setStatusError("Trying to make more than 2 flushes in 30 minutes?? Might be time to get the plunger. 🪠");
+      setStatusError("Trying to make more than 2 flushes in 30 minutes?? Might be time to get the plunger. 🪠 Regular users are limited to 2 flushes per 30 minutes.");
       return;
     }
 
@@ -238,6 +244,9 @@ export default function Home() {
   // Function to load older entries
   const loadOlderEntries = async () => {
     try {
+      // Save current scroll position
+      const scrollPosition = window.scrollY;
+      
       setLoading(true);
       setError(null);
       
@@ -267,6 +276,15 @@ export default function Home() {
       if (data.entries && data.entries.length > 0) {
         // Append the new entries to our existing list
         setEntries([...entries, ...data.entries]);
+        
+        // Wait for DOM to update with new entries
+        setTimeout(() => {
+          // Restore scroll position after state update and render
+          window.scrollTo({
+            top: scrollPosition,
+            behavior: 'instant' // Use instant to avoid additional animation
+          });
+        }, 0);
       }
     } catch (err: any) {
       console.error('Error fetching older entries:', err);
@@ -466,7 +484,10 @@ export default function Home() {
                     
                     <button 
                       className={styles.loadMoreButton}
-                      onClick={loadOlderEntries}
+                      onClick={(e) => {
+                        e.preventDefault(); // Prevent default action
+                        loadOlderEntries();
+                      }}
                       disabled={loading}
                     >
                       {loading ? 'Loading...' : 'Load older flushes'}

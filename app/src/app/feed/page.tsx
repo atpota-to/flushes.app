@@ -67,6 +67,9 @@ export default function FeedPage() {
   // Function to load older entries
   const loadOlderEntries = async () => {
     try {
+      // Save current scroll position
+      const scrollPosition = window.scrollY;
+      
       setLoading(true);
       setError(null);
       
@@ -96,6 +99,15 @@ export default function FeedPage() {
       if (data.entries && data.entries.length > 0) {
         // Append the new entries to our existing list
         setEntries([...entries, ...data.entries]);
+        
+        // Wait for DOM to update with new entries
+        setTimeout(() => {
+          // Restore scroll position after state update and render
+          window.scrollTo({
+            top: scrollPosition,
+            behavior: 'instant' // Use instant to avoid additional animation
+          });
+        }, 0);
       }
     } catch (err: any) {
       console.error('Error fetching older entries:', err);
@@ -170,7 +182,10 @@ export default function FeedPage() {
             
             <button 
               className={styles.loadMoreButton}
-              onClick={loadOlderEntries}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent default action
+                loadOlderEntries();
+              }}
               disabled={loading}
             >
               {loading ? 'Loading...' : 'Load older flushes'}

@@ -1,0 +1,37 @@
+.themeToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--button-background);
+  color: var(--button-text);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.themeToggle:hover {
+  background-color: var(--button-hover);
+}
+
+.themeToggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.themeLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .themeToggle {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .themeLabel {
+    display: none;
+  }
+}

@@ -2,13 +2,13 @@
 // These words will be filtered from all posts in the application
 const BANNED_WORDS: string[] = [
   // Generic offensive terms
-  'offensive', 'inappropriate', 'slur',
+  'slur',
   
   // Hate speech related
   'racist', 'bigot', 'bigotry', 'homophobic', 'transphobic',
   
   // Profanity
-  'shit', 'fuck', 'damn', 'ass', 'asshole', 'bitch',
+  'fuck', 'damn', 'ass', 'asshole', 'bitch',
   
   // Violence
   'kill', 'murder', 'attack', 'violence', 'harm', 'hurt',
@@ -20,9 +20,6 @@ const BANNED_WORDS: string[] = [
   'penis', 'vagina', 'dick', 'cock', 'pussy', 'sex',
   'masturbate', 'orgasm', 'horny', 'erection', 
   'blowjob', 'handjob',
-  
-  // Bathroom-inappropriate terms (since this is a family-friendly app)
-  'diarrhea', 'constipation', 'explosive', 'bloody',
   
   // Spam-related
   'viagra', 'cialis', 'enlarge', 'cryptocurrency', 'bitcoin', 'ethereum',
