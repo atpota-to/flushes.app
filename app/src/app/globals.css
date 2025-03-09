@@ -161,12 +161,20 @@ button:hover {
 }
 
 .card {
-  background: var(--card-background);
+  background-color: var(--card-background);
+  border: 1px solid var(--tile-border);
   border-radius: 8px;
-  box-shadow: 0 2px 10px var(--shadow-color);
-  padding: 2rem;
+  padding: 1.5rem;
   margin: 1rem 0;
   width: 100%;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 .form-group {

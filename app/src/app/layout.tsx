@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
 import ThemeToggle from '@/components/ThemeToggle';
 import ClientOnly from '@/components/ClientOnly';
+import ProfileSearch from '@/components/ProfileSearch';
 
 // Configure this layout as having dynamic runtime to fix SSR issues with theme
 export const dynamic = 'force-dynamic';
@@ -47,13 +48,27 @@ export default function RootLayout({
           <ThemeProvider>
             <header style={{ 
               display: 'flex', 
-              justifyContent: 'flex-end', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
               padding: '0.5rem 1rem',
               backgroundColor: 'var(--card-background)',
               borderBottom: '1px solid var(--tile-border)'
             }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <a href="/" style={{ 
+                  textDecoration: 'none', 
+                  fontWeight: 'bold',
+                  color: 'var(--primary-color)',
+                  fontSize: '1.25rem'
+                }}>
+                  im.flushing
+                </a>
+              </div>
               <ClientOnly>
-                <ThemeToggle />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <ProfileSearch />
+                  <ThemeToggle />
+                </div>
               </ClientOnly>
             </header>
             <main>{children}</main>
