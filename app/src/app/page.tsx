@@ -358,7 +358,7 @@ export default function Home() {
           <div className={styles.feedHeaderLeft}>
             <h2>Recent flushes</h2>
             <p className={styles.feedSubheader}>
-              Click on a username to see their custom flushing profile. 
+              Click on a username to see their flushing profile. 
               <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
             </p>
           </div>
