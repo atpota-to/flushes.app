@@ -669,3 +669,18 @@
   margin-bottom: 1rem;
   line-height: 1.5;
 }
+
+.notice {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid #ff9800;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}

@@ -354,6 +354,10 @@ export default function Home() {
 
       {/* Feed Section */}
       <div className={styles.feedSection}>
+        <div className={styles.notice}>
+          <strong>⚠️ NOTICE:</strong> The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
+        </div>
+        
         <div className={styles.feedHeader}>
           <div className={styles.feedHeaderLeft}>
             <h2>Recent flushes</h2>
