@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './feed.module.css';
 import { formatRelativeTime } from '@/lib/time-utils';
+import { useAuth } from '@/lib/auth-context';
 
 // Types for our feed entries
 interface FlushingEntry {
@@ -21,6 +22,7 @@ export default function FeedPage() {
   const [entries, setEntries] = useState<FlushingEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated, handle } = useAuth();
 
   useEffect(() => {
     // Fetch the latest entries when the component mounts
@@ -68,6 +70,11 @@ export default function FeedPage() {
     <div className={styles.container}>
       <div className={styles.notice}>
         <strong>⚠️ NOTICE:</strong> The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
+        {isAuthenticated && handle && (
+          <div className={styles.noticePersonal}>
+            You can also see your flushes on your flush profile: <a href={`/profile/${handle}`} className={styles.noticeLink}>flushing.im/profile/{handle}</a>
+          </div>
+        )}
       </div>
       
       <header className={styles.header}>

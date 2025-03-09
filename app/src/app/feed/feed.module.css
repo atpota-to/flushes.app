@@ -76,6 +76,25 @@
   line-height: 1.4;
   text-align: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+.noticePersonal {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(255, 152, 0, 0.3);
+}
+
+.noticeLink {
+  color: #e65100;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.noticeLink:hover {
+  color: #f57c00;
 }
 
 .loadingContainer {
