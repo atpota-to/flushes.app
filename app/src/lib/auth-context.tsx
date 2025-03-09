@@ -52,7 +52,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const storedHandle = localStorage.getItem('handle');
       const storedKeyPair = localStorage.getItem('keyPair');
       const storedDpopNonce = localStorage.getItem('dpopNonce');
-      const storedPdsEndpoint = localStorage.getItem('pdsEndpoint');
+      
+      // Special handling for PDS endpoint - check all possible storage locations
+      let storedPdsEndpoint = localStorage.getItem('pdsEndpoint');
+      
+      // If not found, try our auth-prefixed format
+      if (!storedPdsEndpoint) {
+        storedPdsEndpoint = localStorage.getItem('bsky_auth_pdsEndpoint');
+      }
+      
+      // Last resort - check sessionStorage
+      if (!storedPdsEndpoint && typeof sessionStorage !== 'undefined') {
+        try {
+          storedPdsEndpoint = sessionStorage.getItem('pdsEndpoint');
+        } catch (e) {
+          console.warn('Failed to check sessionStorage for PDS endpoint:', e);
+        }
+      }
 
       if (storedAccessToken && storedDid && storedKeyPair) {
         setAccessToken(storedAccessToken);

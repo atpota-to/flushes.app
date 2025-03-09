@@ -245,18 +245,37 @@ function CallbackHandler() {
           pdsEndpoint: pdsEndpoint // Store the PDS endpoint for later use
         });
 
-        // Clear all auth-related storage items
+        // Save the final PDS endpoint to use
+        // Prioritize the one from token extraction, then the stored one
+        const finalPdsEndpoint = pdsEndpoint || storedPdsEndpoint;
+        
+        // Clear only the temporary auth-related items
         clearAuthData('oauth_state');
         clearAuthData('code_verifier');
         clearAuthData('key_pair');
-        clearAuthData('pds_endpoint');
         clearAuthData('auth_server');
         
-        // Also try to clear any leftover sessionStorage items
-        try {
-          sessionStorage.clear();
-        } catch (e) {
-          console.warn('Failed to clear session storage:', e);
+        // IMPORTANT: Do NOT clear pdsEndpoint since we need it for API calls!
+        
+        // Special handling for PDS endpoint - make sure it's in localStorage 
+        // as both a regular key and in our auth format
+        if (finalPdsEndpoint) {
+          console.log('Ensuring PDS endpoint is saved for API calls:', finalPdsEndpoint);
+          
+          // Save directly to localStorage for legacy code
+          localStorage.setItem('pdsEndpoint', finalPdsEndpoint);
+          
+          // Also save in our auth format
+          localStorage.setItem('bsky_auth_pdsEndpoint', finalPdsEndpoint);
+          
+          // And in sessionStorage for good measure
+          try {
+            sessionStorage.setItem('pdsEndpoint', finalPdsEndpoint);
+          } catch (e) {
+            console.warn('Could not save pdsEndpoint to sessionStorage:', e);
+          }
+        } else {
+          console.warn('No PDS endpoint found to save. API calls may fail.');
         }
 
         // Redirect to home page

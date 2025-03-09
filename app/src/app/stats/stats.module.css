@@ -4,20 +4,130 @@
   padding: 2rem 1rem;
 }
 
+/* Main Header - Copied from dashboard styles */
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerContent {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--primary-color);
+  word-wrap: break-word;
+  hyphens: auto;
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #888;
+  margin: 0 0 0.5rem 0;
+  font-weight: normal;
+  word-wrap: break-word;
+}
+
+.description {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.creditLine {
+  display: block;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  color: #888;
+}
+
+.kofiLink {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.kofiLink:hover {
+  text-decoration: underline;
+}
+
+.headerActions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.userInfo {
+  color: #555;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.userInfo:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.logoutButton {
+  background-color: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logoutButton:hover {
+  background-color: rgba(91, 173, 240, 0.1);
+}
+
+.loginButton {
+  display: inline-block;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.loginButton:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Stats Page Specific Styles */
+.statsHeader {
   text-align: center;
   margin-bottom: 2rem;
 }
 
-.header h1 {
-  font-size: 2.5rem;
+.statsHeader h2 {
+  font-size: 2rem;
   margin-bottom: 0.5rem;
   color: var(--primary-color);
 }
 
-.subtitle {
+.statsSubtitle {
   color: #666;
   font-size: 1.2rem;
+  margin: 0;
 }
 
 .controls {
@@ -273,11 +383,36 @@
     padding: 1rem;
   }
   
-  .header h1 {
-    font-size: 1.8rem;
+  /* Header responsive styles - from main page */
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .headerContent {
+    flex: 1 1 100%;
+    text-align: left;
+  }
+  
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .title {
+    font-size: 2rem;
   }
   
   .subtitle {
+    font-size: 1rem;
+  }
+  
+  /* Stats page specific responsive */
+  .statsHeader h2 {
+    font-size: 1.7rem;
+  }
+  
+  .statsSubtitle {
     font-size: 1rem;
   }
   

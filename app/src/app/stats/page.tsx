@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './stats.module.css';
 import { formatRelativeTime } from '@/lib/time-utils';
+import { useAuth } from '@/lib/auth-context';
 
 interface StatsData {
   totalCount: number;
@@ -13,9 +14,15 @@ interface StatsData {
 }
 
 export default function StatsPage() {
+  const { isAuthenticated, handle, clearAuth } = useAuth();
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Function to handle logout
+  const handleLogout = () => {
+    clearAuth();
+  };
 
   useEffect(() => {
     // Fetch stats data when the component mounts
@@ -80,11 +87,39 @@ export default function StatsPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Plumbing Stats 🪠</h1>
-        <p className={styles.subtitle}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.title}>im.flushing 🧻</h1>
+          <p className={styles.subtitle}>https://flushing.im 🚽</p>
+          <p className={styles.description}>
+            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
+            <span className={styles.creditLine}>
+              Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
+              Like the app? Consider contributing to <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>my toilet paper fund</a>.
+            </span>
+          </p>
+        </div>
+        <div className={styles.headerActions}>
+          {isAuthenticated ? (
+            <>
+              <Link href={`/profile/${handle}`} className={styles.userInfo}>@{handle}</Link>
+              <button onClick={handleLogout} className={styles.logoutButton}>
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link href="/auth/login" className={styles.loginButton}>
+              Login with Bluesky
+            </Link>
+          )}
+        </div>
+      </header>
+      
+      <div className={styles.statsHeader}>
+        <h2>Plumbing Stats 🪠</h2>
+        <p className={styles.statsSubtitle}>
           Global statistics for the im.flushing network
         </p>
-      </header>
+      </div>
 
       <div className={styles.controls}>
         <button 
