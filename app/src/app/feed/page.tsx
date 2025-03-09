@@ -66,16 +66,16 @@ export default function FeedPage() {
 
   return (
     <div className={styles.container}>
+      <div className={styles.notice}>
+        <strong>⚠️ NOTICE:</strong> The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
+      </div>
+      
       <header className={styles.header}>
         <h1>Flushing Feed</h1>
         <p className={styles.subtitle}>
           See what everyone is doing in the bathroom right now
         </p>
       </header>
-
-      <div className={styles.notice}>
-        ⚠️ The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
-      </div>
       
       <div className={styles.controls}>
         <button 
