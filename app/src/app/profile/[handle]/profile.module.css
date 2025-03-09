@@ -29,7 +29,7 @@
 
 .subtitle {
   font-size: 1rem;
-  color: #888;
+  color: var(--timestamp-color);
   margin: 0 0 0.5rem 0;
   font-weight: normal;
   word-wrap: break-word;
@@ -37,7 +37,7 @@
 
 .description {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-color);
   margin: 0;
   line-height: 1.5;
   word-wrap: break-word;
@@ -46,7 +46,7 @@
 .profileHeader {
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #e1e1e1;
+  border-bottom: 1px solid var(--tile-border);
 }
 
 .profileInfo {
@@ -64,7 +64,7 @@
 
 .profileStats {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-color);
   margin: 0;
 }
 
@@ -84,24 +84,25 @@
 
 /* Stats section and chart */
 .statsSection {
-  background-color: white;
+  background-color: var(--card-background);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e1e1e1;
+  box-shadow: 0 2px 5px var(--shadow-color);
+  border: 1px solid var(--tile-border);
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .statsHeader {
   font-size: 1.2rem;
   font-weight: 500;
   margin: 0 0 1rem 0;
-  color: #444;
+  color: var(--title-color);
 }
 
 .statDetails {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-color);
 }
 
 .chartContainer {
@@ -109,7 +110,7 @@
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  border-bottom: 1px solid #e1e1e1;
+  border-bottom: 1px solid var(--tile-border);
   margin-top: 1rem;
   padding-top: 1rem;
   position: relative;
@@ -127,7 +128,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 0.5rem;
-  color: #999;
+  color: var(--timestamp-color);
   font-size: 0.8rem;
 }
 
@@ -139,7 +140,7 @@
 
 .chartLegendItem {
   font-size: 0.75rem;
-  color: #888;
+  color: var(--timestamp-color);
 }
 
 .shareStatsButton {
@@ -159,11 +160,11 @@
 .shareStatsButton:hover {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 .noDataMessage {
-  color: #888;
+  color: var(--timestamp-color);
   text-align: center;
   padding: 2rem 0;
   font-style: italic;
@@ -224,12 +225,12 @@
 .backButton:hover {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 .error {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: var(--error-background);
+  color: var(--error-color);
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -245,7 +246,7 @@
 }
 
 .loader {
-  border: 4px solid #f3f3f3;
+  border: 4px solid var(--input-background);
   border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   width: 24px;
@@ -267,17 +268,18 @@
 }
 
 .feedItem {
-  background-color: white;
-  border: 1px solid #e1e1e1;
+  background-color: var(--card-background);
+  border: 1px solid var(--tile-border);
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 5px var(--shadow-color);
   transition: transform 0.2s, box-shadow 0.2s;
+  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .feedItem:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 @media (max-width: 600px) {
@@ -285,7 +287,7 @@
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px var(--shadow-color);
   }
   
   .feedList {
@@ -294,7 +296,7 @@
   
   .feedItem:hover {
     transform: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px var(--shadow-color);
   }
   
   .content {
@@ -391,7 +393,7 @@
 .text {
   font-size: 1.1rem;
   line-height: 1.4;
-  color: #333;
+  color: var(--text-color);
   flex: 1;
   min-width: 0;
   word-wrap: break-word;
@@ -401,7 +403,7 @@
 
 .timestamp {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--timestamp-color);
   margin-left: auto;
   white-space: nowrap;
 }
@@ -427,6 +429,7 @@
     margin-top: 0;
     padding-left: 0.25rem;
     font-size: 0.8rem;
+    color: var(--timestamp-color);
   }
   
   .emoji {
@@ -442,7 +445,7 @@
 .emptyState {
   text-align: center;
   padding: 2rem;
-  background-color: #f9f9f9;
+  background-color: var(--background-color);
   border-radius: 8px;
-  border: 1px dashed #ccc;
+  border: 1px dashed var(--tile-border);
 }

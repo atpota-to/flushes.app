@@ -81,9 +81,9 @@ export default function ThemeToggle() {
   };
 
   const getLabel = () => {
-    if (themeState === 'light') return 'Light';
-    if (themeState === 'dark') return 'Dark';
-    return 'System';
+    if (themeState === 'light') return 'Lights On';
+    if (themeState === 'dark') return 'Lights Off';
+    return 'System Lights';
   };
 
   // During SSR or before mounting, render a placeholder that won't try to use the context
@@ -91,7 +91,7 @@ export default function ThemeToggle() {
     return (
       <button className={styles.themeToggle} aria-label="Theme toggle">
         <LightIcon />
-        <span className={styles.themeLabel}>Theme</span>
+        <span className={styles.themeLabel}>Lights On</span>
       </button>
     );
   }
