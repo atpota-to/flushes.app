@@ -50,8 +50,30 @@ export default function LoginPage() {
         return;
       }
       
-      // Get authorization URL using the PDS endpoint
-      const { url, state, codeVerifier, keyPair } = await getAuthorizationUrl(pdsEndpoint);
+      // Check if this is a bsky.network PDS
+      const isBskyNetwork = hostname?.includes('bsky.network') || false;
+      
+      // For bsky.network endpoints, use the default AUTH_SERVER (bsky.social)
+      // For other PDS servers, use their actual endpoint
+      let authUrl, state, codeVerifier, keyPair;
+      
+      if (isBskyNetwork) {
+        console.log('Using standard Bluesky OAuth flow for bsky.network PDS');
+        // Use the standard AUTH_SERVER for bsky.network endpoints
+        const authData = await getAuthorizationUrl();
+        authUrl = authData.url;
+        state = authData.state;
+        codeVerifier = authData.codeVerifier;
+        keyPair = authData.keyPair;
+      } else {
+        console.log('Using custom PDS OAuth flow for:', pdsEndpoint);
+        // Use the custom PDS endpoint for OAuth
+        const authData = await getAuthorizationUrl(pdsEndpoint);
+        authUrl = authData.url;
+        state = authData.state;
+        codeVerifier = authData.codeVerifier;
+        keyPair = authData.keyPair;
+      }
       
       // Store auth state
       try {
@@ -64,10 +86,23 @@ export default function LoginPage() {
         const stateStored = storeAuthData('oauth_state', state);
         const verifierStored = storeAuthData('code_verifier', codeVerifier);
         const keyPairStored = storeAuthData('key_pair', serializedKeyPair);
-        const pdsStored = storeAuthData('pds_endpoint', pdsEndpoint);
         
-        if (!stateStored || !verifierStored || !keyPairStored || !pdsStored) {
-          throw new Error('Failed to store one or more authentication values');
+        // For bsky.network endpoints, standardize on bsky.social as the auth server
+        // while still storing the actual PDS endpoint for API calls
+        if (isBskyNetwork) {
+          const authServerStored = storeAuthData('auth_server', 'https://bsky.social');
+          const pdsStored = storeAuthData('pds_endpoint', pdsEndpoint);
+          
+          if (!stateStored || !verifierStored || !keyPairStored || !authServerStored || !pdsStored) {
+            throw new Error('Failed to store one or more authentication values');
+          }
+        } else {
+          // For custom PDS endpoints, use them for both auth and API calls
+          const pdsStored = storeAuthData('pds_endpoint', pdsEndpoint);
+          
+          if (!stateStored || !verifierStored || !keyPairStored || !pdsStored) {
+            throw new Error('Failed to store one or more authentication values');
+          }
         }
         
         console.log('OAuth data stored successfully:', {
