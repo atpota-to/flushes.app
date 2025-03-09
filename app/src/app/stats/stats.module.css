@@ -223,7 +223,6 @@
   padding: 1.5rem;
   box-shadow: 0 2px 8px var(--shadow-color);
   border: 1px solid var(--tile-border);
-  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .overallStats h2, .chartSection h2, .leaderboardSection h2 {

@@ -101,9 +101,11 @@ export async function GET(request: NextRequest) {
           // Get the DID
           const authorDid = entry.did;
           
+          // Determine the best handle to use
+          let authorHandle: string;
+          
           // First check if we have a valid handle in the database record
           // and it's not "unknown"
-          let authorHandle: string;
           if (entry.handle && entry.handle !== 'unknown') {
             // Use the handle from the database
             authorHandle = entry.handle;
@@ -111,14 +113,41 @@ export async function GET(request: NextRequest) {
             
             // Store in cache for future use
             dbHandleCache.set(authorDid, authorHandle);
-          } else if (dbHandleCache.has(authorDid)) {
+          } 
+          // Next, check if we have it in the cache
+          else if (dbHandleCache.has(authorDid)) {
             // Use cached handle from previous database entries
             authorHandle = dbHandleCache.get(authorDid)!;
             console.log(`Using cached DB handle for ${authorDid}: ${authorHandle}`);
-          } else {
-            // Resolve handle from DID
-            authorHandle = await resolveDidToHandle(authorDid);
-            console.log(`Resolved handle for ${authorDid}: ${authorHandle}`);
+          } 
+          // If not in database or cache, try to resolve it
+          else {
+            // Try to resolve the handle from PLC directory
+            const resolvedHandle = await resolveDidToHandle(authorDid);
+            
+            // Only use the resolved handle if it's not in the user.xyz format (our fallback format)
+            if (!resolvedHandle.startsWith('user.')) {
+              authorHandle = resolvedHandle;
+              console.log(`Successfully resolved handle for ${authorDid}: ${authorHandle}`);
+              
+              // Also update the database with the resolved handle if possible
+              try {
+                if (supabaseUrl && supabaseKey) {
+                  const supabase = createClient(supabaseUrl, supabaseKey);
+                  await supabase
+                    .from('flushing_records')
+                    .update({ handle: authorHandle })
+                    .eq('did', authorDid);
+                  console.log(`Updated database with resolved handle for ${authorDid}: ${authorHandle}`);
+                }
+              } catch (updateError) {
+                console.error(`Failed to update handle in database for ${authorDid}:`, updateError);
+              }
+            } else {
+              // If resolution failed, still use the resolved handle (which will be our fallback format)
+              authorHandle = resolvedHandle;
+              console.log(`Could not resolve real handle for ${authorDid}, using: ${authorHandle}`);
+            }
           }
           
           if (containsBannedWords(entry.text)) {
@@ -196,9 +225,11 @@ export async function GET(request: NextRequest) {
         // Get the DID
         const authorDid = entry.did;
         
+        // Determine the best handle to use
+        let authorHandle: string;
+        
         // First check if we have a valid handle in the database record
         // and it's not "unknown"
-        let authorHandle: string;
         if (entry.handle && entry.handle !== 'unknown') {
           // Use the handle from the database
           authorHandle = entry.handle;
@@ -206,14 +237,41 @@ export async function GET(request: NextRequest) {
           
           // Store in cache for future use
           dbHandleCache.set(authorDid, authorHandle);
-        } else if (dbHandleCache.has(authorDid)) {
+        } 
+        // Next, check if we have it in the cache
+        else if (dbHandleCache.has(authorDid)) {
           // Use cached handle from previous database entries
           authorHandle = dbHandleCache.get(authorDid)!;
           console.log(`Using cached DB handle for ${authorDid}: ${authorHandle}`);
-        } else {
-          // Resolve handle from DID
-          authorHandle = await resolveDidToHandle(authorDid);
-          console.log(`Resolved handle for ${authorDid}: ${authorHandle}`);
+        } 
+        // If not in database or cache, try to resolve it
+        else {
+          // Try to resolve the handle from PLC directory
+          const resolvedHandle = await resolveDidToHandle(authorDid);
+          
+          // Only use the resolved handle if it's not in the user.xyz format (our fallback format)
+          if (!resolvedHandle.startsWith('user.')) {
+            authorHandle = resolvedHandle;
+            console.log(`Successfully resolved handle for ${authorDid}: ${authorHandle}`);
+            
+            // Also update the database with the resolved handle if possible
+            try {
+              if (supabaseUrl && supabaseKey) {
+                const supabase = createClient(supabaseUrl, supabaseKey);
+                await supabase
+                  .from('flushing_records')
+                  .update({ handle: authorHandle })
+                  .eq('did', authorDid);
+                console.log(`Updated database with resolved handle for ${authorDid}: ${authorHandle}`);
+              }
+            } catch (updateError) {
+              console.error(`Failed to update handle in database for ${authorDid}:`, updateError);
+            }
+          } else {
+            // If resolution failed, still use the resolved handle (which will be our fallback format)
+            authorHandle = resolvedHandle;
+            console.log(`Could not resolve real handle for ${authorDid}, using: ${authorHandle}`);
+          }
         }
         
         // Skip entries with banned content
@@ -340,8 +398,29 @@ async function resolveDidToHandle(did: string): Promise<string> {
         const plcResolver = async () => {
           console.log(`Trying PLC directory for DID: ${did}`);
           
+          // Function to extract handle from PLC data
+          const extractHandleFromPlcData = (plcData: any): string | null => {
+            if (!plcData || !plcData.alsoKnownAs || !Array.isArray(plcData.alsoKnownAs)) {
+              return null;
+            }
+            
+            // Loop through alsoKnownAs and find entries starting with "at://"
+            for (const aka of plcData.alsoKnownAs) {
+              if (typeof aka === 'string' && aka.startsWith('at://')) {
+                // Extract the handle (everything after "at://")
+                const handle = aka.split('//')[1];
+                if (handle) {
+                  return handle;
+                }
+              }
+            }
+            
+            return null;
+          };
+          
           try {
             // Try main PLC endpoint
+            console.log(`Fetching from https://plc.directory/${did}`);
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000);
             const plcResponse = await fetch(`https://plc.directory/${did}`, {
@@ -351,19 +430,18 @@ async function resolveDidToHandle(did: string): Promise<string> {
             
             if (plcResponse.ok) {
               const plcData = await plcResponse.json();
-              if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
-                // alsoKnownAs contains values like 'at://user.bsky.social'
-                for (const aka of plcData.alsoKnownAs) {
-                  if (aka.startsWith('at://')) {
-                    const handle = aka.split('//')[1];
-                    if (handle) {
-                      console.log(`Resolved ${did} to handle ${handle} via PLC directory`);
-                      didResolutionCache.set(did, handle);
-                      return handle;
-                    }
-                  }
-                }
+              console.log(`PLC response for ${did}:`, JSON.stringify(plcData).substring(0, 200) + '...');
+              
+              const handle = extractHandleFromPlcData(plcData);
+              if (handle) {
+                console.log(`Successfully resolved ${did} to handle ${handle} via PLC directory`);
+                didResolutionCache.set(did, handle);
+                return handle;
+              } else {
+                console.log(`PLC data for ${did} did not contain a valid handle in alsoKnownAs:`, plcData.alsoKnownAs);
               }
+            } else {
+              console.log(`PLC response not OK: ${plcResponse.status} ${plcResponse.statusText}`);
             }
           } catch (err) {
             console.warn(`Error with main PLC endpoint for ${did}:`, err);
@@ -371,6 +449,7 @@ async function resolveDidToHandle(did: string): Promise<string> {
           
           try {
             // Try alternate PLC endpoint
+            console.log(`Fetching from https://plc.directory/${did}/data`);
             const altController = new AbortController();
             const altTimeoutId = setTimeout(() => altController.abort(), 3000);
             const altPlcResponse = await fetch(`https://plc.directory/${did}/data`, {
@@ -380,18 +459,18 @@ async function resolveDidToHandle(did: string): Promise<string> {
             
             if (altPlcResponse.ok) {
               const altPlcData = await altPlcResponse.json();
-              if (altPlcData && altPlcData.alsoKnownAs && altPlcData.alsoKnownAs.length > 0) {
-                for (const aka of altPlcData.alsoKnownAs) {
-                  if (aka.startsWith('at://')) {
-                    const handle = aka.split('//')[1];
-                    if (handle) {
-                      console.log(`Resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
-                      didResolutionCache.set(did, handle);
-                      return handle;
-                    }
-                  }
-                }
+              console.log(`PLC alternate response for ${did}:`, JSON.stringify(altPlcData).substring(0, 200) + '...');
+              
+              const handle = extractHandleFromPlcData(altPlcData);
+              if (handle) {
+                console.log(`Successfully resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
+                didResolutionCache.set(did, handle);
+                return handle;
+              } else {
+                console.log(`PLC alternate data for ${did} did not contain a valid handle in alsoKnownAs:`, altPlcData.alsoKnownAs);
               }
+            } else {
+              console.log(`PLC alternate response not OK: ${altPlcResponse.status} ${altPlcResponse.statusText}`);
             }
           } catch (err) {
             console.warn(`Error with alternate PLC endpoint for ${did}:`, err);
