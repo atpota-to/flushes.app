@@ -321,6 +321,13 @@ export async function POST(request: NextRequest) {
         const data = await response.json();
         console.log('Successfully fetched profile data');
         
+        // IMPORTANT: For third-party PDS users, we need to use the handle from describeRepo
+        // which will be accurate for their PDS, rather than the handle we resolved earlier
+        if (pdsEndpoint && pdsEndpoint !== 'https://bsky.social' && data.handle) {
+          console.log(`Using handle from PDS response: ${data.handle} instead of ${userHandle}`);
+          userHandle = data.handle;
+        }
+        
         // Return profile information with both DID and handle
         return NextResponse.json({
           did: userDid,

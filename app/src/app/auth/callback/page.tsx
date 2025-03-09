@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getAccessToken } from '@/lib/bluesky-auth';
+import { getAccessToken, exportJWK, generateDPoPToken } from '@/lib/bluesky-auth';
 import { getProfile } from '@/lib/bluesky-api';
 import { useAuth } from '@/lib/auth-context';
 import { retrieveAuthData, clearAuthData } from '@/lib/storage-util';
@@ -251,6 +251,46 @@ function CallbackHandler() {
           } catch (error) {
             console.error('Failed to resolve user handle:', error);
             userHandle = 'unknown';
+          }
+        }
+        
+        // For users on third-party PDS servers, make one more request 
+        // directly to their PDS to get the correct handle
+        if (pdsEndpoint && pdsEndpoint !== 'https://bsky.social' && userDid) {
+          try {
+            console.log('Making direct request to PDS for handle info:', pdsEndpoint);
+            // Make a direct request to repo.describeRepo to get the correct handle
+            const describeEndpoint = `${pdsEndpoint}/xrpc/com.atproto.repo.describeRepo?repo=${encodeURIComponent(userDid)}`;
+            
+            // Generate a DPoP token for this specific request
+            const pubKey = await exportJWK(keyPair.publicKey);
+            const directDpopToken = await generateDPoPToken(
+              keyPair.privateKey,
+              pubKey,
+              'GET',
+              describeEndpoint,
+              dpopNonce || undefined,
+              tokenResponse.access_token // Include access token for ath claim
+            );
+            
+            const directResponse = await fetch(describeEndpoint, {
+              method: 'GET',
+              headers: {
+                'Authorization': `DPoP ${tokenResponse.access_token}`,
+                'DPoP': directDpopToken
+              }
+            });
+            
+            if (directResponse.ok) {
+              const directData = await directResponse.json();
+              if (directData.handle) {
+                console.log(`Using handle from direct PDS response: ${directData.handle} instead of ${userHandle}`);
+                userHandle = directData.handle;
+              }
+            }
+          } catch (error) {
+            console.error('Failed to get direct handle from PDS:', error);
+            // Continue with the handle we already have
           }
         }
         

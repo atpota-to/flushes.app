@@ -37,12 +37,15 @@ export async function checkAuth(
     
     // Use the PDS endpoint for auth check
     const baseUrl = `${pdsEndpoint}/xrpc`;
-    // We'll use the identity.resolveHandle endpoint which is simpler for auth checking
-    const endpoint = `${baseUrl}/com.atproto.identity.resolveHandle`;
     
-    // The handle param is required, but we're really just checking auth
-    // Use handle=atproto.com as a safe default
-    const url = `${endpoint}?handle=atproto.com`;
+    // First, get the user's handle from their DID using repo.describeRepo
+    const describeRepoEndpoint = `${baseUrl}/com.atproto.repo.describeRepo`;
+    const describeRepoUrl = `${describeRepoEndpoint}?repo=${encodeURIComponent(did)}`;
+    
+    console.log(`Checking user identity with: ${describeRepoUrl}`);
+    
+    // We'll use repo.describeRepo first to get user info
+    const url = describeRepoUrl;
     
     // Generate DPoP token with the full URL including query params
     const publicKey = await exportJWK(keyPair.publicKey);
@@ -221,23 +224,57 @@ export async function getProfile(
   accessToken: string,
   keyPair: CryptoKeyPair,
   dpopNonce: string | null = null,
-  handle: string = 'atproto.com', // Default handle to resolve
+  handle: string = '', // Optional handle to resolve
   pdsEndpoint: string | null = null
 ): Promise<any> {
   try {
     // Generate a DPoP token for the profile request
     const publicKey = await exportJWK(keyPair.publicKey);
+    
     // Use the PDS endpoint if available
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     
-    // Determine the endpoint based on whether we're looking up a DID or handle
+    // Step 1: If we have a DID, we want to get both the user's DID and handle
     let endpoint;
-    if (handle && handle.startsWith('did:')) {
-      // If it's a DID, use the describeRepo endpoint
+    let isDid = handle && handle.startsWith('did:');
+    
+    // First try to get the user's handle from the DID using PLC directory
+    if (isDid) {
+      try {
+        const plcResponse = await fetch(`https://plc.directory/${handle}/data`);
+        
+        if (plcResponse.ok) {
+          const plcData = await plcResponse.json();
+          if (plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+            const handleUrl = plcData.alsoKnownAs[0];
+            if (handleUrl.startsWith('at://')) {
+              // We found the handle!
+              const userHandle = handleUrl.substring(5); // Remove 'at://'
+              console.log(`PLC directory resolved DID ${handle} to handle ${userHandle}`);
+              
+              // Return it immediately
+              return { did: handle, handle: userHandle };
+            }
+          }
+        }
+      } catch (plcError) {
+        console.warn('Failed to resolve handle from PLC directory:', plcError);
+      }
+      
+      // If we get here, we need to use describeRepo to get user info
       endpoint = `${baseUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(handle)}`;
-    } else {
-      // Otherwise use resolveHandle for handles
+      console.log(`Using describeRepo for DID ${handle} at ${endpoint}`);
+    } 
+    // If we have a handle but no DID, we need to resolve the handle to a DID
+    else if (handle) {
       endpoint = `${baseUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`;
+      console.log(`Using resolveHandle for handle ${handle} at ${endpoint}`);
+    }
+    // If we have neither, we'll try to get the user's own info
+    else {
+      // Try to get the user's own repo info - note this only works on some PDS servers
+      endpoint = `${baseUrl}/com.atproto.repo.describeRepo`;
+      console.log(`Using describeRepo without params at ${endpoint}`);
     }
     
     // Generate the DPoP token with the access token for the ath claim
@@ -273,6 +310,7 @@ export async function getProfile(
       return { did: responseData.did || 'unknown_did', handle: responseData.handle || 'unknown' };
     }
     
+    console.log('Profile data from API:', responseData);
     return responseData;
   } catch (error) {
     console.error('Error resolving handle:', error);
