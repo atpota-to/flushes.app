@@ -42,11 +42,11 @@ export default function Home() {
     // Fetch the latest entries when the component mounts
     fetchLatestEntries(true); // Force refresh on initial load
     
-    // Set up periodic refresh every 60 seconds
+    // Set up periodic refresh every 20 seconds
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing feed...');
       fetchLatestEntries(true);
-    }, 60000);
+    }, 20000);
     
     // Clean up interval on unmount
     return () => clearInterval(refreshInterval);

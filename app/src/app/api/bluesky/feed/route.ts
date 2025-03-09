@@ -15,6 +15,7 @@ interface FlushingRecord {
   text: string;
   emoji: string;
   created_at: string;
+  handle?: string; // Optional handle field from the database
 }
 
 // Type for the processed entry for the client
@@ -84,7 +85,8 @@ export async function GET(request: NextRequest) {
             did,
             text,
             emoji,
-            created_at
+            created_at,
+            handle
           `)
           .lt('created_at', cursorRecord.created_at) // Get entries older than cursor
           .order('created_at', { ascending: false })
@@ -96,8 +98,28 @@ export async function GET(request: NextRequest) {
         
         // Process and return older entries (skip caching)
         const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
+          // Get the DID
           const authorDid = entry.did;
-          const authorHandle = await resolveDidToHandle(authorDid);
+          
+          // First check if we have a valid handle in the database record
+          // and it's not "unknown"
+          let authorHandle: string;
+          if (entry.handle && entry.handle !== 'unknown') {
+            // Use the handle from the database
+            authorHandle = entry.handle;
+            console.log(`Using handle from database for ${authorDid}: ${authorHandle}`);
+            
+            // Store in cache for future use
+            dbHandleCache.set(authorDid, authorHandle);
+          } else if (dbHandleCache.has(authorDid)) {
+            // Use cached handle from previous database entries
+            authorHandle = dbHandleCache.get(authorDid)!;
+            console.log(`Using cached DB handle for ${authorDid}: ${authorHandle}`);
+          } else {
+            // Resolve handle from DID
+            authorHandle = await resolveDidToHandle(authorDid);
+            console.log(`Resolved handle for ${authorDid}: ${authorHandle}`);
+          }
           
           if (containsBannedWords(entry.text)) {
             return null;
@@ -152,7 +174,8 @@ export async function GET(request: NextRequest) {
           did,
           text,
           emoji,
-          created_at
+          created_at,
+          handle
         `)
         .order('created_at', { ascending: false })
         .limit(MAX_ENTRIES);
@@ -170,9 +193,28 @@ export async function GET(request: NextRequest) {
       
       // Transform the data to match our client-side model
       const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
-        // Resolve handle from DID
+        // Get the DID
         const authorDid = entry.did;
-        const authorHandle = await resolveDidToHandle(authorDid);
+        
+        // First check if we have a valid handle in the database record
+        // and it's not "unknown"
+        let authorHandle: string;
+        if (entry.handle && entry.handle !== 'unknown') {
+          // Use the handle from the database
+          authorHandle = entry.handle;
+          console.log(`Using handle from database for ${authorDid}: ${authorHandle}`);
+          
+          // Store in cache for future use
+          dbHandleCache.set(authorDid, authorHandle);
+        } else if (dbHandleCache.has(authorDid)) {
+          // Use cached handle from previous database entries
+          authorHandle = dbHandleCache.get(authorDid)!;
+          console.log(`Using cached DB handle for ${authorDid}: ${authorHandle}`);
+        } else {
+          // Resolve handle from DID
+          authorHandle = await resolveDidToHandle(authorDid);
+          console.log(`Resolved handle for ${authorDid}: ${authorHandle}`);
+        }
         
         // Skip entries with banned content
         if (containsBannedWords(entry.text)) {
@@ -265,6 +307,10 @@ function getMockEntries(): ProcessedEntry[] {
 
 // DID resolution cache
 const didResolutionCache = new Map<string, string>();
+
+// Handle column cache - maps DID to handle stored in the database
+// This allows us to use existing handle values from the DB instead of resolving every time
+const dbHandleCache = new Map<string, string>();
 
 // Timeout promise to prevent hanging on API calls
 function timeout(ms: number): Promise<never> {
@@ -392,15 +438,22 @@ async function resolveDidToHandle(did: string): Promise<string> {
     
     // If we get here, all resolution methods failed
     console.log(`All resolution methods failed for ${did}, using shortened DID: ${shortDid}`);
+    
+    // Create a user-friendly version of the DID
+    // Format: "user.{first6chars}"
+    const userFriendlyDid = did.startsWith('did:plc:') ? 
+      `user.${did.substring(8, 14)}` : 
+      `user.${did.substring(0, 6)}`;
+    
     // Cache the fallback result too
-    didResolutionCache.set(did, shortDid);
-    return shortDid;
+    didResolutionCache.set(did, userFriendlyDid);
+    return userFriendlyDid;
   } catch (error) {
     console.error(`Failed to resolve handle for DID ${did}:`, error);
-    // Last resort fallback is the shortened DID
-    const shortDid = did.startsWith('did:plc:') ? 
-      `${did.substring(0, 13)}...` : 
-      `${did.substring(0, 10)}...`;
-    return shortDid;
+    // Last resort fallback is a user-friendly version of the DID
+    const userFriendlyDid = did.startsWith('did:plc:') ? 
+      `user.${did.substring(8, 14)}` : 
+      `user.${did.substring(0, 6)}`;
+    return userFriendlyDid;
   }
 }
