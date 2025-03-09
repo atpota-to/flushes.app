@@ -189,7 +189,7 @@ export default function Home() {
           createdAt: new Date().toISOString()
         };
         
-        console.log('Adding temporary entry to feed:', tempEntry);
+        console.log('Adding temporary entry to feed for immediate display:', tempEntry);
         
         // Add the temporary entry to the top of the feed
         setEntries(prevEntries => [tempEntry, ...prevEntries]);
@@ -221,12 +221,11 @@ export default function Home() {
       setLoading(true);
       setError(null);
       
-      // Use the new direct API endpoint that bypasses all caching
       // Add a timestamp to ensure we bypass browser caching
       const timestamp = Date.now();
       
-      // Use our new direct API endpoint which has a more reliable implementation
-      const url = `/api/bluesky/feed-direct?_t=${timestamp}`;
+      // Use our simple API endpoint for reliability
+      const url = `/api/bluesky/feed-simple?_t=${timestamp}`;
         
       console.log(`Fetching feed from ${url} at ${new Date().toISOString()}`);
       
@@ -304,8 +303,8 @@ export default function Home() {
       console.log(`Loading older entries before ID ${oldestEntry.id}`);
       
       // Use the oldest entry's ID as the cursor, plus add a unique timestamp
-      // Use our direct API for more reliable pagination
-      const url = `/api/bluesky/feed-direct?before=${oldestEntry.id}&_t=${Date.now()}`;
+      // Use our simple API for reliable pagination
+      const url = `/api/bluesky/feed-simple?before=${oldestEntry.id}&_t=${Date.now()}`;
       
       const response = await fetch(url, {
         cache: 'no-store',
@@ -486,11 +485,11 @@ export default function Home() {
                 setLoading(true);
                 setError(null);
                 
-                // Use the direct API endpoint with a timestamp
+                // Use the simple API endpoint with a timestamp
                 const timestamp = Date.now();
-                const url = `/api/bluesky/feed-direct?_t=${timestamp}`;
+                const url = `/api/bluesky/feed-simple?_t=${timestamp}`;
                 console.log(`🔄 MANUAL REFRESH @ ${new Date().toISOString()}`);
-                console.log(`Using direct API URL: ${url}`);
+                console.log(`Using simple API URL: ${url}`);
                 
                 // Use strong no-cache headers to ensure browsers don't use cached responses
                 const response = await fetch(url, {
