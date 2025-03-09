@@ -48,22 +48,12 @@ export default function RootLayout({
           <ThemeProvider>
             <header style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
+              justifyContent: 'center', 
               alignItems: 'center',
               padding: '0.5rem 1rem',
               backgroundColor: 'var(--card-background)',
               borderBottom: '1px solid var(--tile-border)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <a href="/" style={{ 
-                  textDecoration: 'none', 
-                  fontWeight: 'bold',
-                  color: 'var(--primary-color)',
-                  fontSize: '1.25rem'
-                }}>
-                  im.flushing
-                </a>
-              </div>
               <ClientOnly>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                   <ProfileSearch />
