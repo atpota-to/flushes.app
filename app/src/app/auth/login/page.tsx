@@ -117,7 +117,7 @@ export default function LoginPage() {
       }
       
       // Redirect to login
-      window.location.href = url;
+      window.location.href = authUrl;
     } catch (err: any) {
       console.error('Failed to initiate login:', err);
       setError(`Login failed: ${err.message || 'Unknown error'}`);
