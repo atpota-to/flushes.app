@@ -36,6 +36,38 @@ const MAX_ENTRIES = 20;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// Helper function to process database entries into client-friendly format
+async function processEntries(entries: FlushingRecord[]): Promise<ProcessedEntry[]> {
+  // Process entries for the client
+  const processedEntries = entries.map((entry) => {
+    // Skip entries with banned content
+    if (containsBannedWords(entry.text)) {
+      return null;
+    }
+    
+    // Use the handle from the database, or extract from DID as fallback
+    const authorHandle = entry.handle || 
+      (entry.did.startsWith('did:plc:') ? 
+        `${entry.did.substring(8, 16)}...` : 
+        `${entry.did.substring(0, 8)}...`);
+    
+    // Return processed entry
+    return {
+      id: entry.id,
+      uri: entry.uri,
+      cid: entry.cid,
+      authorDid: entry.did,
+      authorHandle: authorHandle,
+      text: sanitizeText(entry.text),
+      emoji: entry.emoji,
+      createdAt: entry.created_at
+    } as ProcessedEntry;
+  });
+  
+  // Filter out null entries (those with banned content)
+  return processedEntries.filter((entry): entry is ProcessedEntry => entry !== null);
+}
+
 export async function GET(request: NextRequest) {
   // Debug log the incoming request
   console.log(`\n=== DIRECT FEED REQUEST @ ${new Date().toISOString()} ===`);
@@ -110,8 +142,12 @@ export async function GET(request: NextRequest) {
           console.log(`✅ Direct SQL query successful, found ${directData.length} entries`);
           entries = directData;
           
-          // We got data, return early
-          return entries;
+          // We got data - process and return as NextResponse
+          const processedEntries = await processEntries(entries);
+          return NextResponse.json({
+            entries: processedEntries,
+            source: 'direct-sql'
+          });
         }
       } catch (rawError) {
         console.error('Exception executing raw SQL:', rawError);
@@ -133,8 +169,12 @@ export async function GET(request: NextRequest) {
           console.log(`✅ RPC function query successful, found ${data.length} entries`);
           entries = data;
           
-          // We got data, return early
-          return entries;
+          // We got data - process and return as NextResponse
+          const processedEntries = await processEntries(entries);
+          return NextResponse.json({
+            entries: processedEntries,
+            source: 'rpc-function'
+          });
         }
       } catch (rpcError) {
         console.error('Exception in RPC function:', rpcError);
@@ -168,39 +208,13 @@ export async function GET(request: NextRequest) {
       console.warn('No entries found - this may indicate a database problem');
     }
     
-    // Process entries for the client
-    const processedEntries = entries.map((entry) => {
-      // Skip entries with banned content
-      if (containsBannedWords(entry.text)) {
-        return null;
-      }
-      
-      // Use the handle from the database, or extract from DID as fallback
-      const authorHandle = entry.handle || 
-        (entry.did.startsWith('did:plc:') ? 
-          `${entry.did.substring(8, 16)}...` : 
-          `${entry.did.substring(0, 8)}...`);
-      
-      // Return processed entry
-      return {
-        id: entry.id,
-        uri: entry.uri,
-        cid: entry.cid,
-        authorDid: entry.did,
-        authorHandle: authorHandle,
-        text: sanitizeText(entry.text),
-        emoji: entry.emoji,
-        createdAt: entry.created_at
-      } as ProcessedEntry;
-    });
-    
-    // Filter out null entries (those with banned content)
-    const filteredEntries = processedEntries.filter((entry): entry is ProcessedEntry => entry !== null);
+    // Process the entries we've retrieved
+    const processedEntries = await processEntries(entries);
     
     // Return the processed entries
     return NextResponse.json({ 
-      entries: filteredEntries,
-      source: 'direct'
+      entries: processedEntries,
+      source: 'standard-query'
     });
   } catch (error: any) {
     console.error('Error in direct feed API:', error);
