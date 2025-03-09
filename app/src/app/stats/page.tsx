@@ -36,11 +36,19 @@ export default function StatsPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/bluesky/stats', {
+      // Add a timestamp to ensure we bypass any browser caching
+      const timestamp = Date.now();
+      const url = `/api/bluesky/stats?_t=${timestamp}`;
+      
+      console.log(`Fetching stats from ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
@@ -151,37 +159,26 @@ export default function StatsPage() {
           {/* Overall Stats */}
           <section className={styles.overallStats}>
             <h2>Overall Flush Activity</h2>
+            <a 
+              href="https://bsky.app/profile/plumber.flushing.im" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.plumberProfileLink}
+            >
+              Follow our resident plumber on Bluesky
+            </a>
             <div className={styles.statsGrid}>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.totalCount}</div>
-                <div className={styles.statLabel}>Total Flushes</div>
+                <div className={styles.statLabel}>Total flushes</div>
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.flushesPerDay}</div>
-                <div className={styles.statLabel}>Flushes Per Active Day</div>
+                <div className={styles.statLabel}>Flushes per day</div>
               </div>
               <div className={styles.statCard}>
-                <div className={styles.statValue}>
-                  <a 
-                    href="https://bsky.app/profile/plumber.flushing.im" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className={styles.plumberLink}
-                    title="Visit the plumber's Bluesky profile"
-                  >
-                    🪠 {statsData.plumberFlushCount}
-                  </a>
-                </div>
-                <div className={styles.statLabel}>
-                  <a 
-                    href="https://bsky.app/profile/plumber.flushing.im" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className={styles.plumberLink}
-                  >
-                    Emergency Plumber Visits
-                  </a>
-                </div>
+                <div className={styles.statValue}>{statsData.plumberFlushCount}</div>
+                <div className={styles.statLabel}>Emergency plumber visits</div>
               </div>
             </div>
           </section>

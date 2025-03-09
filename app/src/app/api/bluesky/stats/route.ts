@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Configure this route as dynamic to fix static generation issues  
+// Configure this route as dynamic and disable caching 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 // Supabase client - using environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -14,14 +15,81 @@ export async function GET(request: NextRequest) {
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       
-      // 1. Get total flush count
-      const { count: totalCount, error: countError } = await supabase
-        .from('flushing_records')
-        .select('*', { count: 'exact', head: true });
+      // 1. Get total flush count - using multiple approaches for accuracy
+      console.log('Fetching total flush count from database...');
       
-      if (countError) {
-        throw new Error(`Failed to get total count: ${countError.message}`);
+      let totalCount = null;
+      
+      // Method 1: Get the count using the most reliable count query
+      try {
+        console.log('Trying count method 1: standard count query');
+        const { count, error: countError } = await supabase
+          .from('flushing_records')
+          .select('*', { count: 'exact', head: true });
+        
+        if (countError) {
+          throw countError;
+        }
+        
+        if (count !== null) {
+          console.log(`Method 1 returned count: ${count}`);
+          totalCount = count;
+        }
+      } catch (err) {
+        console.error('Count method 1 failed:', err);
       }
+      
+      // Method 2: Get the maximum ID as a sanity check
+      try {
+        console.log('Trying count method 2: getting highest ID');
+        const { data: maxIdData, error: maxIdError } = await supabase
+          .from('flushing_records')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1);
+        
+        if (!maxIdError && maxIdData && maxIdData.length > 0) {
+          const highestId = Number(maxIdData[0].id);
+          console.log(`Highest ID in database: ${highestId}`);
+          
+          // If highest ID is significantly higher than our count, something might be wrong
+          if (totalCount !== null && highestId > totalCount * 1.2) {
+            console.warn(`Warning: Highest ID (${highestId}) is much higher than count (${totalCount})`);
+          }
+        }
+      } catch (err) {
+        console.error('Count method 2 failed:', err);
+      }
+      
+      // Method 3: Get count by fetching all IDs and counting them
+      try {
+        console.log('Trying count method 3: fetching and counting all IDs');
+        const { data: allIds, error: idsError } = await supabase
+          .from('flushing_records')
+          .select('id');
+        
+        if (!idsError && allIds) {
+          const countFromIds = allIds.length;
+          console.log(`Method 3 returned count: ${countFromIds}`);
+          
+          // If our first method didn't work or returned a lower count, use this one
+          if (totalCount === null || countFromIds > totalCount) {
+            console.log(`Updating count from ${totalCount} to ${countFromIds} from method 3`);
+            totalCount = countFromIds;
+          }
+        }
+      } catch (err) {
+        console.error('Count method 3 failed:', err);
+      }
+      
+      // Final check: Ensure we have a valid count, or default to 0
+      if (totalCount === null) {
+        console.warn('All count methods failed, defaulting to 0');
+        totalCount = 0;
+      }
+      
+      console.log(`Final total count: ${totalCount}`);
+      
 
       // 2. Get daily flush counts for the chart
       const { data: dailyData, error: dailyError } = await supabase
