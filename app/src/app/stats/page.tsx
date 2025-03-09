@@ -178,7 +178,7 @@ export default function StatsPage() {
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.plumberFlushCount}</div>
-                <div className={styles.statLabel}>Emergency plumber visits</div>
+                <div className={styles.statLabel}>Emergency plumber flushes</div>
               </div>
             </div>
           </section>
