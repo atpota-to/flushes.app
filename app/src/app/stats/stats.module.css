@@ -235,7 +235,7 @@
 /* Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
@@ -263,6 +263,35 @@
 .statLabel {
   color: var(--text-color);
   font-size: 1.1rem;
+}
+
+/* Plumber link styles */
+.plumberLink {
+  color: inherit;
+  text-decoration: none;
+  display: inline-block;
+  transition: transform 0.2s, color 0.2s;
+  position: relative;
+}
+
+.plumberLink:hover {
+  color: #e84142; /* A reddish color for plumber branding */
+  transform: scale(1.05);
+}
+
+.plumberLink:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: #e84142;
+  transition: width 0.3s;
+}
+
+.plumberLink:hover:after {
+  width: 100%;
 }
 
 /* Chart Styles */

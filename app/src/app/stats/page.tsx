@@ -11,6 +11,7 @@ interface StatsData {
   flushesPerDay: number;
   chartData: { date: string; count: number }[];
   leaderboard: { did: string; count: number; handle?: string }[];
+  plumberFlushCount: number;
 }
 
 export default function StatsPage() {
@@ -158,6 +159,29 @@ export default function StatsPage() {
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.flushesPerDay}</div>
                 <div className={styles.statLabel}>Flushes Per Active Day</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>
+                  <a 
+                    href="https://bsky.app/profile/plumber.flushing.im" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.plumberLink}
+                    title="Visit the plumber's Bluesky profile"
+                  >
+                    🪠 {statsData.plumberFlushCount}
+                  </a>
+                </div>
+                <div className={styles.statLabel}>
+                  <a 
+                    href="https://bsky.app/profile/plumber.flushing.im" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={styles.plumberLink}
+                  >
+                    Emergency Plumber Visits
+                  </a>
+                </div>
               </div>
             </div>
           </section>

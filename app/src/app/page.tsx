@@ -176,37 +176,16 @@ export default function Home() {
       setText('is ');
       setSuccess('Your flushing status has been updated!');
       
-      // Create a temporary entry to display immediately
-      if (result && result.uri && result.cid) {
-        const tempEntry: FlushingEntry = {
-          id: `temp-${Date.now()}`, // Create a temporary ID
-          uri: result.uri,
-          cid: result.cid,
-          authorDid: did,
-          authorHandle: handle || 'unknown',
-          text: formattedText,
-          emoji: selectedEmoji,
-          createdAt: new Date().toISOString()
-        };
-        
-        console.log('Adding temporary entry to feed for immediate display:', tempEntry);
-        
-        // Add the temporary entry to the top of the feed
-        setEntries(prevEntries => [tempEntry, ...prevEntries]);
-        
-        // Also mark it as a new entry for animation
-        setNewEntryIds(new Set([tempEntry.id]));
-      }
-      
       // Close status form after successful submission
       setTimeout(() => {
         setStatusOpen(false);
       }, 2000);
       
-      // Still refresh the feed after a delay to get the actual database entry
+      // Refresh the feed after a delay to get the newly created entry
       setTimeout(() => {
+        console.log('Refreshing feed to show new entry...');
         fetchLatestEntries(true);
-      }, 3000);
+      }, 2500);
     } catch (err: any) {
       console.error('Failed to update status:', err);
       setStatusError(`Failed to update status: ${err.message || 'Unknown error'}`);

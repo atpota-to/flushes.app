@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
         flushesPerDay = parseFloat(((totalCount || 0) / activeDaysCount).toFixed(1));
       }
       
-      // 3. Get top flushers (leaderboard)
+      // 3. Get top flushers (leaderboard) - excluding test accounts
       const { data: leaderboardData, error: leaderboardError } = await supabase
         .from('flushing_records')
-        .select('did')
+        .select('did, handle')
         .order('created_at', { ascending: false });
       
       if (leaderboardError) {
@@ -74,8 +74,32 @@ export async function GET(request: NextRequest) {
       
       // Count flushes by DID
       const didCounts = new Map<string, number>();
+      
+      // Special count for the plumber
+      let plumberFlushCount = 0;
+      
+      // List of DIDs to exclude from leaderboard
+      const excludedDids = [
+        'did:plc:fouf3svmcxzn6bpiw3lgwz22', // plumber.flushing.im
+        'did:plc:fnhrjbkwjiw6iyxxg2o3rljw'  // testing.dame.is
+      ];
+      
+      // List of handles to exclude from leaderboard (as fallback)
+      const excludedHandles = [
+        'plumber.flushing.im',
+        'testing.dame.is'
+      ];
+      
       leaderboardData?.forEach(entry => {
-        didCounts.set(entry.did, (didCounts.get(entry.did) || 0) + 1);
+        // Check if this is the plumber or test account
+        if (entry.did === 'did:plc:fouf3svmcxzn6bpiw3lgwz22' || entry.handle === 'plumber.flushing.im') {
+          plumberFlushCount++;
+        } 
+        // Only count towards leaderboard if not an excluded account
+        else if (!excludedDids.includes(entry.did) && 
+                 !(entry.handle && excludedHandles.includes(entry.handle))) {
+          didCounts.set(entry.did, (didCounts.get(entry.did) || 0) + 1);
+        }
       });
       
       // Convert to array and sort by count
@@ -89,7 +113,8 @@ export async function GET(request: NextRequest) {
         totalCount,
         flushesPerDay,
         chartData: chartData.slice(-30), // Last 30 days
-        leaderboard
+        leaderboard,
+        plumberFlushCount
       });
     } else {
       // If no Supabase credentials, return mock data
@@ -97,7 +122,8 @@ export async function GET(request: NextRequest) {
         totalCount: 42,
         flushesPerDay: 3.5,
         chartData: generateMockChartData(),
-        leaderboard: generateMockLeaderboard()
+        leaderboard: generateMockLeaderboard(),
+        plumberFlushCount: 15
       });
     }
   } catch (error: any) {
