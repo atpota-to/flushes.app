@@ -34,7 +34,7 @@ const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 const MAX_ENTRIES = 20;
 
 // Cache settings to avoid hitting the database too frequently
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_TTL = 1 * 60 * 1000; // 1 minute in milliseconds (reduced from 5 min)
 let cachedEntries: ProcessedEntry[] = [];
 let lastFetchTime = 0;
 
@@ -123,10 +123,16 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // For normal (non-pagination) requests, use the cache if valid
+    // For normal (non-pagination) requests, use the cache if valid and not forcing refresh
     if (!forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
       console.log('Returning cached entries');
       return NextResponse.json({ entries: cachedEntries });
+    }
+    
+    // If force refresh is requested, clear the didResolutionCache to force fresh handle resolution
+    if (forceRefresh) {
+      console.log('Force refresh requested, clearing DID resolution cache');
+      didResolutionCache.clear();
     }
     
     console.log('Fetching fresh entries');
@@ -136,6 +142,7 @@ export async function GET(request: NextRequest) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       
       // Fetch entries from the flushing_records table
+      console.log(`Querying database for latest ${MAX_ENTRIES} entries...`);
       const { data: entries, error } = await supabase
         .from('flushing_records')
         .select(`
@@ -152,6 +159,13 @@ export async function GET(request: NextRequest) {
       
       if (error) {
         throw new Error(`Supabase error: ${error.message}`);
+      }
+      
+      console.log(`Retrieved ${entries?.length || 0} entries from database. Latest created_at: ${entries?.[0]?.created_at || 'none'}`);
+      
+      // If no entries were found, this is suspicious - log a warning
+      if (!entries || entries.length === 0) {
+        console.warn('No entries found in database - this may indicate a problem');
       }
       
       // Transform the data to match our client-side model
@@ -249,7 +263,17 @@ function getMockEntries(): ProcessedEntry[] {
   return mockEntries;
 }
 
-// Function to attempt to resolve a DID to a handle
+// DID resolution cache
+const didResolutionCache = new Map<string, string>();
+
+// Timeout promise to prevent hanging on API calls
+function timeout(ms: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
+  });
+}
+
+// Function to attempt to resolve a DID to a handle with timeout
 // First tries PLC directory, then tries Bluesky API as a fallback
 async function resolveDidToHandle(did: string): Promise<string> {
   try {
@@ -258,44 +282,83 @@ async function resolveDidToHandle(did: string): Promise<string> {
       `${did.substring(0, 13)}...` : 
       `${did.substring(0, 10)}...`;
     
+    // Check if we have a cached result for this DID
+    if (didResolutionCache.has(did)) {
+      return didResolutionCache.get(did)!;
+    }
+    
     // Try PLC directory first - most reliable and doesn't require auth
     if (did && did.startsWith('did:plc:')) {
       try {
-        console.log(`Trying PLC directory for DID: ${did}`);
-        const plcResponse = await fetch(`https://plc.directory/${did}`);
-        
-        if (plcResponse.ok) {
-          const plcData = await plcResponse.json();
-          if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
-            // alsoKnownAs contains values like 'at://user.bsky.social'
-            for (const aka of plcData.alsoKnownAs) {
-              if (aka.startsWith('at://')) {
-                const handle = aka.split('//')[1];
-                if (handle) {
-                  console.log(`Resolved ${did} to handle ${handle} via PLC directory`);
-                  return handle;
+        // Use timeout to prevent hanging
+        const plcResolver = async () => {
+          console.log(`Trying PLC directory for DID: ${did}`);
+          
+          try {
+            // Try main PLC endpoint
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+            const plcResponse = await fetch(`https://plc.directory/${did}`, {
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            if (plcResponse.ok) {
+              const plcData = await plcResponse.json();
+              if (plcData && plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+                // alsoKnownAs contains values like 'at://user.bsky.social'
+                for (const aka of plcData.alsoKnownAs) {
+                  if (aka.startsWith('at://')) {
+                    const handle = aka.split('//')[1];
+                    if (handle) {
+                      console.log(`Resolved ${did} to handle ${handle} via PLC directory`);
+                      didResolutionCache.set(did, handle);
+                      return handle;
+                    }
+                  }
                 }
               }
             }
+          } catch (err) {
+            console.warn(`Error with main PLC endpoint for ${did}:`, err);
           }
-        }
-        
-        // Try alternate PLC directory endpoint format
-        const altPlcResponse = await fetch(`https://plc.directory/${did}/data`);
-        if (altPlcResponse.ok) {
-          const altPlcData = await altPlcResponse.json();
-          if (altPlcData && altPlcData.alsoKnownAs && altPlcData.alsoKnownAs.length > 0) {
-            for (const aka of altPlcData.alsoKnownAs) {
-              if (aka.startsWith('at://')) {
-                const handle = aka.split('//')[1];
-                if (handle) {
-                  console.log(`Resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
-                  return handle;
+          
+          try {
+            // Try alternate PLC endpoint
+            const altController = new AbortController();
+            const altTimeoutId = setTimeout(() => altController.abort(), 3000);
+            const altPlcResponse = await fetch(`https://plc.directory/${did}/data`, {
+              signal: altController.signal
+            });
+            clearTimeout(altTimeoutId);
+            
+            if (altPlcResponse.ok) {
+              const altPlcData = await altPlcResponse.json();
+              if (altPlcData && altPlcData.alsoKnownAs && altPlcData.alsoKnownAs.length > 0) {
+                for (const aka of altPlcData.alsoKnownAs) {
+                  if (aka.startsWith('at://')) {
+                    const handle = aka.split('//')[1];
+                    if (handle) {
+                      console.log(`Resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
+                      didResolutionCache.set(did, handle);
+                      return handle;
+                    }
+                  }
                 }
               }
             }
+          } catch (err) {
+            console.warn(`Error with alternate PLC endpoint for ${did}:`, err);
           }
-        }
+          
+          throw new Error('PLC resolution failed');
+        };
+        
+        // Try PLC with a timeout
+        await Promise.race([
+          plcResolver(),
+          timeout(5000) // 5 second overall timeout
+        ]);
       } catch (plcError) {
         console.warn(`Failed to resolve handle from PLC directory for DID ${did}:`, plcError);
         // Continue to next method
@@ -303,21 +366,34 @@ async function resolveDidToHandle(did: string): Promise<string> {
     }
     
     // Fall back to Bluesky API
-    console.log(`Falling back to Bluesky API for DID: ${did}`);
     try {
-      // Try to resolve DID directly with Bluesky API
-      await agent.login({ identifier: '', password: '' });
-      const response = await agent.getProfile({ actor: did });
-      if (response?.data?.handle) {
-        console.log(`Resolved ${did} to handle ${response.data.handle} via Bluesky API`);
-        return response.data.handle;
-      }
+      console.log(`Falling back to Bluesky API for DID: ${did}`);
+      
+      const bskyResolver = async () => {
+        // Try to resolve DID directly with Bluesky API
+        await agent.login({ identifier: '', password: '' });
+        const response = await agent.getProfile({ actor: did });
+        if (response?.data?.handle) {
+          console.log(`Resolved ${did} to handle ${response.data.handle} via Bluesky API`);
+          didResolutionCache.set(did, response.data.handle);
+          return response.data.handle;
+        }
+        throw new Error('Bluesky API resolution failed');
+      };
+      
+      // Try Bluesky API with a timeout
+      await Promise.race([
+        bskyResolver(),
+        timeout(5000) // 5 second timeout
+      ]);
     } catch (apiError) {
       console.error(`Failed to resolve handle with Bluesky API for DID ${did}:`, apiError);
     }
     
     // If we get here, all resolution methods failed
     console.log(`All resolution methods failed for ${did}, using shortened DID: ${shortDid}`);
+    // Cache the fallback result too
+    didResolutionCache.set(did, shortDid);
     return shortDid;
   } catch (error) {
     console.error(`Failed to resolve handle for DID ${did}:`, error);
