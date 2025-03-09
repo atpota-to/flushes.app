@@ -1,9 +1,99 @@
-// Bluesky OAuth client configuration
-const BLUESKY_AUTH_SERVER = 'https://bsky.social';
+// Default Bluesky OAuth client configuration
+const DEFAULT_AUTH_SERVER = 'https://bsky.social';
 const REDIRECT_URI = 'https://flushing.im/auth/callback';
 const CLIENT_ID = 'https://flushing.im/client-metadata.json';
 // Need to include transition:generic to be able to create records
 const SCOPES = 'atproto transition:generic';
+
+// Type definitions for handle resolution
+interface DidDocument {
+  id: string;
+  service?: Array<{
+    id: string;
+    type: string;
+    serviceEndpoint: string;
+  }>;
+  alsoKnownAs?: string[];
+}
+
+// Function to resolve a handle to a DID document
+export async function resolveHandleToDid(handle: string): Promise<{ 
+  did: string; 
+  pdsEndpoint: string | null; 
+  hostname: string | null;
+}> {
+  try {
+    // First, check if handle already is a DID
+    if (handle.startsWith('did:')) {
+      return await fetchDidDocument(handle);
+    }
+    
+    // If not a DID, resolve the handle to a DID
+    const resolveResponse = await fetch(`https://api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+    
+    if (!resolveResponse.ok) {
+      throw new Error(`Failed to resolve handle: ${resolveResponse.status}`);
+    }
+    
+    const resolveData = await resolveResponse.json();
+    const did = resolveData.did;
+    
+    // Now get the DID document to find the PDS endpoint
+    return await fetchDidDocument(did);
+  } catch (error) {
+    console.error('Error resolving handle:', error);
+    throw new Error(`Failed to resolve handle. Please ensure it's valid.`);
+  }
+}
+
+// Function to fetch a DID document and extract PDS endpoint
+async function fetchDidDocument(did: string): Promise<{ 
+  did: string; 
+  pdsEndpoint: string | null; 
+  hostname: string | null;
+}> {
+  try {
+    const response = await fetch(`https://plc.directory/${did}/data`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch DID document: ${response.status}`);
+    }
+    
+    const didDoc: DidDocument = await response.json();
+    
+    // Find the PDS service endpoint
+    const pdsService = didDoc.service?.find(s => 
+      s.type === 'AtprotoPersonalDataServer' || 
+      s.id === '#atproto_pds'
+    );
+    
+    const pdsEndpoint = pdsService?.serviceEndpoint || null;
+    let hostname = null;
+    
+    // Extract hostname from the PDS endpoint
+    if (pdsEndpoint) {
+      try {
+        const url = new URL(pdsEndpoint);
+        hostname = url.hostname;
+      } catch (e) {
+        console.error('Error parsing PDS endpoint URL:', e);
+      }
+    }
+    
+    return {
+      did,
+      pdsEndpoint,
+      hostname
+    };
+  } catch (error) {
+    console.error('Error fetching DID document:', error);
+    return {
+      did,
+      pdsEndpoint: null,
+      hostname: null
+    };
+  }
+}
 
 // Generate a random string for PKCE and state
 export function generateRandomString(length: number): string {
@@ -143,34 +233,49 @@ export async function generateDPoPToken(
 }
 
 // Get the authorization URL for Bluesky OAuth
-export async function getAuthorizationUrl(): Promise<{ url: string, state: string, codeVerifier: string, keyPair: CryptoKeyPair }> {
+export async function getAuthorizationUrl(
+  pdsEndpoint?: string
+): Promise<{ url: string, state: string, codeVerifier: string, keyPair: CryptoKeyPair, pdsEndpoint: string }> {
   const state = generateRandomString(32);
   const codeVerifier = generateRandomString(64);
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const keyPair = await generateDPoPKeyPair();
   const publicKey = await exportJWK(keyPair.publicKey);
 
-  // Initial PAR request to get DPoP nonce
-  const parEndpoint = `${BLUESKY_AUTH_SERVER}/.well-known/oauth-authorization-server`;
-  const parResponse = await fetch(parEndpoint, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  // Use the provided PDS endpoint or default to Bluesky's
+  const authServer = pdsEndpoint || DEFAULT_AUTH_SERVER;
+  
+  // Get the service URL for OAuth (well-known endpoint)
+  let authEndpoint: string;
+  let metadataEndpoint: string;
+  
+  try {
+    // Try to fetch the OAuth metadata from the PDS
+    metadataEndpoint = `${authServer}/.well-known/oauth-authorization-server`;
+    const parResponse = await fetch(metadataEndpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!parResponse.ok) {
-    throw new Error(`Failed to fetch OAuth metadata: ${parResponse.statusText}`);
+    if (!parResponse.ok) {
+      // If failed, use the default path structure for OAuth
+      console.warn(`Failed to fetch OAuth metadata from ${authServer}, using default paths`);
+      authEndpoint = `${authServer}/oauth/authorize`;
+    } else {
+      // If successful, get the authorization endpoint from the metadata
+      const metadata = await parResponse.json();
+      authEndpoint = metadata.authorization_endpoint || `${authServer}/oauth/authorize`;
+    }
+  } catch (error) {
+    console.error('Error fetching OAuth metadata:', error);
+    // Fallback to default path structure
+    authEndpoint = `${authServer}/oauth/authorize`;
   }
-
-  const metadata = await parResponse.json();
-  const parsEndpoint = metadata.pushed_authorization_request_endpoint;
   
-  // Now we need to make a PAR request
-  // Note: In a real implementation, you would need to handle the DPoP nonce exchange
-  // For simplicity, we're going directly to the authorization endpoint
-  
-  const authUrl = `${BLUESKY_AUTH_SERVER}/oauth/authorize` +
+  // Build the authorization URL
+  const authUrl = `${authEndpoint}` +
     `?client_id=${encodeURIComponent(CLIENT_ID)}` +
     `&response_type=code` +
     `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
@@ -183,7 +288,8 @@ export async function getAuthorizationUrl(): Promise<{ url: string, state: strin
     url: authUrl,
     state,
     codeVerifier,
-    keyPair
+    keyPair,
+    pdsEndpoint: authServer
   };
 }
 
@@ -227,9 +333,16 @@ async function getNonce(endpoint: string): Promise<string | null> {
 }
 
 // Get a nonce using our server-side API endpoint
-async function fetchNonce(): Promise<string | null> {
+async function fetchNonce(pdsEndpoint: string = DEFAULT_AUTH_SERVER): Promise<string | null> {
   try {
-    const response = await fetch('/api/auth/nonce');
+    const response = await fetch('/api/auth/nonce', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ pdsEndpoint })
+    });
+    
     if (!response.ok) {
       console.warn('Failed to get nonce from API');
       return null;
@@ -248,14 +361,15 @@ export async function getAccessToken(
   code: string,
   codeVerifier: string,
   keyPair: CryptoKeyPair,
+  pdsEndpoint: string = DEFAULT_AUTH_SERVER,
   dpopNonce?: string
 ): Promise<any> {
-  const tokenEndpoint = `${BLUESKY_AUTH_SERVER}/oauth/token`;
+  const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
 
   // ALWAYS get a fresh nonce first if we don't have one
   if (!dpopNonce) {
     console.log('No nonce provided, getting one from API...');
-    const nonce = await fetchNonce();
+    const nonce = await fetchNonce(pdsEndpoint);
     if (nonce) {
       console.log('Obtained nonce from API:', nonce);
       dpopNonce = nonce;
@@ -288,7 +402,8 @@ export async function getAccessToken(
     body: JSON.stringify({
       code,
       codeVerifier,
-      dpopToken
+      dpopToken,
+      pdsEndpoint // Add PDS endpoint to the request
     })
   });
 
@@ -302,7 +417,7 @@ export async function getAccessToken(
   ) {
     console.log('Received nonce from error response:', responseData.nonce);
     // Retry with the new nonce
-    return getAccessToken(code, codeVerifier, keyPair, responseData.nonce);
+    return getAccessToken(code, codeVerifier, keyPair, pdsEndpoint, responseData.nonce);
   }
   
   // Handle other errors

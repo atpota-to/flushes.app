@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BLUESKY_AUTH_SERVER = 'https://bsky.social';
+const DEFAULT_AUTH_SERVER = 'https://bsky.social';
 const REDIRECT_URI = 'https://flushing.im/auth/callback';
 const CLIENT_ID = 'https://flushing.im/client-metadata.json';
 
-// Function to get a nonce from Bluesky
-async function getNonce(): Promise<string | null> {
+// Function to get a nonce from the specified PDS
+async function getNonce(pdsEndpoint: string): Promise<string | null> {
   try {
-    const tokenEndpoint = `${BLUESKY_AUTH_SERVER}/oauth/token`;
+    const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
     const headResponse = await fetch(tokenEndpoint, {
       method: 'HEAD',
       headers: {
@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
   try {
     // Parse the request body
     const body = await request.json();
-    const { code, codeVerifier, dpopToken } = body;
+    const { code, codeVerifier, dpopToken, pdsEndpoint } = body;
+    
+    // Use the provided PDS endpoint or default to Bluesky's
+    const authServer = pdsEndpoint || DEFAULT_AUTH_SERVER;
     
     if (!code || !codeVerifier || !dpopToken) {
       return NextResponse.json(
@@ -35,12 +38,14 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get a nonce first
-    const nonce = await getNonce();
-    console.log('Got nonce from server-side:', nonce);
+    // Get a nonce from the specified PDS
+    const nonce = await getNonce(authServer);
+    console.log(`Got nonce from server-side (${authServer}):`, nonce);
     
-    // Forward the token request to Bluesky
-    const tokenEndpoint = `${BLUESKY_AUTH_SERVER}/oauth/token`;
+    // Forward the token request to the specified PDS
+    const tokenEndpoint = `${authServer}/oauth/token`;
+    console.log(`Making token request to: ${tokenEndpoint}`);
+    
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
       headers: {

@@ -108,12 +108,21 @@ function CallbackHandler() {
         );
         const keyPair = { publicKey, privateKey };
 
+        // Check if we have a PDS endpoint in sessionStorage
+        const storedPdsEndpoint = retrieveAuthData('pds_endpoint');
+        
         // Exchange code for tokens - we may need several attempts
         setStatus('Getting access token...');
         console.log('Exchanging code for token...');
         let tokenResponse;
         try {
-          tokenResponse = await getAccessToken(code, codeVerifier, keyPair);
+          // Pass the PDS endpoint if we have it
+          tokenResponse = await getAccessToken(
+            code, 
+            codeVerifier, 
+            keyPair, 
+            storedPdsEndpoint || undefined
+          );
         } catch (tokenError: any) {
           console.error('Token exchange error:', tokenError);
           setError(`Failed to get access token: ${tokenError.message}`);
@@ -226,6 +235,7 @@ function CallbackHandler() {
         clearAuthData('oauth_state');
         clearAuthData('code_verifier');
         clearAuthData('key_pair');
+        clearAuthData('pds_endpoint');
         
         // Also try to clear any leftover sessionStorage items
         try {
