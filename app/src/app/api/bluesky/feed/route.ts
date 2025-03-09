@@ -49,11 +49,25 @@ const agent = new BskyAgent({
 });
 
 export async function GET(request: NextRequest) {
+  // Debug log all incoming requests with timestamp
+  const requestTime = new Date().toISOString();
+  console.log(`\n=== FEED REQUEST @ ${requestTime} ===`);
+  console.log(`URL: ${request.url}`);
+  console.log(`Headers: ${JSON.stringify(Object.fromEntries(request.headers))}`);
+  
   try {
     const now = Date.now();
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.get('refresh') === 'true';
     const beforeCursor = url.searchParams.get('before');
+    
+    console.log(`Request params: forceRefresh=${forceRefresh}, beforeCursor=${beforeCursor || 'none'}`);
+    console.log(`Current time: ${new Date(now).toISOString()}`);
+    console.log(`Current cache age: ${now - lastFetchTime}ms, TTL: ${CACHE_TTL}ms`);
+    console.log(`Cached entries count: ${cachedEntries.length}`);
+    console.log(`DID resolution cache size: ${didResolutionCache.size}`);
+    console.log(`DB handle cache size: ${dbHandleCache.size}`);
+    console.log('=== END REQUEST INFO ===');
     
     // If we have a 'before' cursor, we're paginating and shouldn't use the cache
     if (beforeCursor) {
@@ -134,11 +148,26 @@ export async function GET(request: NextRequest) {
               try {
                 if (supabaseUrl && supabaseKey) {
                   const supabase = createClient(supabaseUrl, supabaseKey);
-                  await supabase
+                  // Update all records with this DID to have the correct handle
+                  const { error: updateError } = await supabase
                     .from('flushing_records')
                     .update({ handle: authorHandle })
                     .eq('did', authorDid);
-                  console.log(`Updated database with resolved handle for ${authorDid}: ${authorHandle}`);
+                    
+                  if (updateError) {
+                    console.error(`Error updating handle in DB: ${updateError.message}`);
+                  } else {
+                    console.log(`✅ Updated database with resolved handle for ${authorDid}: ${authorHandle}`);
+                    
+                    // For DEBUG - check if our update worked
+                    const { data: dbData } = await supabase
+                      .from('flushing_records')
+                      .select('id, did, handle, text, created_at')
+                      .eq('did', authorDid)
+                      .limit(1);
+                      
+                    console.log(`Current DB data for ${authorDid} after update:`, dbData);
+                  }
                 }
               } catch (updateError) {
                 console.error(`Failed to update handle in database for ${authorDid}:`, updateError);
@@ -174,17 +203,16 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // For normal (non-pagination) requests, use the cache if valid and not forcing refresh
-    if (!forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
+    // IMPORTANT: We're disabling the cache completely to ensure we always get fresh data
+    // This is because we're having issues with stale data
+    if (false && !forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
       console.log('Returning cached entries');
       return NextResponse.json({ entries: cachedEntries });
     }
     
-    // If force refresh is requested, clear the didResolutionCache to force fresh handle resolution
-    if (forceRefresh) {
-      console.log('Force refresh requested, clearing DID resolution cache');
-      didResolutionCache.clear();
-    }
+    // Clear the DID resolution cache on every request to ensure fresh resolution
+    console.log('Clearing DID resolution cache to force fresh handle resolution');
+    didResolutionCache.clear();
     
     console.log('Fetching fresh entries');
     
@@ -194,6 +222,10 @@ export async function GET(request: NextRequest) {
       
       // Fetch entries from the flushing_records table
       console.log(`Querying database for latest ${MAX_ENTRIES} entries...`);
+      
+      // Debug log the SQL query we're about to execute
+      console.log('SQL Query: SELECT id, uri, cid, did, text, emoji, created_at, handle FROM flushing_records ORDER BY created_at DESC LIMIT 20');
+      
       const { data: entries, error } = await supabase
         .from('flushing_records')
         .select(`
@@ -213,10 +245,24 @@ export async function GET(request: NextRequest) {
         throw new Error(`Supabase error: ${error.message}`);
       }
       
-      console.log(`Retrieved ${entries?.length || 0} entries from database. Latest created_at: ${entries?.[0]?.created_at || 'none'}`);
+      console.log(`Retrieved ${entries?.length || 0} entries from database.`);
       
-      // If no entries were found, this is suspicious - log a warning
-      if (!entries || entries.length === 0) {
+      // If entries found, log the most recent ones for debugging
+      if (entries && entries.length > 0) {
+        console.log('Latest entry:', {
+          id: entries[0].id,
+          did: entries[0].did,
+          handle: entries[0].handle,
+          text: entries[0].text.substring(0, 30) + (entries[0].text.length > 30 ? '...' : ''),
+          created_at: entries[0].created_at
+        });
+        
+        // Debug: log the 5 most recent entries
+        console.log('Recent entries:');
+        for (let i = 0; i < Math.min(5, entries.length); i++) {
+          console.log(`  ${i+1}. [${entries[i].id}] ${entries[i].did.substring(0, 20)}... - "${entries[i].text.substring(0, 20)}..." (${entries[i].created_at})`);
+        }
+      } else {
         console.warn('No entries found in database - this may indicate a problem');
       }
       
@@ -377,162 +423,107 @@ function timeout(ms: number): Promise<never> {
   });
 }
 
-// Function to attempt to resolve a DID to a handle with timeout
-// First tries PLC directory, then tries Bluesky API as a fallback
+// Direct fetch from PLC directory to resolve a DID to a handle
+// This is a simplified implementation that tries to be as reliable as possible
 async function resolveDidToHandle(did: string): Promise<string> {
   try {
-    // Create a fallback shortened DID to use if all else fails
-    const shortDid = did.startsWith('did:plc:') ? 
-      `${did.substring(0, 13)}...` : 
-      `${did.substring(0, 10)}...`;
-    
     // Check if we have a cached result for this DID
     if (didResolutionCache.has(did)) {
       return didResolutionCache.get(did)!;
     }
     
-    // Try PLC directory first - most reliable and doesn't require auth
+    console.log(`Resolving handle for DID: ${did}`);
+    
+    // Create a fallback in case resolution fails
+    const fallbackHandle = did.startsWith('did:plc:') ? 
+      did.substring(8, 20) : 
+      did.substring(0, 12);
+    
+    // Only try PLC directory for did:plc DIDs
     if (did && did.startsWith('did:plc:')) {
       try {
-        // Use timeout to prevent hanging
-        const plcResolver = async () => {
-          console.log(`Trying PLC directory for DID: ${did}`);
+        // Fetch directly from PLC directory with a simple GET request
+        const url = `https://plc.directory/${did}`;
+        console.log(`Fetching from ${url}`);
+        
+        const plcResponse = await fetch(url, { 
+          method: 'GET',
+          // No signal/timeout here to ensure we get a response
+        });
+        
+        if (plcResponse.ok) {
+          const plcData = await plcResponse.json();
           
-          // Function to extract handle from PLC data
-          const extractHandleFromPlcData = (plcData: any): string | null => {
-            if (!plcData || !plcData.alsoKnownAs || !Array.isArray(plcData.alsoKnownAs)) {
-              return null;
-            }
-            
-            // Loop through alsoKnownAs and find entries starting with "at://"
+          // Debug: Log the entire response for diagnosis
+          console.log(`Full PLC data for ${did}:`, JSON.stringify(plcData));
+          
+          // Extract handle from alsoKnownAs if it exists
+          if (plcData && plcData.alsoKnownAs && Array.isArray(plcData.alsoKnownAs)) {
+            // Find the first entry that starts with "at://"
             for (const aka of plcData.alsoKnownAs) {
               if (typeof aka === 'string' && aka.startsWith('at://')) {
-                // Extract the handle (everything after "at://")
-                const handle = aka.split('//')[1];
-                if (handle) {
+                // Extract the handle portion (after "at://")
+                const handle = aka.substring(5); // "at://".length === 5
+                
+                if (handle && handle.length > 0) {
+                  console.log(`✅ Successfully resolved ${did} to handle: ${handle}`);
+                  
+                  // Cache it for future use
+                  didResolutionCache.set(did, handle);
+                  
+                  // Return the resolved handle
                   return handle;
                 }
               }
             }
-            
-            return null;
-          };
-          
-          try {
-            // Try main PLC endpoint
-            console.log(`Fetching from https://plc.directory/${did}`);
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-            const plcResponse = await fetch(`https://plc.directory/${did}`, {
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            if (plcResponse.ok) {
-              const plcData = await plcResponse.json();
-              console.log(`PLC response for ${did}:`, JSON.stringify(plcData).substring(0, 200) + '...');
-              
-              const handle = extractHandleFromPlcData(plcData);
-              if (handle) {
-                console.log(`Successfully resolved ${did} to handle ${handle} via PLC directory`);
-                didResolutionCache.set(did, handle);
-                return handle;
-              } else {
-                console.log(`PLC data for ${did} did not contain a valid handle in alsoKnownAs:`, plcData.alsoKnownAs);
-              }
-            } else {
-              console.log(`PLC response not OK: ${plcResponse.status} ${plcResponse.statusText}`);
-            }
-          } catch (err) {
-            console.warn(`Error with main PLC endpoint for ${did}:`, err);
           }
           
-          try {
-            // Try alternate PLC endpoint
-            console.log(`Fetching from https://plc.directory/${did}/data`);
-            const altController = new AbortController();
-            const altTimeoutId = setTimeout(() => altController.abort(), 3000);
-            const altPlcResponse = await fetch(`https://plc.directory/${did}/data`, {
-              signal: altController.signal
-            });
-            clearTimeout(altTimeoutId);
-            
-            if (altPlcResponse.ok) {
-              const altPlcData = await altPlcResponse.json();
-              console.log(`PLC alternate response for ${did}:`, JSON.stringify(altPlcData).substring(0, 200) + '...');
-              
-              const handle = extractHandleFromPlcData(altPlcData);
-              if (handle) {
-                console.log(`Successfully resolved ${did} to handle ${handle} via PLC directory (alternate endpoint)`);
-                didResolutionCache.set(did, handle);
-                return handle;
-              } else {
-                console.log(`PLC alternate data for ${did} did not contain a valid handle in alsoKnownAs:`, altPlcData.alsoKnownAs);
-              }
-            } else {
-              console.log(`PLC alternate response not OK: ${altPlcResponse.status} ${altPlcResponse.statusText}`);
-            }
-          } catch (err) {
-            console.warn(`Error with alternate PLC endpoint for ${did}:`, err);
-          }
-          
-          throw new Error('PLC resolution failed');
-        };
-        
-        // Try PLC with a timeout
-        await Promise.race([
-          plcResolver(),
-          timeout(5000) // 5 second overall timeout
-        ]);
-      } catch (plcError) {
-        console.warn(`Failed to resolve handle from PLC directory for DID ${did}:`, plcError);
-        // Continue to next method
+          console.warn(`❌ Could not find handle in PLC data for ${did}`);
+        } else {
+          console.warn(`❌ PLC fetch failed: ${plcResponse.status} ${plcResponse.statusText}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error fetching from PLC directory:`, error);
       }
     }
     
     // Fall back to Bluesky API
     try {
-      console.log(`Falling back to Bluesky API for DID: ${did}`);
+      console.log(`Trying Bluesky API for DID: ${did}`);
       
-      const bskyResolver = async () => {
-        // Try to resolve DID directly with Bluesky API
-        await agent.login({ identifier: '', password: '' });
-        const response = await agent.getProfile({ actor: did });
-        if (response?.data?.handle) {
-          console.log(`Resolved ${did} to handle ${response.data.handle} via Bluesky API`);
-          didResolutionCache.set(did, response.data.handle);
-          return response.data.handle;
-        }
-        throw new Error('Bluesky API resolution failed');
-      };
+      // Create a new agent for this request
+      const agent = new BskyAgent({
+        service: 'https://bsky.social'
+      });
       
-      // Try Bluesky API with a timeout
-      await Promise.race([
-        bskyResolver(),
-        timeout(5000) // 5 second timeout
-      ]);
+      // Log in with empty credentials (still required by the API)
+      await agent.login({ identifier: '', password: '' });
+      
+      // Get the profile
+      const response = await agent.getProfile({ actor: did });
+      
+      if (response && response.success && response.data && response.data.handle) {
+        const handle = response.data.handle;
+        console.log(`✅ Successfully resolved ${did} to handle via Bluesky API: ${handle}`);
+        
+        // Cache it for future use
+        didResolutionCache.set(did, handle);
+        
+        // Return the resolved handle
+        return handle;
+      } else {
+        console.warn(`❌ Bluesky API resolution failed for ${did}`);
+      }
     } catch (apiError) {
-      console.error(`Failed to resolve handle with Bluesky API for DID ${did}:`, apiError);
+      console.error(`❌ Error with Bluesky API:`, apiError);
     }
     
-    // If we get here, all resolution methods failed
-    console.log(`All resolution methods failed for ${did}, using shortened DID: ${shortDid}`);
-    
-    // Create a user-friendly version of the DID
-    // Format: "user.{first6chars}"
-    const userFriendlyDid = did.startsWith('did:plc:') ? 
-      `user.${did.substring(8, 14)}` : 
-      `user.${did.substring(0, 6)}`;
-    
-    // Cache the fallback result too
-    didResolutionCache.set(did, userFriendlyDid);
-    return userFriendlyDid;
+    // If all resolution methods failed, use the fallback
+    console.log(`❌ All resolution methods failed for ${did}, using fallback: ${fallbackHandle}`);
+    didResolutionCache.set(did, fallbackHandle);
+    return fallbackHandle;
   } catch (error) {
-    console.error(`Failed to resolve handle for DID ${did}:`, error);
-    // Last resort fallback is a user-friendly version of the DID
-    const userFriendlyDid = did.startsWith('did:plc:') ? 
-      `user.${did.substring(8, 14)}` : 
-      `user.${did.substring(0, 6)}`;
-    return userFriendlyDid;
+    console.error(`❌ Unexpected error resolving handle for ${did}:`, error);
+    return did.substring(0, 12); // Last resort fallback
   }
 }

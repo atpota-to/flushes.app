@@ -211,6 +211,8 @@ export default function Home() {
         ? '/api/bluesky/feed?refresh=true'
         : '/api/bluesky/feed';
         
+      console.log(`Fetching feed from ${url} at ${new Date().toISOString()}`);
+      
       const response = await fetch(url, {
         cache: 'no-store',
         headers: {
@@ -224,20 +226,35 @@ export default function Home() {
       }
       
       const data = await response.json();
+      console.log(`Received ${data.entries?.length || 0} entries from API`);
+      
+      // Debug: Log the most recent entries we received
+      if (data.entries && data.entries.length > 0) {
+        console.log('Latest entries from API:');
+        for (let i = 0; i < Math.min(3, data.entries.length); i++) {
+          const entry = data.entries[i];
+          console.log(`  ${i+1}. ID: ${entry.id}, Handle: @${entry.authorHandle}, Text: "${entry.text.substring(0, 20)}..."`);
+        }
+      }
       
       // Check for new entries
       if (entries.length > 0) {
         const currentIds = new Set(entries.map((entry: FlushingEntry) => entry.id));
         const newEntries = data.entries.filter((entry: FlushingEntry) => !currentIds.has(entry.id));
         
-        // Mark new entries for animation
+        // Log new entries
         if (newEntries.length > 0) {
+          console.log(`Found ${newEntries.length} new entries`);
+          
+          // Mark new entries for animation
           setNewEntryIds(new Set(newEntries.map((entry: FlushingEntry) => entry.id)));
           
           // Clear the animation markers after animation completes
           setTimeout(() => {
             setNewEntryIds(new Set());
           }, 2000);
+        } else {
+          console.log('No new entries found in this update');
         }
       }
       
@@ -431,7 +448,33 @@ export default function Home() {
             </p>
           </div>
           <button 
-            onClick={() => fetchLatestEntries(true)}
+            onClick={() => {
+              // Guaranteed fresh data with cache busting
+              setLoading(true);
+              const uniqueUrl = `/api/bluesky/feed?refresh=true&_t=${Date.now()}`;
+              console.log(`Manual refresh with unique URL: ${uniqueUrl}`);
+              fetch(uniqueUrl, { 
+                cache: 'no-store',
+                headers: {
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache',
+                  'Expires': '0'
+                }
+              })
+                .then(response => response.json())
+                .then(data => {
+                  console.log(`Manual refresh got ${data.entries?.length || 0} entries`);
+                  if (data.entries?.length > 0) {
+                    console.log(`First entry ID: ${data.entries[0].id}, text: ${data.entries[0].text.substring(0, 20)}...`);
+                  }
+                  setEntries(data.entries || []);
+                  setLoading(false);
+                })
+                .catch(err => {
+                  console.error('Manual refresh error:', err);
+                  setLoading(false);
+                });
+            }}
             className={styles.refreshButton}
             disabled={loading}
           >
