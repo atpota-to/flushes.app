@@ -183,7 +183,7 @@ export default function Home() {
           uri: result.uri,
           cid: result.cid,
           authorDid: did,
-          authorHandle: handle,
+          authorHandle: handle || 'unknown',
           text: formattedText,
           emoji: selectedEmoji,
           createdAt: new Date().toISOString()
@@ -225,7 +225,10 @@ export default function Home() {
       const timestamp = Date.now();
       
       // Use our simple API endpoint for reliability
-      const url = `/api/bluesky/feed-simple?_t=${timestamp}`;
+      // Add refresh=true when forcing a refresh to ensure we get fresh data
+      const url = forceRefresh 
+        ? `/api/bluesky/feed-simple?refresh=true&_t=${timestamp}`
+        : `/api/bluesky/feed-simple?_t=${timestamp}`;
         
       console.log(`Fetching feed from ${url} at ${new Date().toISOString()}`);
       
@@ -485,9 +488,9 @@ export default function Home() {
                 setLoading(true);
                 setError(null);
                 
-                // Use the simple API endpoint with a timestamp
+                // Use the simple API endpoint with a refresh parameter and timestamp
                 const timestamp = Date.now();
-                const url = `/api/bluesky/feed-simple?_t=${timestamp}`;
+                const url = `/api/bluesky/feed-simple?refresh=true&_t=${timestamp}`;
                 console.log(`🔄 MANUAL REFRESH @ ${new Date().toISOString()}`);
                 console.log(`Using simple API URL: ${url}`);
                 

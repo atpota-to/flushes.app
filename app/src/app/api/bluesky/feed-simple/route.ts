@@ -3,7 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 // Configure this route as dynamic to prevent any caching
+// Make sure this route is not cached
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 // Define type for our database entry
 interface FlushingRecord {
@@ -44,8 +46,14 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const beforeCursor = url.searchParams.get('before');
+    const refresh = url.searchParams.get('refresh') === 'true';
     
-    console.log(`Request params: beforeCursor=${beforeCursor || 'none'}`);
+    console.log(`Request params: beforeCursor=${beforeCursor || 'none'}, refresh=${refresh}`);
+    
+    // If refreshing, log it clearly
+    if (refresh) {
+      console.log('🔄 REFRESH requested - ensuring fresh data');
+    }
     
     // If we don't have Supabase credentials, return an error
     if (!supabaseUrl || !supabaseKey) {
