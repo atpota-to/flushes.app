@@ -87,31 +87,73 @@ export async function GET(request: NextRequest) {
       
       entries = data || [];
     } else {
-      // Main query: get the most recent entries
-      // Use a direct SQL query for maximum reliability
-      const { data, error } = await supabase.rpc('get_latest_entries', {
-        max_entries: MAX_ENTRIES
-      });
-      
-      if (error) {
-        console.error('RPC function error:', error);
+      // First try: Direct raw SQL query via executeRaw (most reliable)
+      try {
+        // Use a direct SQL query to completely bypass any ORM and query builder caching
+        const rawQuery = `
+          SELECT * FROM flushing_records 
+          ORDER BY id DESC 
+          LIMIT ${MAX_ENTRIES}
+        `;
         
-        // Fallback to regular query if RPC fails
-        console.log('Falling back to regular query');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('flushing_records')
-          .select('*')
-          .order('id', { ascending: false })
-          .limit(MAX_ENTRIES);
+        console.log('Executing direct SQL query:', rawQuery);
+        
+        const { data: directData, error: directError } = await supabase.rpc(
+          'execute_raw_query', 
+          { raw_query: rawQuery }
+        );
+        
+        if (directError) {
+          console.error('Raw SQL query error:', directError);
+          // Continue to next approach
+        } else if (directData && Array.isArray(directData) && directData.length > 0) {
+          console.log(`✅ Direct SQL query successful, found ${directData.length} entries`);
+          entries = directData;
           
-        if (fallbackError) {
-          throw new Error(`Fallback query error: ${fallbackError.message}`);
+          // We got data, return early
+          return entries;
         }
-        
-        entries = fallbackData || [];
-      } else {
-        entries = data || [];
+      } catch (rawError) {
+        console.error('Exception executing raw SQL:', rawError);
+        // Continue to next approach
       }
+      
+      // Second try: Using the RPC function approach
+      try {
+        console.log('Trying RPC function approach');
+        
+        const { data, error } = await supabase.rpc('get_latest_entries', {
+          max_entries: MAX_ENTRIES
+        });
+        
+        if (error) {
+          console.error('RPC function error:', error);
+          // Continue to fallback approach
+        } else if (data && Array.isArray(data) && data.length > 0) {
+          console.log(`✅ RPC function query successful, found ${data.length} entries`);
+          entries = data;
+          
+          // We got data, return early
+          return entries;
+        }
+      } catch (rpcError) {
+        console.error('Exception in RPC function:', rpcError);
+        // Continue to fallback approach
+      }
+      
+      // Final fallback: Standard query builder approach
+      console.log('Falling back to standard query builder');
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('flushing_records')
+        .select('*')
+        .order('id', { ascending: false })
+        .limit(MAX_ENTRIES);
+        
+      if (fallbackError) {
+        throw new Error(`Fallback query error: ${fallbackError.message}`);
+      }
+      
+      entries = fallbackData || [];
     }
     
     console.log(`Query returned ${entries.length} entries`);
