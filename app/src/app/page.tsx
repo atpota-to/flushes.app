@@ -234,6 +234,47 @@ export default function Home() {
       setLoading(false);
     }
   };
+  
+  // Function to load older entries
+  const loadOlderEntries = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get the oldest entry we currently have
+      const oldestEntry = entries[entries.length - 1];
+      if (!oldestEntry) {
+        return; // No entries to use as cursor
+      }
+      
+      // Use the oldest entry's ID as the cursor
+      const url = `/api/bluesky/feed?before=${oldestEntry.id}`;
+      
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch older entries: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.entries && data.entries.length > 0) {
+        // Append the new entries to our existing list
+        setEntries([...entries, ...data.entries]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching older entries:', err);
+      setError(err.message || 'Failed to load older entries');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Function to handle logout
   const handleLogout = () => {
@@ -290,6 +331,7 @@ export default function Home() {
               <path d="M19 9L12 16L5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
+          <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
 
           {/* Collapsible status update form */}
           <div className={`${styles.statusUpdateContainer} ${statusOpen ? styles.statusUpdateOpen : ''}`}>
@@ -300,7 +342,6 @@ export default function Home() {
               <form onSubmit={handleSubmit} className={styles.form}>
                 <div className={styles.formGroup}>
                   <label>Select an emoji for your status</label>
-                  <p className={styles.emojiNote}>Scroll to see all options</p>
                   <div className={styles.emojiGrid}>
                     {EMOJIS.map((emoji) => (
                       <button
@@ -359,8 +400,7 @@ export default function Home() {
           <div className={styles.feedHeaderLeft}>
             <h2>Recent flushes</h2>
             <p className={styles.feedSubheader}>
-              Click on a username to see their flushing profile. 
-              <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
+              Click on a username to see their flushing profile.
             </p>
           </div>
           <button 
@@ -385,43 +425,60 @@ export default function Home() {
               // Filter first to determine if we have any valid entries
               (() => {
                 const validEntries = entries.filter(entry => isAllowedEmoji(entry.emoji));
-                return validEntries.length > 0 ? 
-                  validEntries.map((entry) => (
-                  <div 
-                    key={entry.id} 
-                    className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
-                  >
-                    <div className={styles.content}>
-                      <div className={styles.contentLeft}>
-                        <span className={styles.emoji}>{entry.emoji}</span>
-                        <Link 
-                          href={`/profile/${entry.authorHandle}`}
-                          className={styles.authorLink}
-                        >
-                          @{entry.authorHandle}
-                        </Link>
-                        <span className={styles.text}>
-                          {entry.text ? (
-                            entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
-                              // For handles ending with .is, remove the "is" prefix if it exists
-                              (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
-                                (entry.text.length > 63 ? `${sanitizeText(entry.text.substring(3, 63))}...` : sanitizeText(entry.text.substring(3))) : 
-                                (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
-                              ) :
-                              // For regular handles, display normal text
-                              (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
-                          ) : (
-                            entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
-                              'flushing' : 'is flushing'
-                          )}
-                        </span>
+                return validEntries.length > 0 ? (
+                  <>
+                    {validEntries.map((entry) => (
+                      <div 
+                        key={entry.id} 
+                        className={`${styles.feedItem} ${newEntryIds.has(entry.id) ? styles.newFeedItem : ''}`}
+                      >
+                        <div className={styles.content}>
+                          <div className={styles.contentLeft}>
+                            <span className={styles.emoji}>{entry.emoji}</span>
+                            <Link 
+                              href={`/profile/${entry.authorHandle}`}
+                              className={styles.authorLink}
+                            >
+                              @{entry.authorHandle}
+                            </Link>
+                            <span className={styles.text}>
+                              {entry.text ? (
+                                entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                                  // For handles ending with .is, remove the "is" prefix if it exists
+                                  (sanitizeText(entry.text).toLowerCase().startsWith('is ') ? 
+                                    (entry.text.length > 63 ? `${sanitizeText(entry.text.substring(3, 63))}...` : sanitizeText(entry.text.substring(3))) : 
+                                    (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
+                                  ) :
+                                  // For regular handles, display normal text
+                                  (entry.text.length > 60 ? `${sanitizeText(entry.text.substring(0, 60))}...` : sanitizeText(entry.text))
+                              ) : (
+                                entry.authorHandle && entry.authorHandle.endsWith('.is') ? 
+                                  'flushing' : 'is flushing'
+                              )}
+                            </span>
+                          </div>
+                          <span className={styles.timestamp}>
+                            {formatRelativeTime(entry.createdAt)}
+                          </span>
+                        </div>
                       </div>
-                      <span className={styles.timestamp}>
-                        {formatRelativeTime(entry.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                )) : (
+                    ))}
+                    
+                    <button 
+                      className={styles.loadMoreButton}
+                      onClick={loadOlderEntries}
+                      disabled={loading}
+                    >
+                      {loading ? 'Loading...' : 'Load older flushes'}
+                      {!loading && (
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="7 13 12 18 17 13"></polyline>
+                          <polyline points="7 6 12 11 17 6"></polyline>
+                        </svg>
+                      )}
+                    </button>
+                  </>
+                ) : (
                   <div className={styles.emptyState}>
                     <p>No valid entries found. Login and be the first to share your status!</p>
                   </div>

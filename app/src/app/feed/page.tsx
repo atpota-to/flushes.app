@@ -63,6 +63,47 @@ export default function FeedPage() {
       setLoading(false);
     }
   };
+  
+  // Function to load older entries
+  const loadOlderEntries = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get the oldest entry we currently have
+      const oldestEntry = entries[entries.length - 1];
+      if (!oldestEntry) {
+        return; // No entries to use as cursor
+      }
+      
+      // Use the oldest entry's ID as the cursor
+      const url = `/api/bluesky/feed?before=${oldestEntry.id}`;
+      
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch older entries: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.entries && data.entries.length > 0) {
+        // Append the new entries to our existing list
+        setEntries([...entries, ...data.entries]);
+      }
+    } catch (err: any) {
+      console.error('Error fetching older entries:', err);
+      setError(err.message || 'Failed to load older entries');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // No longer needed - using formatRelativeTime from time-utils
 
@@ -104,27 +145,43 @@ export default function FeedPage() {
 
       <div className={styles.feedList}>
         {entries.length > 0 ? (
-          entries.map((entry) => (
-            <div key={entry.id} className={styles.feedItem}>
-              <div className={styles.feedHeader}>
-                <a 
-                  href={`https://bsky.app/profile/${entry.authorHandle}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.authorLink}
-                >
-                  @{entry.authorHandle}
-                </a>
-                <span className={styles.timestamp}>
-                  {formatRelativeTime(entry.createdAt)}
-                </span>
+          <>
+            {entries.map((entry) => (
+              <div key={entry.id} className={styles.feedItem}>
+                <div className={styles.feedHeader}>
+                  <a 
+                    href={`https://bsky.app/profile/${entry.authorHandle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.authorLink}
+                  >
+                    @{entry.authorHandle}
+                  </a>
+                  <span className={styles.timestamp}>
+                    {formatRelativeTime(entry.createdAt)}
+                  </span>
+                </div>
+                <div className={styles.content}>
+                  <span className={styles.emoji}>{entry.emoji}</span>
+                  <span className={styles.text}>{entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text}</span>
+                </div>
               </div>
-              <div className={styles.content}>
-                <span className={styles.emoji}>{entry.emoji}</span>
-                <span className={styles.text}>{entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text}</span>
-              </div>
-            </div>
-          ))
+            ))}
+            
+            <button 
+              className={styles.loadMoreButton}
+              onClick={loadOlderEntries}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Load older flushes'}
+              {!loading && (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="7 13 12 18 17 13"></polyline>
+                  <polyline points="7 6 12 11 17 6"></polyline>
+                </svg>
+              )}
+            </button>
+          </>
         ) : !loading ? (
           <div className={styles.emptyState}>
             <p>No entries found. Be the first to share your status!</p>

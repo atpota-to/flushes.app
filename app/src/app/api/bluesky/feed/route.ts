@@ -49,8 +49,78 @@ export async function GET(request: NextRequest) {
     const now = Date.now();
     const url = new URL(request.url);
     const forceRefresh = url.searchParams.get('refresh') === 'true';
+    const beforeCursor = url.searchParams.get('before');
     
-    // Check if cache is still valid and no force refresh is requested
+    // If we have a 'before' cursor, we're paginating and shouldn't use the cache
+    if (beforeCursor) {
+      console.log('Pagination request with cursor:', beforeCursor);
+      
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        // Find the record that matches the cursor ID
+        const { data: cursorRecord, error: cursorError } = await supabase
+          .from('flushing_records')
+          .select('created_at')
+          .eq('id', beforeCursor)
+          .single();
+        
+        if (cursorError) {
+          console.error('Error finding cursor record:', cursorError);
+          // If cursor record not found, just return empty results
+          return NextResponse.json({ entries: [] });
+        }
+        
+        // Fetch entries older than the cursor timestamp
+        const { data: entries, error } = await supabase
+          .from('flushing_records')
+          .select(`
+            id,
+            uri,
+            cid,
+            did,
+            text,
+            emoji,
+            created_at
+          `)
+          .lt('created_at', cursorRecord.created_at) // Get entries older than cursor
+          .order('created_at', { ascending: false })
+          .limit(MAX_ENTRIES);
+          
+        if (error) {
+          throw new Error(`Supabase error: ${error.message}`);
+        }
+        
+        // Process and return older entries (skip caching)
+        const processedEntries = await Promise.all((entries || []).map(async (entry: FlushingRecord) => {
+          const authorDid = entry.did;
+          const authorHandle = await resolveDidToHandle(authorDid) || 'unknown';
+          
+          if (containsBannedWords(entry.text)) {
+            return null;
+          }
+          
+          return {
+            id: entry.id,
+            uri: entry.uri,
+            cid: entry.cid,
+            authorDid: authorDid,
+            authorHandle: authorHandle,
+            text: sanitizeText(entry.text),
+            emoji: entry.emoji,
+            createdAt: entry.created_at
+          } as ProcessedEntry;
+        }));
+        
+        const filteredEntries = processedEntries.filter((entry): entry is ProcessedEntry => entry !== null);
+        return NextResponse.json({ entries: filteredEntries });
+      } else {
+        // For mock data with pagination, just return empty results
+        return NextResponse.json({ entries: [] });
+      }
+    }
+    
+    // For normal (non-pagination) requests, use the cache if valid
     if (!forceRefresh && now - lastFetchTime < CACHE_TTL && cachedEntries.length > 0) {
       console.log('Returning cached entries');
       return NextResponse.json({ entries: cachedEntries });
