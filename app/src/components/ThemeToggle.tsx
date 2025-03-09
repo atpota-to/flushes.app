@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/lib/theme-context';
+import { useTheme, ThemeContextType, Theme } from '@/lib/theme-context';
 import React, { useState, useEffect } from 'react';
 import styles from './ThemeToggle.module.css';
 
@@ -38,10 +38,10 @@ const SystemIcon = () => (
 export default function ThemeToggle() {
   // Prevent hydration errors by using conditional hooks
   const [mounted, setMounted] = useState(false);
-  const [themeState, setThemeState] = useState('system');
+  const [themeState, setThemeState] = useState<Theme>('system');
   
   // Safe way to access theme context that won't break SSR
-  let themeContext;
+  let themeContext: ThemeContextType | undefined = undefined;
   try {
     themeContext = useTheme();
   } catch (e) {
