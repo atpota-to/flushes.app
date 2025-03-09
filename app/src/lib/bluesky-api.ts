@@ -111,7 +111,7 @@ export async function makeAuthenticatedRequest(
   const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
   const url = `${baseUrl}/${endpoint}`;
   
-  console.log(`Making ${method} request to ${url}`);
+  console.log(`Making ${method} request to ${url} (PDS: ${pdsEndpoint || 'default'})`);
   
   // If no nonce is provided, try to get one first
   if (!dpopNonce) {

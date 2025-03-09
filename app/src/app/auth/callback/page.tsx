@@ -156,20 +156,40 @@ function CallbackHandler() {
 
         setStatus('Getting user profile...');
 
-        // Extract PDS endpoint from the token
-        let pdsEndpoint = null;
+        // Extract PDS endpoint from the token or from stored value
+        let pdsEndpoint = storedPdsEndpoint;
         
-        // First, try to decode the access token
+        // First, try to decode the access token to extract the PDS endpoint
         try {
           const parts = tokenResponse.access_token.split('.');
           if (parts.length === 3) {
             const payload = JSON.parse(atob(parts[1]));
-            if (payload.aud && typeof payload.aud === 'string' && payload.aud.startsWith('did:web:')) {
-              pdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
+            console.log('Token payload:', {
+              ...payload, 
+              access_token: tokenResponse.access_token ? '[REDACTED]' : null
+            });
+            
+            if (payload.aud && typeof payload.aud === 'string') {
+              if (payload.aud.startsWith('did:web:')) {
+                pdsEndpoint = 'https://' + payload.aud.replace('did:web:', '');
+                console.log('Extracted PDS endpoint from token did:web aud:', pdsEndpoint);
+              } else if (payload.aud.startsWith('https://')) {
+                pdsEndpoint = payload.aud;
+                console.log('Using https:// aud as PDS endpoint:', pdsEndpoint);
+              } else if (payload.iss && payload.iss.startsWith('https://')) {
+                pdsEndpoint = payload.iss;
+                console.log('Using iss as PDS endpoint:', pdsEndpoint);
+              }
             }
           }
         } catch (e) {
-          console.warn('Failed to extract PDS endpoint from token');
+          console.warn('Failed to extract PDS endpoint from token:', e);
+          
+          // If we couldn't extract from token but have the stored endpoint, use that
+          if (storedPdsEndpoint) {
+            console.log('Using stored PDS endpoint instead:', storedPdsEndpoint);
+            pdsEndpoint = storedPdsEndpoint;
+          }
         }
         
         // Get user profile

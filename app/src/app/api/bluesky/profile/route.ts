@@ -250,83 +250,114 @@ export async function POST(request: NextRequest) {
     
     // Use the PDS endpoint if provided, otherwise use the default
     const apiUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : DEFAULT_API_URL;
+    console.log(`Using API URL for profile fetch: ${apiUrl}`);
     
-    // We can resolve either a handle or a DID
-    let url;
-    if (handle && handle.startsWith('did:')) {
-      // If it's a DID, use describeRepo to get details
-      url = `${apiUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(handle)}`;
-    } else {
-      // Otherwise treat it as a handle to resolve
-      const userHandle = handle || 'atproto.com';
-      url = `${apiUrl}/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(userHandle)}`;
-    }
+    // Special handling for third-party PDS
+    // First get the user's DID if we're looking up a handle
+    let userDid = handle;
+    let userHandle = handle;
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `DPoP ${accessToken}`,
-        'DPoP': dpopToken
-      }
-    });
-    
-    // Check for DPoP nonce error
-    if (response.status === 401) {
-      const newNonce = response.headers.get('DPoP-Nonce');
-      const errorResponse = await response.json().catch(() => ({}));
-      
-      if (newNonce) {
-        return NextResponse.json({
-          error: 'use_dpop_nonce',
-          nonce: newNonce,
-          originalError: errorResponse
-        }, { status: 401 });
-      }
-    }
-    
-    // Return the response
-    if (!response.ok) {
-      let errorText = '';
-      let errorObj: Record<string, any> = {};
-      
-      try {
-        errorText = await response.text();
-        console.error('Error from Bluesky:', response.status, errorText);
+    try {
+      if (!handle.startsWith('did:')) {
+        // Always use bsky.social for resolving handles to DIDs
+        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
         
-        // Try to parse the response as JSON if it's not empty
-        if (errorText) {
-          try {
-            errorObj = JSON.parse(errorText);
-          } catch (parseError) {
-            console.error('Failed to parse error response as JSON:', parseError);
-          }
+        if (!resolveResponse.ok) {
+          console.error(`Failed to resolve handle ${handle}:`, await resolveResponse.text());
+          throw new Error(`Failed to resolve handle: ${resolveResponse.statusText}`);
         }
-      } catch (e) {
-        console.error('Error reading response:', e);
+        
+        const resolveData = await resolveResponse.json();
+        userDid = resolveData.did;
+        userHandle = handle;
+        console.log(`Resolved handle ${handle} to DID ${userDid}`);
+      } else {
+        // If we're given a DID, try to find the handle
+        try {
+          // Try PLC directory first
+          const plcResponse = await fetch(`https://plc.directory/${handle}/data`);
+          
+          if (plcResponse.ok) {
+            const plcData = await plcResponse.json();
+            if (plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+              const handleUrl = plcData.alsoKnownAs[0];
+              if (handleUrl.startsWith('at://')) {
+                userHandle = handleUrl.substring(5); // Remove 'at://'
+                console.log(`Resolved DID ${handle} to handle ${userHandle}`);
+              }
+            }
+          }
+        } catch (plcError) {
+          console.warn('Failed to resolve handle from PLC directory:', plcError);
+        }
       }
       
-      // If we can't get the profile, return a basic response to continue the flow
-      if (response.status === 400) {
+      // Now use the correct endpoint for looking up the profile
+      const url = `${apiUrl}/com.atproto.repo.describeRepo?repo=${encodeURIComponent(userDid)}`;
+    
+      console.log(`Making profile request to: ${url}`);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `DPoP ${accessToken}`,
+          'DPoP': dpopToken
+        }
+      });
+      
+      // Check for DPoP nonce error
+      if (response.status === 401) {
+        const newNonce = response.headers.get('DPoP-Nonce');
+        if (newNonce) {
+          console.log('Received nonce from profile request:', newNonce);
+          return NextResponse.json({
+            error: 'use_dpop_nonce',
+            nonce: newNonce
+          }, { status: 401 });
+        }
+      }
+      
+      // If we get a successful response
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Successfully fetched profile data');
+        
+        // Return profile information with both DID and handle
         return NextResponse.json({
-          did: 'unknown_did',
-          handle: 'unknown'
+          did: userDid,
+          handle: userHandle
         });
       }
       
-      return NextResponse.json(
-        { error: 'Profile fetch error', message: errorText, details: errorObj },
-        { status: response.status }
-      );
+      // Handle error response
+      console.error(`Profile request failed with status: ${response.status}`);
+      let errorText = await response.text().catch(() => 'Failed to read response');
+      console.error('Error from profile request:', errorText);
+      
+      // Return information with the handle/DID we resolved
+      return NextResponse.json({
+        did: userDid,
+        handle: userHandle,
+        error: `Profile request failed with status: ${response.status}`
+      });
+      
+    } catch (error: any) {
+      console.error('Profile resolution error:', error);
+      
+      // Even if we have errors, return the best information we have
+      return NextResponse.json({
+        did: userDid || 'unknown_did',
+        handle: userHandle || 'unknown',
+        error: error.message
+      });
     }
+  } catch (outerError: any) {
+    console.error('Top-level profile fetch error:', outerError);
     
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error: any) {
-    console.error('Profile fetch error:', error);
-    // Return a basic profile to continue the flow
+    // Fallback for any unexpected errors
     return NextResponse.json({
       did: 'unknown_did',
-      handle: 'unknown'
+      handle: 'unknown',
+      error: outerError.message
     });
   }
 }
