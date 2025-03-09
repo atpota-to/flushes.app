@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
+// Configure this route as dynamic to fix static generation issues
+export const dynamic = 'force-dynamic';
+
 // This is the default API URL, but we'll use the user's PDS endpoint instead if available
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';

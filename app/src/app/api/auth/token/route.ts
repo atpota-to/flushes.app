@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Configure this route as dynamic to fix static generation issues
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_AUTH_SERVER = 'https://bsky.social';
 const REDIRECT_URI = 'https://flushing.im/auth/callback';
 const CLIENT_ID = 'https://flushing.im/client-metadata.json';

@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { BskyAgent } from '@atproto/api';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
+// Configure this route as dynamic to fix static generation issues
+export const dynamic = 'force-dynamic';
+
 // Define type for our database entry
 interface FlushingRecord {
   id: string | number;

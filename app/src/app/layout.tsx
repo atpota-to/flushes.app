@@ -3,6 +3,10 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
 import ThemeToggle from '@/components/ThemeToggle';
+import ClientOnly from '@/components/ClientOnly';
+
+// Configure this layout as having dynamic runtime to fix SSR issues with theme
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "im.flushing",
@@ -48,7 +52,9 @@ export default function RootLayout({
               backgroundColor: 'var(--card-background)',
               borderBottom: '1px solid var(--tile-border)'
             }}>
-              <ThemeToggle />
+              <ClientOnly>
+                <ThemeToggle />
+              </ClientOnly>
             </header>
             <main>{children}</main>
           </ThemeProvider>

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+
+// Configure this route as dynamic to fix static generation issues
+export const dynamic = 'force-dynamic';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
 // Define interfaces for type safety

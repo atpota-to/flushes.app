@@ -9,7 +9,13 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+// Create default context values to avoid SSR errors
+const defaultContextValue: ThemeContextType = {
+  theme: 'system',
+  setTheme: () => {},
+};
+
+const ThemeContext = createContext<ThemeContextType>(defaultContextValue);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('system');
@@ -17,16 +23,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   
   // Get stored theme preference or use system default
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
-    if (storedTheme) {
-      setTheme(storedTheme);
+    // Only run in browser context
+    if (typeof window !== 'undefined') {
+      const storedTheme = localStorage.getItem('theme') as Theme | null;
+      if (storedTheme) {
+        setTheme(storedTheme);
+      }
+      setMounted(true);
     }
-    setMounted(true);
   }, []);
   
   // Apply theme class to document
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || typeof window === 'undefined') return;
     
     // Save to local storage
     localStorage.setItem('theme', theme);
@@ -58,7 +67,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Handle system preference changes
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || typeof window === 'undefined') return;
     
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
@@ -83,18 +92,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme,
   };
 
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  // Always render the provider to avoid SSR issues, but use default values until mounted
+  return (
+    <ThemeContext.Provider value={mounted ? value : defaultContextValue}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
+// Safe version of useTheme that won't throw during SSR
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+  return useContext(ThemeContext);
 }
