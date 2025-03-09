@@ -39,51 +39,17 @@ export default function ProfileSearch() {
     };
   }, []);
 
-  // Fetch suggestions when query changes
+  // Suggestions fetch is disabled for now
   useEffect(() => {
-    // Clear previous timer
+    // Clear previous timer if it exists
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-
-    // Return early if query is too short
-    if (query.trim().length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    // Set a new timer to fetch suggestions
-    debounceTimerRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        // Normalize query by removing @ if present
-        const searchTerm = query.trim().startsWith('@') 
-          ? query.trim().substring(1) 
-          : query.trim();
-
-        console.log('Fetching suggestions for:', searchTerm);
-        const response = await fetch(`/api/bluesky/search?q=${encodeURIComponent(searchTerm)}`);
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          console.log('Search suggestions:', data.suggestions);
-          setSuggestions(data.suggestions);
-          setShowSuggestions(true);
-        } else {
-          console.error('Search API error:', data.error, data.message);
-          setSuggestions([]);
-          setShowSuggestions(true);
-        }
-      } catch (error) {
-        console.error('Failed to fetch suggestions:', error);
-        setSuggestions([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300); // 300ms debounce delay
-
+    
+    // Always hide suggestions
+    setSuggestions([]);
+    setShowSuggestions(false);
+    
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -104,11 +70,7 @@ export default function ProfileSearch() {
     }
   };
 
-  const handleSuggestionClick = (handle: string) => {
-    router.push(`/profile/${handle}`);
-    setQuery(`@${handle}`);
-    setShowSuggestions(false);
-  };
+  // Removed handleSuggestionClick as it's no longer needed
 
   return (
     <div className={styles.searchContainer}>
@@ -118,7 +80,6 @@ export default function ProfileSearch() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => query.trim().length >= 2 && setShowSuggestions(true)}
           placeholder="Search user @handle"
           className={styles.searchInput}
           aria-label="Search for a user profile"
@@ -130,39 +91,7 @@ export default function ProfileSearch() {
           </svg>
         </button>
       </form>
-      
-      {showSuggestions && (
-        <div ref={suggestionsRef} className={styles.suggestionsContainer}>
-          {loading ? (
-            <div className={styles.loadingContainer}>
-              <span className={styles.loadingDot}></span>
-              <span className={styles.loadingDot}></span>
-              <span className={styles.loadingDot}></span>
-            </div>
-          ) : suggestions.length > 0 ? (
-            <ul className={styles.suggestionsList}>
-              {suggestions.map((suggestion) => (
-                <li key={suggestion.did} className={styles.suggestionItem}>
-                  <button 
-                    type="button"
-                    onClick={() => handleSuggestionClick(suggestion.handle)}
-                    className={styles.suggestionButton}
-                  >
-                    <div className={styles.suggestionInfo}>
-                      {suggestion.displayName && (
-                        <span className={styles.displayName}>{suggestion.displayName}</span>
-                      )}
-                      <span className={styles.handle}>@{suggestion.handle}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className={styles.noResults}>No users found</div>
-          )}
-        </div>
-      )}
+      {/* Suggestions dropdown removed */}
     </div>
   );
 }
