@@ -8,11 +8,22 @@ const SCOPES = 'atproto transition:generic';
 // Type definitions for handle resolution
 interface DidDocument {
   id: string;
+  // Support both formats of service definitions
   service?: Array<{
     id: string;
     type: string;
     serviceEndpoint: string;
   }>;
+  services?: {
+    atproto_pds?: {
+      type: string;
+      endpoint: string;
+    };
+    [key: string]: {
+      type: string;
+      endpoint: string;
+    } | undefined;
+  };
   alsoKnownAs?: string[];
 }
 
@@ -61,13 +72,30 @@ async function fetchDidDocument(did: string): Promise<{
     
     const didDoc: DidDocument = await response.json();
     
-    // Find the PDS service endpoint
-    const pdsService = didDoc.service?.find(s => 
-      s.type === 'AtprotoPersonalDataServer' || 
-      s.id === '#atproto_pds'
-    );
+    // Find the PDS service endpoint - handle both formats
+    let pdsEndpoint = null;
     
-    const pdsEndpoint = pdsService?.serviceEndpoint || null;
+    // First try the services format (newer format)
+    if (didDoc.services?.atproto_pds) {
+      pdsEndpoint = didDoc.services.atproto_pds.endpoint;
+    } 
+    // Or try any service with AtprotoPersonalDataServer type
+    else if (didDoc.services) {
+      const serviceKey = Object.keys(didDoc.services).find(key => 
+        didDoc.services?.[key]?.type === 'AtprotoPersonalDataServer'
+      );
+      if (serviceKey && didDoc.services[serviceKey]) {
+        pdsEndpoint = didDoc.services[serviceKey]?.endpoint || null;
+      }
+    }
+    // Fall back to the older service array format
+    else if (didDoc.service) {
+      const pdsService = didDoc.service.find(s => 
+        s.type === 'AtprotoPersonalDataServer' || 
+        s.id === '#atproto_pds'
+      );
+      pdsEndpoint = pdsService?.serviceEndpoint || null;
+    }
     let hostname = null;
     
     // Extract hostname from the PDS endpoint
