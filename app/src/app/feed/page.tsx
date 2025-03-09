@@ -68,14 +68,6 @@ export default function FeedPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.notice}>
-        <strong>⚠️ NOTICE:</strong> The flush feed is currently out of order. You can still make flushes that save to your PDS, but the feed here won't update until we fix the leak. Sorry for the inconvenience!
-        {isAuthenticated && handle && (
-          <div className={styles.noticePersonal}>
-            You can also see your flushes on your flush profile: <a href={`/profile/${handle}`} className={styles.noticeLink}>flushing.im/profile/{handle}</a>
-          </div>
-        )}
-      </div>
       
       <header className={styles.header}>
         <h1>Flushing Feed</h1>
