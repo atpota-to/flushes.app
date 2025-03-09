@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
       if (supabaseUrl && supabaseKey) {
         const supabase = createClient(supabaseUrl, supabaseKey);
         
-        // Find the record that matches the cursor ID
+        // Debug: find the record that matches the cursor ID
         const { data: cursorRecord, error: cursorError } = await supabase
           .from('flushing_records')
-          .select('created_at')
+          .select('id, created_at')
           .eq('id', beforeCursor)
           .single();
         
@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ entries: [] });
         }
         
-        // Fetch entries older than the cursor timestamp
+        // Fetch entries with IDs less than the cursor ID (older entries)
+        console.log(`Fetching entries older than ID ${beforeCursor}`);
         const { data: entries, error } = await supabase
           .from('flushing_records')
           .select(`
@@ -102,8 +103,8 @@ export async function GET(request: NextRequest) {
             created_at,
             handle
           `)
-          .lt('created_at', cursorRecord.created_at) // Get entries older than cursor
-          .order('created_at', { ascending: false })
+          .lt('id', beforeCursor) // Get entries older than cursor by ID
+          .order('id', { ascending: false }) // Order by ID instead of created_at
           .limit(MAX_ENTRIES);
           
         if (error) {
@@ -221,11 +222,34 @@ export async function GET(request: NextRequest) {
       const supabase = createClient(supabaseUrl, supabaseKey);
       
       // Fetch entries from the flushing_records table
-      console.log(`Querying database for latest ${MAX_ENTRIES} entries...`);
+      console.log(`Querying database for latest ${MAX_ENTRIES} entries at ${new Date().toISOString()}...`);
       
       // Debug log the SQL query we're about to execute
       console.log('SQL Query: SELECT id, uri, cid, did, text, emoji, created_at, handle FROM flushing_records ORDER BY created_at DESC LIMIT 20');
       
+      // First, let's check what's the highest ID in the database to debug
+      const { data: maxIdResult } = await supabase
+        .from('flushing_records')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+        
+      console.log('Highest ID in database:', maxIdResult?.[0]?.id || 'unknown');
+      
+      // Now let's check what's the latest timestamp in the database
+      const { data: latestTimestampResult } = await supabase
+        .from('flushing_records')
+        .select('id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      console.log('Latest timestamp in database:', 
+        latestTimestampResult?.[0]?.id 
+          ? `ID ${latestTimestampResult[0].id} at ${latestTimestampResult[0].created_at}` 
+          : 'unknown');
+      
+      // Try ordering by ID instead of created_at to see if it works better
+      // This should work because IDs are auto-incrementing and higher IDs are newer
       const { data: entries, error } = await supabase
         .from('flushing_records')
         .select(`
@@ -238,7 +262,7 @@ export async function GET(request: NextRequest) {
           created_at,
           handle
         `)
-        .order('created_at', { ascending: false })
+        .order('id', { ascending: false }) // Changed to sort by ID instead of created_at
         .limit(MAX_ENTRIES);
       
       if (error) {

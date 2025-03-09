@@ -42,14 +42,7 @@ export default function Home() {
     // Fetch the latest entries when the component mounts
     fetchLatestEntries(true); // Force refresh on initial load
     
-    // Set up periodic refresh every 20 seconds
-    const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing feed...');
-      fetchLatestEntries(true);
-    }, 20000);
-    
-    // Clean up interval on unmount
-    return () => clearInterval(refreshInterval);
+    // Removed auto-refresh to avoid excessive API calls
   }, []);
 
   // Toggle status update form
@@ -282,14 +275,17 @@ export default function Home() {
         return; // No entries to use as cursor
       }
       
-      // Use the oldest entry's ID as the cursor
-      const url = `/api/bluesky/feed?before=${oldestEntry.id}`;
+      console.log(`Loading older entries before ID ${oldestEntry.id}`);
+      
+      // Use the oldest entry's ID as the cursor, plus add a unique timestamp
+      const url = `/api/bluesky/feed?before=${oldestEntry.id}&_t=${Date.now()}`;
       
       const response = await fetch(url, {
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
       
@@ -300,6 +296,14 @@ export default function Home() {
       const data = await response.json();
       
       if (data.entries && data.entries.length > 0) {
+        console.log(`Loaded ${data.entries.length} older entries`);
+        
+        // Debug: log the first few older entries
+        for (let i = 0; i < Math.min(3, data.entries.length); i++) {
+          const entry = data.entries[i];
+          console.log(`  Older ${i+1}. ID: ${entry.id}, Handle: @${entry.authorHandle}, Text: "${entry.text.substring(0, 20)}..."`);
+        }
+        
         // Append the new entries to our existing list
         setEntries([...entries, ...data.entries]);
         
@@ -311,6 +315,8 @@ export default function Home() {
             behavior: 'instant' // Use instant to avoid additional animation
           });
         }, 0);
+      } else {
+        console.log('No older entries found');
       }
     } catch (err: any) {
       console.error('Error fetching older entries:', err);
@@ -448,32 +454,51 @@ export default function Home() {
             </p>
           </div>
           <button 
-            onClick={() => {
-              // Guaranteed fresh data with cache busting
-              setLoading(true);
-              const uniqueUrl = `/api/bluesky/feed?refresh=true&_t=${Date.now()}`;
-              console.log(`Manual refresh with unique URL: ${uniqueUrl}`);
-              fetch(uniqueUrl, { 
-                cache: 'no-store',
-                headers: {
-                  'Cache-Control': 'no-cache, no-store, must-revalidate',
-                  'Pragma': 'no-cache',
-                  'Expires': '0'
-                }
-              })
-                .then(response => response.json())
-                .then(data => {
-                  console.log(`Manual refresh got ${data.entries?.length || 0} entries`);
-                  if (data.entries?.length > 0) {
-                    console.log(`First entry ID: ${data.entries[0].id}, text: ${data.entries[0].text.substring(0, 20)}...`);
+            onClick={async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                
+                // Request with a unique timestamp to completely bypass any caching
+                const timestamp = Date.now();
+                const url = `/api/bluesky/feed?refresh=true&_t=${timestamp}`;
+                console.log(`MANUAL REFRESH @ ${new Date().toISOString()}`);
+                console.log(`Using URL: ${url}`);
+                
+                const response = await fetch(url, {
+                  method: 'GET',
+                  cache: 'no-store',
+                  headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
                   }
-                  setEntries(data.entries || []);
-                  setLoading(false);
-                })
-                .catch(err => {
-                  console.error('Manual refresh error:', err);
-                  setLoading(false);
                 });
+                
+                if (!response.ok) {
+                  throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log(`Refresh received ${data.entries?.length || 0} entries`);
+                
+                if (data.entries && data.entries.length > 0) {
+                  console.log(`Highest ID from refresh: ${data.entries[0].id}`);
+                  for (let i = 0; i < Math.min(5, data.entries.length); i++) {
+                    console.log(`  ${i+1}. ID: ${data.entries[i].id}, Handle: @${data.entries[i].authorHandle}, Text: "${data.entries[i].text.substring(0, 20)}..."`);
+                  }
+                } else {
+                  console.log('No entries returned from refresh');
+                }
+                
+                // Update the entries with the new data
+                setEntries(data.entries || []);
+              } catch (err) {
+                console.error('Manual refresh error:', err);
+                setError('Failed to refresh. Try again.');
+              } finally {
+                setLoading(false);
+              }
             }}
             className={styles.refreshButton}
             disabled={loading}
