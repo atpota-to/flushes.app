@@ -29,7 +29,7 @@
 
 .subtitle {
   font-size: 1rem;
-  color: #888;
+  color: var(--timestamp-color);
   margin: 0 0 0.5rem 0;
   font-weight: normal;
   word-wrap: break-word;
@@ -37,7 +37,7 @@
 
 .description {
   font-size: 1.1rem;
-  color: #666;
+  color: var(--text-color);
   margin: 0;
   line-height: 1.5;
   word-wrap: break-word;
@@ -47,7 +47,7 @@
   display: block;
   font-size: 0.85rem;
   margin-top: 0.5rem;
-  color: #888;
+  color: var(--timestamp-color);
 }
 
 .kofiLink {
@@ -94,7 +94,7 @@
 }
 
 .userInfo {
-  color: #555;
+  color: var(--text-color);
   font-weight: 500;
   text-decoration: none;
   transition: color 0.2s;
@@ -117,7 +117,7 @@
 }
 
 .logoutButton:hover {
-  background-color: rgba(91, 173, 240, 0.1);
+  background-color: var(--button-hover);
 }
 
 .loginButton {
@@ -135,7 +135,7 @@
 .loginButton:hover {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 /* Status form styles */
@@ -215,16 +215,18 @@
   display: none; /* Hide since we don't need to scroll anymore */
   margin: 0 0 0.5rem 0;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--timestamp-color);
   font-style: italic;
 }
 
 .input {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid #ddd;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
   font-size: 1rem;
+  background-color: var(--input-background);
+  color: var(--text-color);
 }
 
 .input:focus {
@@ -238,9 +240,9 @@
   align-items: center;
   width: 100%;
   position: relative;
-  border: 1px solid #ddd;
+  border: 1px solid var(--input-border);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--input-background);
 }
 
 .inputWrapper:focus-within {
@@ -251,10 +253,10 @@
 .inputPrefix {
   padding: 0.8rem 0.8rem 0.8rem 0.8rem;
   font-size: 1rem;
-  color: #333;
+  color: var(--text-color);
   font-weight: 500;
-  background-color: #f8f8f8;
-  border-right: 1px solid #eee;
+  background-color: var(--input-prefix-background);
+  border-right: 1px solid var(--input-border);
   border-radius: 4px 0 0 4px;
 }
 
@@ -265,6 +267,7 @@
   font-size: 1rem;
   background: transparent;
   border-radius: 0 4px 4px 0;
+  color: var(--text-color);
 }
 
 .inputWithPrefix:focus {
@@ -274,7 +277,7 @@
 
 .charCount {
   text-align: right;
-  color: #666;
+  color: var(--timestamp-color);
   font-size: 0.8rem;
   margin-top: 0.3rem;
 }
@@ -284,9 +287,9 @@
   grid-template-columns: repeat(auto-fill, minmax(2.2rem, 1fr));
   gap: 0.5rem;
   padding: 0.8rem;
-  border: 1px solid #eee;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background-color: #fcfcfc;
+  background-color: var(--emoji-grid-bg);
   max-height: none; /* Remove height restriction */
   overflow-y: visible; /* No need for scrolling */
 }
@@ -308,8 +311,8 @@
 }
 
 .emojiButton {
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  background: var(--emoji-button-bg);
+  border: 1px solid var(--emoji-button-border);
   border-radius: 4px;
   font-size: 1.3rem;
   aspect-ratio: 1/1;
@@ -333,7 +336,7 @@
 }
 
 .emojiButton:hover {
-  background: #eaeaea;
+  background: var(--button-hover);
   transform: scale(1.05);
 }
 
@@ -343,16 +346,17 @@
 }
 
 .preview {
-  background: #f9f9f9;
+  background: var(--background-color);
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1.5rem;
+  border: 1px solid var(--tile-border);
 }
 
 .previewTitle {
   font-weight: 500;
   margin-bottom: 0.5rem;
-  color: #666;
+  color: var(--text-color);
 }
 
 .previewContent {
@@ -381,17 +385,18 @@
 .submitButton:hover:not(:disabled) {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 .submitButton:disabled {
-  background-color: #cccccc;
+  background-color: var(--button-disabled);
+  color: var(--button-disabled-text);
   cursor: not-allowed;
 }
 
 .success {
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
+  background-color: var(--success-background);
+  color: var(--success-text);
   padding: 1rem;
   border-radius: 4px;
   margin: 1rem 0;
@@ -423,7 +428,7 @@
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e1e1e1;
+  border-bottom: 1px solid var(--tile-border);
 }
 
 .feedHeaderLeft {
@@ -440,7 +445,7 @@
 
 .feedSubheader {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--timestamp-color);
   margin: 0;
   display: flex;
   flex-direction: column;
@@ -477,7 +482,8 @@
 }
 
 .refreshButton:disabled {
-  background-color: #ccc;
+  background-color: var(--button-disabled);
+  color: var(--button-disabled-text);
   cursor: not-allowed;
 }
 
@@ -507,7 +513,7 @@
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px var(--shadow-color);
   }
   
   .feedList {
@@ -516,7 +522,7 @@
   
   .feedItem:hover {
     transform: none;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px var(--shadow-color);
   }
 }
 
@@ -569,7 +575,7 @@
 .text {
   font-size: 1.1rem;
   line-height: 1.4;
-  color: #333;
+  color: var(--text-color);
   flex: 1;
   min-width: 0;
   word-wrap: break-word;
@@ -579,7 +585,7 @@
 
 .timestamp {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--timestamp-color);
   margin-left: auto;
   white-space: nowrap;
 }

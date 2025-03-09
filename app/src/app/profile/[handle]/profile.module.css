@@ -90,7 +90,6 @@
   margin-bottom: 1.5rem;
   box-shadow: 0 2px 5px var(--shadow-color);
   border: 1px solid var(--tile-border);
-  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .statsHeader {
@@ -274,7 +273,6 @@
   padding: 1rem;
   box-shadow: 0 2px 5px var(--shadow-color);
   transition: transform 0.2s, box-shadow 0.2s;
-  background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .feedItem:hover {
