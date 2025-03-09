@@ -91,24 +91,22 @@ export async function GET(request: NextRequest) {
         
         // Fetch entries with IDs less than the cursor ID (older entries)
         console.log(`Fetching entries older than ID ${beforeCursor}`);
+        
+        // Enhanced query for entries older than the cursor
         const { data: entries, error } = await supabase
           .from('flushing_records')
-          .select(`
-            id,
-            uri,
-            cid,
-            did,
-            text,
-            emoji,
-            created_at,
-            handle
-          `)
+          .select('*')
           .lt('id', beforeCursor) // Get entries older than cursor by ID
-          .order('id', { ascending: false }) // Order by ID instead of created_at
+          .order('id', { ascending: false }) // Order by ID to get newest first
           .limit(MAX_ENTRIES);
           
         if (error) {
           throw new Error(`Supabase error: ${error.message}`);
+        }
+        
+        console.log(`Found ${entries?.length || 0} older entries`);
+        if (entries && entries.length > 0) {
+          console.log(`Oldest ID in batch: ${entries[entries.length-1].id}, Newest ID in batch: ${entries[0].id}`);
         }
         
         // Process and return older entries (skip caching)
@@ -248,26 +246,86 @@ export async function GET(request: NextRequest) {
           ? `ID ${latestTimestampResult[0].id} at ${latestTimestampResult[0].created_at}` 
           : 'unknown');
       
-      // Try ordering by ID instead of created_at to see if it works better
-      // This should work because IDs are auto-incrementing and higher IDs are newer
-      const { data: entries, error } = await supabase
-        .from('flushing_records')
-        .select(`
-          id,
-          uri,
-          cid,
-          did,
-          text,
-          emoji,
-          created_at,
-          handle
-        `)
-        .order('id', { ascending: false }) // Changed to sort by ID instead of created_at
-        .limit(MAX_ENTRIES);
+      // Try multiple query approaches to ensure we get the most recent data
+      console.log('Executing direct query to ensure we get the absolute latest data');
       
-      if (error) {
-        throw new Error(`Supabase error: ${error.message}`);
+      let entries;
+      
+      try {
+        // First try: Get entries with highest IDs
+        const { data: idSortedEntries, error: idSortError } = await supabase
+          .from('flushing_records')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(MAX_ENTRIES);
+        
+        if (idSortError) {
+          throw idSortError;
+        }
+        
+        if (idSortedEntries && idSortedEntries.length > 0) {
+          console.log('✅ ID-sorted query successful');
+          console.log(`ID-sorted query found entries with IDs: ${idSortedEntries.slice(0, 5).map(e => e.id).join(', ')}...`);
+          entries = idSortedEntries;
+        } else {
+          console.warn('⚠️ ID-sorted query returned no entries');
+        }
+      } catch (err) {
+        console.error('❌ Error with ID-sorted query:', err);
       }
+      
+      // If first query failed, try a different approach
+      if (!entries) {
+        try {
+          // Second try: Get entries with newest timestamps
+          const { data: timeSortedEntries, error: timeSortError } = await supabase
+            .from('flushing_records')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(MAX_ENTRIES);
+          
+          if (timeSortError) {
+            throw timeSortError;
+          }
+          
+          if (timeSortedEntries && timeSortedEntries.length > 0) {
+            console.log('✅ Time-sorted query successful');
+            console.log(`Time-sorted query found entries with IDs: ${timeSortedEntries.slice(0, 5).map(e => e.id).join(', ')}...`);
+            entries = timeSortedEntries;
+          } else {
+            console.warn('⚠️ Time-sorted query returned no entries');
+          }
+        } catch (err) {
+          console.error('❌ Error with time-sorted query:', err);
+        }
+      }
+      
+      // If still no entries, try a last approach
+      if (!entries) {
+        console.log('⚠️ All previous queries failed, trying basic query');
+        const { data: basicEntries, error: basicError } = await supabase
+          .from('flushing_records')
+          .select('*')
+          .limit(MAX_ENTRIES);
+          
+        if (basicError) {
+          throw new Error(`Basic query error: ${basicError.message}`);
+        }
+        
+        entries = basicEntries || [];
+      }
+      
+      // Safety check
+      if (!entries) {
+        entries = [];
+      }
+      
+      console.log(`Final query found ${entries.length} entries`);
+      if (entries.length > 0) {
+        console.log(`Highest ID: ${entries[0].id}, Latest timestamp: ${entries[0].created_at}`);
+      }
+      
+      // Error already handled in the try/catch blocks above
       
       console.log(`Retrieved ${entries?.length || 0} entries from database.`);
       

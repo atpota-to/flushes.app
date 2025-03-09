@@ -508,6 +508,13 @@ export default function Home() {
         </div>
 
         {error && <div className={styles.error}>{error}</div>}
+        
+        {/* Debug info (hidden in production) */}
+        {entries && entries.length > 0 && (
+          <div className={styles.debugInfo} style={{ fontSize: '10px', color: '#666', margin: '5px 0', display: 'none' }}>
+            <p>Debug: Latest entry ID: {entries[0].id}, Count: {entries.length}</p>
+          </div>
+        )}
 
         {loading ? (
           <div className={styles.loadingContainer}>
