@@ -135,6 +135,7 @@ export default function LoginPage() {
       ) : (
         <div className={styles.loginForm}>
           <h1>Login with Bluesky</h1>
+          <p className={styles.subtitle}>using your AT Protocol account</p>
           <p className={styles.description}>
             Enter your Bluesky handle to continue. This works with any Bluesky account,
             including those on custom PDS servers.
@@ -161,7 +162,7 @@ export default function LoginPage() {
               </button>
             </div>
             <p className={styles.helpText}>
-              Examples: alice.bsky.social, bob.com, or any other Bluesky handle
+              Examples: alice.bsky.social, bob.com, etc.
             </p>
           </form>
           

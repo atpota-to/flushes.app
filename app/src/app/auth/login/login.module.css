@@ -38,7 +38,14 @@
 
 .loginForm h1 {
   color: var(--primary-color);
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  font-style: italic;
 }
 
 .description {

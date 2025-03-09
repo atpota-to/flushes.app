@@ -357,7 +357,10 @@ export default function Home() {
         <div className={styles.feedHeader}>
           <div className={styles.feedHeaderLeft}>
             <h2>Recent flushes</h2>
-            <p className={styles.feedSubheader}>Click on a username to see their custom flushing profile.</p>
+            <p className={styles.feedSubheader}>
+              Click on a username to see their custom flushing profile. 
+              <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
+            </p>
           </div>
           <button 
             onClick={() => fetchLatestEntries(true)}

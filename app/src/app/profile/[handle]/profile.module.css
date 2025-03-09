@@ -153,7 +153,7 @@
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  margin: 1.5rem auto 0;
+  margin-top: 1.5rem;
   transition: all 0.2s;
 }
 
