@@ -52,18 +52,17 @@ export async function GET(request: NextRequest) {
       
       // Calculate flushes per day
       let flushesPerDay = 0;
-      if (chartData.length > 0) {
+      if (chartData.length > 0 && totalCount !== null) {
         // Calculate days between first and last flush
         const firstDate = new Date(chartData[0].date);
         const lastDate = new Date(chartData[chartData.length - 1].date);
         const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)));
-        flushesPerDay = parseFloat((totalCount / daysDiff).toFixed(1));
+        flushesPerDay = parseFloat(((totalCount || 0) / daysDiff).toFixed(1));
       }
       
       // 3. Get top flushers (leaderboard)
       const { data: leaderboardData, error: leaderboardError } = await supabase
         .from('flushing_records')
-        .select('did, count')
         .select('did')
         .order('created_at', { ascending: false });
       
