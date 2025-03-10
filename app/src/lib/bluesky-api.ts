@@ -91,7 +91,7 @@ export async function refreshAccessToken(
       publicKey,
       'POST',
       tokenEndpoint,
-      dpopNonce
+      dpopNonce || undefined // Convert null to undefined to satisfy TypeScript
     );
     
     // Make the token refresh request
