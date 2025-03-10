@@ -14,13 +14,174 @@ export interface FlushingRecord {
   createdAt: string;
 }
 
+// Check if a JWT token is expired
+export function isTokenExpired(token: string): boolean {
+  try {
+    // Extract the payload from the JWT token
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.error('Invalid token format');
+      return true; // Assume expired if format is invalid
+    }
+    
+    // Decode the payload
+    const payload = JSON.parse(atob(parts[1]));
+    
+    // Check if the token has an expiration time
+    if (!payload.exp) {
+      console.warn('Token does not have an expiration time');
+      return false; // Can't determine if it's expired
+    }
+    
+    // Check if the token is expired
+    const now = Math.floor(Date.now() / 1000);
+    const isExpired = payload.exp <= now;
+    
+    if (isExpired) {
+      console.log(`Token expired at ${new Date(payload.exp * 1000).toISOString()}`);
+    }
+    
+    return isExpired;
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return true; // Assume expired if there's an error
+  }
+}
+
+// Refresh an access token using the refresh token
+export async function refreshAccessToken(
+  refreshToken: string,
+  keyPair: CryptoKeyPair,
+  pdsEndpoint: string
+): Promise<{ 
+  accessToken: string; 
+  refreshToken: string;
+  dpopNonce?: string;
+}> {
+  try {
+    if (!pdsEndpoint) {
+      throw new Error('No PDS endpoint provided for token refresh');
+    }
+    
+    console.log('Refreshing access token with PDS endpoint:', pdsEndpoint);
+    
+    // Endpoint for token refresh
+    const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
+    
+    // Get a nonce for the DPoP token
+    let dpopNonce = null;
+    try {
+      // Try to get a nonce with a HEAD request
+      const headResponse = await fetch(tokenEndpoint, {
+        method: 'HEAD'
+      });
+      
+      dpopNonce = headResponse.headers.get('DPoP-Nonce');
+      if (dpopNonce) {
+        console.log('Got nonce for token refresh:', dpopNonce);
+      }
+    } catch (nonceError) {
+      console.warn('Failed to get nonce for token refresh:', nonceError);
+    }
+    
+    // Generate DPoP token for the refresh request
+    const publicKey = await exportJWK(keyPair.publicKey);
+    const dpopToken = await generateDPoPToken(
+      keyPair.privateKey,
+      publicKey,
+      'POST',
+      tokenEndpoint,
+      dpopNonce
+    );
+    
+    // Make the token refresh request
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'DPoP': dpopToken
+      },
+      body: new URLSearchParams({
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': 'https://flushing.im/client-metadata.json'
+      })
+    });
+    
+    // Check for nonce error
+    if (response.status === 401) {
+      const newNonce = response.headers.get('DPoP-Nonce');
+      if (newNonce) {
+        console.log('Got new nonce during token refresh:', newNonce);
+        
+        // Try again with the new nonce
+        const retryDpopToken = await generateDPoPToken(
+          keyPair.privateKey,
+          publicKey,
+          'POST',
+          tokenEndpoint,
+          newNonce
+        );
+        
+        const retryResponse = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'DPoP': retryDpopToken
+          },
+          body: new URLSearchParams({
+            'grant_type': 'refresh_token',
+            'refresh_token': refreshToken,
+            'client_id': 'https://flushing.im/client-metadata.json'
+          })
+        });
+        
+        if (!retryResponse.ok) {
+          const errorText = await retryResponse.text();
+          throw new Error(`Token refresh retry failed: ${retryResponse.status}, ${errorText}`);
+        }
+        
+        const tokenData = await retryResponse.json();
+        
+        // Return the new tokens and nonce
+        return {
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || refreshToken, // Use the new refresh token if provided
+          dpopNonce: newNonce
+        };
+      }
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Token refresh failed: ${response.status}, ${errorText}`);
+    }
+    
+    const tokenData = await response.json();
+    
+    // Get any nonce from the response headers
+    const responseNonce = response.headers.get('DPoP-Nonce');
+    
+    // Return the new tokens and nonce
+    return {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token || refreshToken, // Use the new refresh token if provided
+      dpopNonce: responseNonce || dpopNonce
+    };
+  } catch (error) {
+    console.error('Error refreshing access token:', error);
+    throw error;
+  }
+}
+
 // Check if authentication is valid by making a simple request
 export async function checkAuth(
   accessToken: string,
   keyPair: CryptoKeyPair,
-  did: string,  // Add DID parameter
+  did: string,
   dpopNonce: string | null = null,
-  pdsEndpoint: string | null = null
+  pdsEndpoint: string | null = null,
+  refreshToken: string | null = null // Add refresh token parameter
 ): Promise<boolean> {
   try {
     if (!pdsEndpoint) {
@@ -31,6 +192,31 @@ export async function checkAuth(
     if (!did) {
       console.error('No DID provided for auth check');
       return false;
+    }
+    
+    // First check if the token is expired by decoding it
+    const tokenExpired = isTokenExpired(accessToken);
+    if (tokenExpired && refreshToken) {
+      console.log('Access token is expired, attempting to refresh...');
+      
+      try {
+        // Try to refresh the token
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
+          await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+        
+        // Update tokens in localStorage
+        localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+        
+        console.log('Token refreshed successfully, retrying auth check with new token');
+        
+        // Return the result of checkAuth with the new token
+        return checkAuth(newAccessToken, keyPair, did, newNonce || null, pdsEndpoint, newRefreshToken);
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        return false;
+      }
     }
     
     console.log('Checking auth with PDS endpoint:', pdsEndpoint);
@@ -88,7 +274,30 @@ export async function checkAuth(
       if (nonce) {
         console.log('Got nonce during auth check:', nonce);
         // Try again with the nonce, but prevent infinite recursion
-        return checkAuth(accessToken, keyPair, did, nonce, pdsEndpoint);
+        return checkAuth(accessToken, keyPair, did, nonce, pdsEndpoint, refreshToken);
+      }
+      
+      // If we have a refresh token, try to refresh the access token
+      if (refreshToken && !tokenExpired) { // Only try this if we didn't already try above
+        console.log('Auth failed with 401, attempting to refresh token...');
+        
+        try {
+          // Try to refresh the token
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
+            await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+          
+          // Update tokens in localStorage
+          localStorage.setItem('accessToken', newAccessToken);
+          localStorage.setItem('refreshToken', newRefreshToken);
+          if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+          
+          console.log('Token refreshed successfully, retrying auth check with new token');
+          
+          // Return the result of checkAuth with the new token
+          return checkAuth(newAccessToken, keyPair, did, newNonce || null, pdsEndpoint, newRefreshToken);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+        }
       }
     }
     
@@ -329,7 +538,8 @@ export async function createFlushingStatus(
   emoji: string,
   dpopNonce: string | null = null,
   pdsEndpoint: string | null = null,
-  retryCount: number = 0 // Add retry counter
+  retryCount: number = 0, // Add retry counter
+  refreshToken: string | null = null // Add refresh token parameter
 ): Promise<any> {
   // Safety check: prevent infinite recursion
   if (retryCount >= 3) {
@@ -418,8 +628,45 @@ export async function createFlushingStatus(
         emoji,
         errorData.nonce,
         pdsEndpoint,
-        retryCount + 1
+        retryCount + 1,
+        refreshToken // Pass through the refresh token
       );
+    }
+    
+    // Handle expired token with refresh
+    if (response.status === 401 && refreshToken) {
+      console.log('Authentication error (401), attempting token refresh...');
+      
+      try {
+        // Try to refresh the token
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
+          await refreshAccessToken(refreshToken, keyPair, pdsEndpoint || 'https://bsky.social');
+        
+        // Update tokens in localStorage
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('accessToken', newAccessToken);
+          localStorage.setItem('refreshToken', newRefreshToken);
+          if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+        }
+        
+        console.log('Token refreshed successfully, retrying status creation');
+        
+        // Retry with the new token
+        return createFlushingStatus(
+          newAccessToken,
+          keyPair,
+          did,
+          statusText,
+          emoji,
+          newNonce || null,
+          pdsEndpoint,
+          retryCount + 1,
+          newRefreshToken
+        );
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw new Error('Authentication expired. Please log out and log in again.');
+      }
     }
     
     // For other errors, throw with more details

@@ -22,7 +22,7 @@ interface FlushingEntry {
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
+  const { isAuthenticated, accessToken, refreshToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
   
   // Status update state
   const [text, setText] = useState('is ');
@@ -130,13 +130,14 @@ export default function Home() {
       );
       const keyPair = { publicKey, privateKey };
       
-      // First, check if auth is valid
+      // First, check if auth is valid (passing the refresh token)
       const isAuthValid = await checkAuth(
         accessToken,
         keyPair,
         did,
         dpopNonce || null,
-        pdsEndpoint
+        pdsEndpoint,
+        refreshToken // Pass the refresh token to enable auto-refresh if needed
       );
       
       if (!isAuthValid) {
@@ -167,7 +168,9 @@ export default function Home() {
         formattedText, 
         selectedEmoji,
         dpopNonce || null,
-        pdsEndpoint
+        pdsEndpoint,
+        0, // initial retry count
+        refreshToken // Pass refresh token to enable token refresh if needed
       );
       
       console.log('Status update result:', result);
