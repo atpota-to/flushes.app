@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/lib/theme-context';
 import ThemeToggle from '@/components/ThemeToggle';
 import ClientOnly from '@/components/ClientOnly';
 import ProfileSearch from '@/components/ProfileSearch';
+import { Analytics } from "@vercel/analytics/react"
 
 // Configure this layout as having dynamic runtime to fix SSR issues with theme
 export const dynamic = 'force-dynamic';
@@ -64,6 +65,7 @@ export default function RootLayout({
             <main>{children}</main>
           </ThemeProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
