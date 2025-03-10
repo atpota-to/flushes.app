@@ -166,7 +166,7 @@ export async function refreshAccessToken(
     return {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token || refreshToken, // Use the new refresh token if provided
-      dpopNonce: responseNonce || dpopNonce
+      dpopNonce: responseNonce || dpopNonce || undefined
     };
   } catch (error) {
     console.error('Error refreshing access token:', error);
