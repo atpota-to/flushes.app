@@ -458,7 +458,8 @@
   text-decoration: none;
   transition: color 0.2s;
   margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
 .statsLink:hover {

@@ -379,6 +379,9 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Plumbing Stats link - visible to all users */}
+      <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
+
       {/* Status update section - only visible when logged in */}
       {isAuthenticated && (
         <>
@@ -392,7 +395,6 @@ export default function Home() {
               <path d="M19 9L12 16L5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
 
           {/* Collapsible status update form */}
           <div className={`${styles.statusUpdateContainer} ${statusOpen ? styles.statusUpdateOpen : ''}`}>
