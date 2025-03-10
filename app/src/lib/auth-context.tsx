@@ -39,6 +39,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [dpopNonce, setDpopNonce] = useState<string | null>(null);
   const [pdsEndpoint, setPdsEndpoint] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [lastTokenRefresh, setLastTokenRefresh] = useState<number>(0);
+
+  // Function to check token and refresh if needed
+  const checkAndRefreshToken = async () => {
+    if (!accessToken || !refreshToken || !serializedKeyPair || !did || !pdsEndpoint) {
+      return;
+    }
+
+    try {
+      // Dynamically import isTokenExpired and refreshAccessToken
+      const { isTokenExpired, refreshAccessToken } = await import('./bluesky-api');
+      
+      // Check if token is expired or expiring soon
+      if (isTokenExpired(accessToken)) {
+        console.log('Access token is expired or expiring soon, refreshing...');
+        
+        // Deserialize keypair
+        const keyPairData = JSON.parse(serializedKeyPair);
+        const publicKey = await window.crypto.subtle.importKey(
+          'jwk',
+          keyPairData.publicKey,
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          true,
+          ['verify']
+        );
+        const privateKey = await window.crypto.subtle.importKey(
+          'jwk',
+          keyPairData.privateKey,
+          { name: 'ECDSA', namedCurve: 'P-256' },
+          true,
+          ['sign']
+        );
+        const keyPair = { publicKey, privateKey };
+        
+        // Refresh the token
+        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
+          await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+        
+        // Update state and localStorage
+        setAccessToken(newAccessToken);
+        setRefreshToken(newRefreshToken);
+        if (newNonce) setDpopNonce(newNonce);
+        
+        localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+        
+        setLastTokenRefresh(Date.now());
+        console.log('Successfully refreshed access token');
+      }
+    } catch (error) {
+      console.error('Failed to refresh token:', error);
+    }
+  };
 
   useEffect(() => {
     // Set isClient to true once the component mounts
@@ -82,6 +136,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }
   }, []);
+  
+  // Effect to check token expiration periodically
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // Check token immediately after login
+    checkAndRefreshToken();
+    
+    // Check token every 10 minutes
+    const tokenCheckInterval = setInterval(() => {
+      checkAndRefreshToken();
+    }, 10 * 60 * 1000); // 10 minutes
+    
+    return () => clearInterval(tokenCheckInterval);
+  }, [isAuthenticated, accessToken, refreshToken, serializedKeyPair, did, pdsEndpoint]);
 
   const setAuth = ({
     accessToken,

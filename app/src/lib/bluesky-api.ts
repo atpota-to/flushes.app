@@ -41,7 +41,15 @@ export function isTokenExpired(token: string): boolean {
       console.log(`Token expired at ${new Date(payload.exp * 1000).toISOString()}`);
     }
     
-    return isExpired;
+    // We also want to proactively refresh tokens that will expire soon (within 5 minutes)
+    const expiresInSeconds = payload.exp - now;
+    const isExpiringSoon = expiresInSeconds > 0 && expiresInSeconds < 300; // 5 minutes
+    
+    if (isExpiringSoon) {
+      console.log(`Token will expire soon: ${expiresInSeconds} seconds remaining`);
+    }
+    
+    return isExpired || isExpiringSoon;
   } catch (error) {
     console.error('Error checking token expiration:', error);
     return true; // Assume expired if there's an error
@@ -209,6 +217,8 @@ export async function checkAuth(
         localStorage.setItem('refreshToken', newRefreshToken);
         if (newNonce) localStorage.setItem('dpopNonce', newNonce);
         
+        console.log('Tokens updated in localStorage during checkAuth');
+        
         console.log('Token refreshed successfully, retrying auth check with new token');
         
         // Return the result of checkAuth with the new token
@@ -290,6 +300,8 @@ export async function checkAuth(
           localStorage.setItem('accessToken', newAccessToken);
           localStorage.setItem('refreshToken', newRefreshToken);
           if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+          
+          console.log('Tokens updated in localStorage during checkAuth');
           
           console.log('Token refreshed successfully, retrying auth check with new token');
           
@@ -647,6 +659,8 @@ export async function createFlushingStatus(
           localStorage.setItem('accessToken', newAccessToken);
           localStorage.setItem('refreshToken', newRefreshToken);
           if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+          
+          console.log('Tokens updated in localStorage during createFlushingStatus');
         }
         
         console.log('Token refreshed successfully, retrying status creation');
