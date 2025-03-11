@@ -1,18 +1,18 @@
 {
-  "client_id": "https://flushing.im/client-metadata.json",
+  "client_id": "https://flushes.app/client-metadata.json",
   "application_type": "web",
-  "client_name": "I'm Flushing",
-  "client_uri": "https://flushing.im",
-  "logo_uri": "https://flushing.im/logo.png",
-  "tos_uri": "https://flushing.im/terms",
-  "policy_uri": "https://flushing.im/privacy",
+  "client_name": "Flushes",
+  "client_uri": "https://flushes.app",
+  "logo_uri": "https://flushes.app/logo.png",
+  "tos_uri": "https://flushes.app/terms",
+  "policy_uri": "https://flushes.app/privacy",
   "dpop_bound_access_tokens": true,
   "grant_types": [
     "authorization_code",
     "refresh_token"
   ],
   "redirect_uris": [
-    "https://flushing.im/auth/callback"
+    "https://flushes.app/auth/callback"
   ],
   "response_types": [
     "code"
