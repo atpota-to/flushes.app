@@ -265,33 +265,36 @@ export async function POST(request: NextRequest) {
     // First get the user's DID if we're looking up a handle
     let userDid = handle;
     let userHandle = handle;
+    let resolveHandle = handle; // Create a new variable we can modify
     
     // Special case for plumber account handles
     if (handle === 'plumber.flushing.im') {
       console.log('Converting old plumber.flushing.im handle to plumber.flushes.app in API');
-      handle = 'plumber.flushes.app'; 
+      resolveHandle = 'plumber.flushes.app'; 
       userHandle = 'plumber.flushes.app';
+    } else {
+      resolveHandle = handle;
     }
     
     try {
-      if (!handle.startsWith('did:')) {
+      if (!resolveHandle.startsWith('did:')) {
         // Always use bsky.social for resolving handles to DIDs
-        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(resolveHandle)}`);
         
         if (!resolveResponse.ok) {
-          console.error(`Failed to resolve handle ${handle}:`, await resolveResponse.text());
+          console.error(`Failed to resolve handle ${resolveHandle}:`, await resolveResponse.text());
           throw new Error(`Failed to resolve handle: ${resolveResponse.statusText}`);
         }
         
         const resolveData = await resolveResponse.json();
         userDid = resolveData.did;
-        userHandle = handle;
-        console.log(`Resolved handle ${handle} to DID ${userDid}`);
+        userHandle = resolveHandle;
+        console.log(`Resolved handle ${resolveHandle} to DID ${userDid}`);
       } else {
         // If we're given a DID, try to find the handle
         try {
           // Try PLC directory first
-          const plcResponse = await fetch(`https://plc.directory/${handle}/data`);
+          const plcResponse = await fetch(`https://plc.directory/${resolveHandle}/data`);
           
           if (plcResponse.ok) {
             const plcData = await plcResponse.json();
