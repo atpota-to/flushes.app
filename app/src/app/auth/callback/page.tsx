@@ -148,10 +148,23 @@ function CallbackHandler() {
           return;
         }
 
-        // Save the DPoP nonce from the response headers if present
+        // Save the DPoP nonce from the response
         let dpopNonce = null;
+        
+        // First check if it's in the response object
         if (tokenResponse.dpop_nonce) {
           dpopNonce = tokenResponse.dpop_nonce;
+          console.log('Retrieved DPoP nonce from token response:', dpopNonce);
+        }
+        
+        // If not found in the response object, check localStorage
+        // This is useful for third-party PDS servers
+        if (!dpopNonce && typeof localStorage !== 'undefined') {
+          const storedNonce = localStorage.getItem('dpopNonce');
+          if (storedNonce) {
+            console.log('Retrieved DPoP nonce from localStorage:', storedNonce);
+            dpopNonce = storedNonce;
+          }
         }
 
         setStatus('Getting user profile...');

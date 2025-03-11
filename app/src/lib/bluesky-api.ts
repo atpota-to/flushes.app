@@ -71,25 +71,55 @@ export async function refreshAccessToken(
       throw new Error('No PDS endpoint provided for token refresh');
     }
     
-    console.log('Refreshing access token with PDS endpoint:', pdsEndpoint);
+    console.log('[TOKEN REFRESH] Refreshing token for PDS:', pdsEndpoint);
     
     // Endpoint for token refresh
     const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
     
-    // Get a nonce for the DPoP token
+    // First, ALWAYS get a fresh nonce before attempting token refresh
     let dpopNonce = null;
     try {
-      // Try to get a nonce with a HEAD request
-      const headResponse = await fetch(tokenEndpoint, {
-        method: 'HEAD'
+      // Try server-side nonce retrieval first
+      console.log('[TOKEN REFRESH] Getting fresh nonce from server API');
+      const nonceResponse = await fetch('/api/auth/nonce', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdsEndpoint })
       });
       
-      dpopNonce = headResponse.headers.get('DPoP-Nonce');
-      if (dpopNonce) {
-        console.log('Got nonce for token refresh:', dpopNonce);
+      if (nonceResponse.ok) {
+        const nonceData = await nonceResponse.json();
+        if (nonceData.nonce) {
+          dpopNonce = nonceData.nonce;
+          console.log('[TOKEN REFRESH] Got fresh nonce from server API:', dpopNonce);
+        }
+      }
+      
+      // If server-side retrieval fails, try client-side
+      if (!dpopNonce) {
+        console.log('[TOKEN REFRESH] Trying HEAD request for nonce');
+        const headResponse = await fetch(tokenEndpoint, { method: 'HEAD' });
+        dpopNonce = headResponse.headers.get('DPoP-Nonce');
+      }
+      
+      // If still no nonce, try POST probe
+      if (!dpopNonce) {
+        console.log('[TOKEN REFRESH] Trying POST probe for nonce');
+        const probeResponse = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({})  // Empty body to trigger error response with nonce
+        });
+        dpopNonce = probeResponse.headers.get('DPoP-Nonce');
       }
     } catch (nonceError) {
-      console.warn('Failed to get nonce for token refresh:', nonceError);
+      console.warn('[TOKEN REFRESH] Failed to get initial nonce:', nonceError);
+    }
+    
+    if (!dpopNonce) {
+      console.log('[TOKEN REFRESH] No nonce obtained, proceeding without one');
+    } else {
+      console.log('[TOKEN REFRESH] Obtained nonce:', dpopNonce);
     }
     
     // Generate DPoP token for the refresh request
@@ -99,8 +129,10 @@ export async function refreshAccessToken(
       publicKey,
       'POST',
       tokenEndpoint,
-      dpopNonce || undefined // Convert null to undefined to satisfy TypeScript
+      dpopNonce || undefined
     );
+    
+    console.log('[TOKEN REFRESH] Making token refresh request');
     
     // Make the token refresh request
     const response = await fetch(tokenEndpoint, {
@@ -116,13 +148,26 @@ export async function refreshAccessToken(
       })
     });
     
-    // Check for nonce error
+    // Handle nonce error explicitly - this is the critical part!
     if (response.status === 401) {
+      let responseBody;
+      try {
+        responseBody = await response.json();
+      } catch (e) {
+        responseBody = {};
+      }
+      
       const newNonce = response.headers.get('DPoP-Nonce');
-      if (newNonce) {
-        console.log('Got new nonce during token refresh:', newNonce);
+      
+      // Check for DPoP nonce error
+      if (
+        (responseBody.error === 'use_dpop_nonce' || 
+        (responseBody.error_description && responseBody.error_description.includes('nonce'))) && 
+        newNonce
+      ) {
+        console.log('[TOKEN REFRESH] Received nonce error, retrying with new nonce:', newNonce);
         
-        // Try again with the new nonce
+        // Generate new DPoP token with the provided nonce
         const retryDpopToken = await generateDPoPToken(
           keyPair.privateKey,
           publicKey,
@@ -131,6 +176,9 @@ export async function refreshAccessToken(
           newNonce
         );
         
+        console.log('[TOKEN REFRESH] Retrying token refresh with new nonce');
+        
+        // Retry the request with the new nonce
         const retryResponse = await fetch(tokenEndpoint, {
           method: 'POST',
           headers: {
@@ -146,15 +194,22 @@ export async function refreshAccessToken(
         
         if (!retryResponse.ok) {
           const errorText = await retryResponse.text();
+          console.error('[TOKEN REFRESH] Token refresh retry failed:', retryResponse.status, errorText);
           throw new Error(`Token refresh retry failed: ${retryResponse.status}, ${errorText}`);
         }
         
         const tokenData = await retryResponse.json();
+        console.log('[TOKEN REFRESH] Successfully refreshed token on retry');
+        
+        // Store the new nonce for future requests
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('dpopNonce', newNonce);
+        }
         
         // Return the new tokens and nonce
         return {
           accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token || refreshToken, // Use the new refresh token if provided
+          refreshToken: tokenData.refresh_token || refreshToken,
           dpopNonce: newNonce
         };
       }
@@ -162,6 +217,7 @@ export async function refreshAccessToken(
     
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[TOKEN REFRESH] Token refresh failed:', response.status, errorText);
       throw new Error(`Token refresh failed: ${response.status}, ${errorText}`);
     }
     
@@ -170,14 +226,21 @@ export async function refreshAccessToken(
     // Get any nonce from the response headers
     const responseNonce = response.headers.get('DPoP-Nonce');
     
+    console.log('[TOKEN REFRESH] Successfully refreshed access token');
+    
+    // Update the nonce in localStorage
+    if (responseNonce && typeof localStorage !== 'undefined') {
+      localStorage.setItem('dpopNonce', responseNonce);
+    }
+    
     // Return the new tokens and nonce
     return {
       accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token || refreshToken, // Use the new refresh token if provided
-      dpopNonce: responseNonce || dpopNonce || undefined
+      refreshToken: tokenData.refresh_token || refreshToken,
+      dpopNonce: responseNonce || dpopNonce
     };
   } catch (error) {
-    console.error('Error refreshing access token:', error);
+    console.error('[TOKEN REFRESH] Error refreshing access token:', error);
     throw error;
   }
 }
@@ -280,35 +343,58 @@ export async function checkAuth(
     }
     
     if (response.status === 401) {
+      // Try to parse error response
+      let responseBody;
+      try {
+        responseBody = await response.json();
+      } catch (e) {
+        responseBody = {};
+      }
+      
       const nonce = response.headers.get('DPoP-Nonce');
       if (nonce) {
-        console.log('Got nonce during auth check:', nonce);
+        console.log('[AUTH CHECK] Got nonce during auth check:', nonce);
+        
+        // Store the nonce for future use
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('dpopNonce', nonce);
+        }
+        
+        // Check if this is a nonce error
+        if (responseBody.error === 'use_dpop_nonce' || 
+            (responseBody.error_description && responseBody.error_description.includes('nonce'))) {
+          console.log('[AUTH CHECK] DPoP nonce error detected, retrying with new nonce');
+        }
+        
         // Try again with the nonce, but prevent infinite recursion
         return checkAuth(accessToken, keyPair, did, nonce, pdsEndpoint, refreshToken);
       }
       
       // If we have a refresh token, try to refresh the access token
       if (refreshToken && !tokenExpired) { // Only try this if we didn't already try above
-        console.log('Auth failed with 401, attempting to refresh token...');
+        console.log('[AUTH CHECK] Auth failed with 401, attempting to refresh token...');
         
         try {
-          // Try to refresh the token
+          // Try to refresh the token with enhanced error handling
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
             await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
           
           // Update tokens in localStorage
-          localStorage.setItem('accessToken', newAccessToken);
-          localStorage.setItem('refreshToken', newRefreshToken);
-          if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('accessToken', newAccessToken);
+            localStorage.setItem('refreshToken', newRefreshToken);
+            if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+            
+            console.log('[AUTH CHECK] Tokens updated in localStorage during checkAuth');
+          }
           
-          console.log('Tokens updated in localStorage during checkAuth');
-          
-          console.log('Token refreshed successfully, retrying auth check with new token');
+          console.log('[AUTH CHECK] Token refreshed successfully, retrying auth check with new token');
           
           // Return the result of checkAuth with the new token
           return checkAuth(newAccessToken, keyPair, did, newNonce || null, pdsEndpoint, newRefreshToken);
         } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
+          console.error('[AUTH CHECK] Token refresh failed:', refreshError);
+          console.log('[AUTH CHECK] User needs to re-authenticate - session cannot be restored');
         }
       }
     }
@@ -393,20 +479,37 @@ export async function makeAuthenticatedRequest(
       responseBody = {};
     }
     
+    // Get the nonce from headers if available
+    const newDpopNonce = response.headers.get('DPoP-Nonce');
+    
     // Check if this is a nonce error
     if (
-      responseBody.error === 'use_dpop_nonce' || 
-      (responseBody.error_description && responseBody.error_description.includes('nonce'))
+      (responseBody.error === 'use_dpop_nonce' || 
+      (responseBody.error_description && responseBody.error_description.includes('nonce'))) &&
+      newDpopNonce
     ) {
-      // Get new nonce from header
-      const newDpopNonce = response.headers.get('DPoP-Nonce');
-      if (newDpopNonce) {
-        console.log('Retrying API request with nonce:', newDpopNonce);
-        return makeAuthenticatedRequest(endpoint, method, accessToken, keyPair, newDpopNonce, body);
+      // Store the nonce for future use
+      if (typeof localStorage !== 'undefined') {
+        console.log('[API REQUEST] Storing new DPoP nonce in localStorage:', newDpopNonce);
+        localStorage.setItem('dpopNonce', newDpopNonce);
       }
+      
+      console.log('[API REQUEST] Retrying request with new nonce:', newDpopNonce);
+      return makeAuthenticatedRequest(endpoint, method, accessToken, keyPair, newDpopNonce, body, pdsEndpoint);
     }
     
     // Other 401 error, possibly expired token
+    console.error('[API REQUEST] Request failed with 401 unauthorized:', responseBody);
+    
+    // Include nonce in error message if available
+    if (newDpopNonce) {
+      console.log('[API REQUEST] 401 response included nonce:', newDpopNonce);
+      // Store the nonce even though we're not retrying now
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('dpopNonce', newDpopNonce);
+      }
+    }
+    
     throw new Error(`API request unauthorized: ${JSON.stringify(responseBody)}`);
   }
 
@@ -433,8 +536,13 @@ export async function makeAuthenticatedRequest(
   // Save any nonce for future requests
   const returnNonce = response.headers.get('DPoP-Nonce');
   if (returnNonce && returnNonce !== dpopNonce) {
-    // If there's a place to store it, we would store it here
-    console.log('New DPoP nonce received:', returnNonce);
+    console.log('[API REQUEST] New DPoP nonce received in successful response:', returnNonce);
+    
+    // Always store the latest nonce for future requests
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('dpopNonce', returnNonce);
+      console.log('[API REQUEST] Updated nonce in localStorage for future requests');
+    }
   }
   
   return result;

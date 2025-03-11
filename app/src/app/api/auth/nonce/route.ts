@@ -13,43 +13,84 @@ export async function POST(request: NextRequest) {
     
     // Try to get a nonce from the specified PDS
     const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
-    console.log(`Attempting to get nonce from: ${tokenEndpoint}`);
+    console.log(`[NONCE API] Attempting to get nonce from: ${tokenEndpoint}`);
     
-    const response = await fetch(tokenEndpoint, {
-      method: 'HEAD',
-      headers: {
-        'Accept': '*/*'
-      }
-    });
+    // Try multiple methods to get a nonce
+    let nonce = null;
     
-    const nonce = response.headers.get('DPoP-Nonce');
-    
-    if (nonce) {
-      return NextResponse.json({ nonce });
-    } else {
-      // Try another method if HEAD doesn't work
-      const probeResponse = await fetch(tokenEndpoint, {
-        method: 'POST',
+    // Method 1: HEAD request (most efficient)
+    try {
+      console.log(`[NONCE API] Trying HEAD request to ${tokenEndpoint}`);
+      const headResponse = await fetch(tokenEndpoint, {
+        method: 'HEAD',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        // Empty body to trigger an error response that might contain a nonce
-        body: new URLSearchParams({})
+          'Accept': '*/*'
+        }
       });
       
-      const probeNonce = probeResponse.headers.get('DPoP-Nonce');
-      
-      if (probeNonce) {
-        return NextResponse.json({ nonce: probeNonce });
-      } else {
-        return NextResponse.json(
-          { error: 'Could not retrieve nonce', endpoint: tokenEndpoint },
-          { status: 404 }
-        );
+      nonce = headResponse.headers.get('DPoP-Nonce');
+      if (nonce) {
+        console.log(`[NONCE API] Got nonce via HEAD request: ${nonce}`);
+      }
+    } catch (headError) {
+      console.warn(`[NONCE API] HEAD request failed:`, headError);
+    }
+    
+    // Method 2: OPTIONS request if HEAD fails
+    if (!nonce) {
+      try {
+        console.log(`[NONCE API] Trying OPTIONS request to ${tokenEndpoint}`);
+        const optionsResponse = await fetch(tokenEndpoint, {
+          method: 'OPTIONS',
+          headers: {
+            'Accept': '*/*'
+          }
+        });
+        
+        nonce = optionsResponse.headers.get('DPoP-Nonce');
+        if (nonce) {
+          console.log(`[NONCE API] Got nonce via OPTIONS request: ${nonce}`);
+        }
+      } catch (optionsError) {
+        console.warn(`[NONCE API] OPTIONS request failed:`, optionsError);
       }
     }
+    
+    // Method 3: POST probe (last resort)
+    if (!nonce) {
+      try {
+        console.log(`[NONCE API] Trying POST probe to ${tokenEndpoint}`);
+        const probeResponse = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          // Empty body to trigger an error response that might contain a nonce
+          body: new URLSearchParams({})
+        });
+        
+        nonce = probeResponse.headers.get('DPoP-Nonce');
+        if (nonce) {
+          console.log(`[NONCE API] Got nonce via POST probe: ${nonce}`);
+        }
+      } catch (probeError) {
+        console.warn(`[NONCE API] POST probe failed:`, probeError);
+      }
+    }
+    
+    // If we got a nonce through any method, return it
+    if (nonce) {
+      return NextResponse.json({ nonce });
+    }
+    
+    // If all methods failed, return an error
+    console.log(`[NONCE API] All methods failed to get a nonce from ${tokenEndpoint}`);
+    return NextResponse.json(
+      { error: 'Could not retrieve nonce', endpoint: tokenEndpoint },
+      { status: 404 }
+    );
   } catch (error: any) {
-    console.error('Nonce retrieval error:', error);
+    console.error('[NONCE API] Nonce retrieval error:', error);
     return NextResponse.json(
       { error: 'Nonce retrieval error', message: error.message },
       { status: 500 }
@@ -62,41 +103,84 @@ export async function GET() {
   try {
     // Use the default Bluesky server
     const tokenEndpoint = `${DEFAULT_AUTH_SERVER}/oauth/token`;
-    const response = await fetch(tokenEndpoint, {
-      method: 'HEAD',
-      headers: {
-        'Accept': '*/*'
-      }
-    });
+    console.log(`[NONCE API] GET: Attempting to get nonce from: ${tokenEndpoint}`);
     
-    const nonce = response.headers.get('DPoP-Nonce');
+    // Try multiple methods to get a nonce
+    let nonce = null;
     
-    if (nonce) {
-      return NextResponse.json({ nonce });
-    } else {
-      // Try another method if HEAD doesn't work
-      const probeResponse = await fetch(tokenEndpoint, {
-        method: 'POST',
+    // Method 1: HEAD request (most efficient)
+    try {
+      console.log(`[NONCE API] GET: Trying HEAD request to ${tokenEndpoint}`);
+      const headResponse = await fetch(tokenEndpoint, {
+        method: 'HEAD',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        // Empty body to trigger an error response that might contain a nonce
-        body: new URLSearchParams({})
+          'Accept': '*/*'
+        }
       });
       
-      const probeNonce = probeResponse.headers.get('DPoP-Nonce');
-      
-      if (probeNonce) {
-        return NextResponse.json({ nonce: probeNonce });
-      } else {
-        return NextResponse.json(
-          { error: 'Could not retrieve nonce' },
-          { status: 404 }
-        );
+      nonce = headResponse.headers.get('DPoP-Nonce');
+      if (nonce) {
+        console.log(`[NONCE API] GET: Got nonce via HEAD request: ${nonce}`);
+      }
+    } catch (headError) {
+      console.warn(`[NONCE API] GET: HEAD request failed:`, headError);
+    }
+    
+    // Method 2: OPTIONS request if HEAD fails
+    if (!nonce) {
+      try {
+        console.log(`[NONCE API] GET: Trying OPTIONS request to ${tokenEndpoint}`);
+        const optionsResponse = await fetch(tokenEndpoint, {
+          method: 'OPTIONS',
+          headers: {
+            'Accept': '*/*'
+          }
+        });
+        
+        nonce = optionsResponse.headers.get('DPoP-Nonce');
+        if (nonce) {
+          console.log(`[NONCE API] GET: Got nonce via OPTIONS request: ${nonce}`);
+        }
+      } catch (optionsError) {
+        console.warn(`[NONCE API] GET: OPTIONS request failed:`, optionsError);
       }
     }
+    
+    // Method 3: POST probe (last resort)
+    if (!nonce) {
+      try {
+        console.log(`[NONCE API] GET: Trying POST probe to ${tokenEndpoint}`);
+        const probeResponse = await fetch(tokenEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          // Empty body to trigger an error response that might contain a nonce
+          body: new URLSearchParams({})
+        });
+        
+        nonce = probeResponse.headers.get('DPoP-Nonce');
+        if (nonce) {
+          console.log(`[NONCE API] GET: Got nonce via POST probe: ${nonce}`);
+        }
+      } catch (probeError) {
+        console.warn(`[NONCE API] GET: POST probe failed:`, probeError);
+      }
+    }
+    
+    // If we got a nonce through any method, return it
+    if (nonce) {
+      return NextResponse.json({ nonce });
+    }
+    
+    // If all methods failed, return an error
+    console.log(`[NONCE API] GET: All methods failed to get a nonce from ${tokenEndpoint}`);
+    return NextResponse.json(
+      { error: 'Could not retrieve nonce', endpoint: tokenEndpoint },
+      { status: 404 }
+    );
   } catch (error: any) {
-    console.error('Nonce retrieval error:', error);
+    console.error('[NONCE API] GET: Nonce retrieval error:', error);
     return NextResponse.json(
       { error: 'Nonce retrieval error', message: error.message },
       { status: 500 }

@@ -53,7 +53,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Check if token is expired or expiring soon
       if (isTokenExpired(accessToken)) {
-        console.log('Access token is expired or expiring soon, refreshing...');
+        console.log('[AUTH CONTEXT] Access token is expired or expiring soon, refreshing...');
         
         // Deserialize keypair
         const keyPairData = JSON.parse(serializedKeyPair);
@@ -73,24 +73,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
         );
         const keyPair = { publicKey, privateKey };
         
-        // Refresh the token
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-          await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+        // Get the current DPoP nonce from localStorage if available
+        let currentNonce = dpopNonce;
+        if (!currentNonce && typeof localStorage !== 'undefined') {
+          currentNonce = localStorage.getItem('dpopNonce');
+          if (currentNonce) {
+            console.log('[AUTH CONTEXT] Retrieved nonce from localStorage:', currentNonce);
+            // Update state with the nonce from localStorage
+            setDpopNonce(currentNonce);
+          }
+        }
         
-        // Update state and localStorage
-        setAccessToken(newAccessToken);
-        setRefreshToken(newRefreshToken);
-        if (newNonce) setDpopNonce(newNonce);
+        console.log('[AUTH CONTEXT] Refreshing token for PDS:', pdsEndpoint);
         
-        localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-        if (newNonce) localStorage.setItem('dpopNonce', newNonce);
-        
-        setLastTokenRefresh(Date.now());
-        console.log('Successfully refreshed access token');
+        // Refresh the token with enhanced error handling
+        try {
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
+            await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+          
+          // Update state
+          setAccessToken(newAccessToken);
+          setRefreshToken(newRefreshToken);
+          if (newNonce) setDpopNonce(newNonce);
+          
+          // Update localStorage
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('accessToken', newAccessToken);
+            localStorage.setItem('refreshToken', newRefreshToken);
+            if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+          }
+          
+          setLastTokenRefresh(Date.now());
+          console.log('[AUTH CONTEXT] Successfully refreshed access token');
+        } catch (refreshError) {
+          console.error('[AUTH CONTEXT] Token refresh failed:', refreshError);
+          
+          // If refresh fails, we'll still try to use any nonce we received
+          if (typeof localStorage !== 'undefined') {
+            const latestNonce = localStorage.getItem('dpopNonce');
+            if (latestNonce && latestNonce !== dpopNonce) {
+              console.log('[AUTH CONTEXT] Using latest nonce from localStorage:', latestNonce);
+              setDpopNonce(latestNonce);
+            }
+          }
+        }
+      } else {
+        // Even if token is not expired, make sure we have the latest nonce
+        if (typeof localStorage !== 'undefined') {
+          const latestNonce = localStorage.getItem('dpopNonce');
+          if (latestNonce && latestNonce !== dpopNonce) {
+            console.log('[AUTH CONTEXT] Updating nonce from localStorage:', latestNonce);
+            setDpopNonce(latestNonce);
+          }
+        }
       }
     } catch (error) {
-      console.error('Failed to refresh token:', error);
+      console.error('[AUTH CONTEXT] Error in checkAndRefreshToken:', error);
     }
   };
 
