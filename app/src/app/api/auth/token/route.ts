@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse the request body
     const body = await request.json();
-    const { code, codeVerifier, dpopToken, pdsEndpoint } = body;
+    const { code, codeVerifier, dpopToken, pdsEndpoint, originalPdsEndpoint } = body;
     
     // Use the provided PDS endpoint or default to Bluesky's
     // CRITICAL FIX: For third-party PDS, always use bsky.social for token requests
@@ -54,6 +54,22 @@ export async function POST(request: NextRequest) {
     const tokenEndpoint = `${authServer}/oauth/token`;
     console.log(`Making token request to: ${tokenEndpoint}`);
     
+    // Prepare the form data
+    const formData = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+      code_verifier: codeVerifier
+    });
+    
+    // For third-party PDS, add the 'resource' parameter with the original PDS endpoint
+    // This is CRITICAL for the token exchange to work with third-party PDS servers
+    if (originalPdsEndpoint && originalPdsEndpoint !== authServer) {
+      console.log(`Adding resource parameter for third-party PDS: ${originalPdsEndpoint}`);
+      formData.append('resource', originalPdsEndpoint);
+    }
+    
     const response = await fetch(tokenEndpoint, {
       method: 'POST',
       headers: {
@@ -61,13 +77,7 @@ export async function POST(request: NextRequest) {
         'DPoP': dpopToken,
         // Include any additional headers needed
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: REDIRECT_URI,
-        client_id: CLIENT_ID,
-        code_verifier: codeVerifier
-      })
+      body: formData
     });
     
     // Get the response data

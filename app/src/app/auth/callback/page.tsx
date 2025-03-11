@@ -117,18 +117,31 @@ function CallbackHandler() {
         console.log('Exchanging code for token...');
         let tokenResponse;
         try {
-          // CRITICAL FIX: Use bsky.social for token exchange regardless of PDS host
-          // Third-party PDS servers don't implement OAuth endpoints
+          // CRITICAL FIX: For third-party PDS, we need to use bsky.social for token exchange
+          // But we must pass the original PDS endpoint (iss param) as well
           let authServer = storedAuthServer || 'https://bsky.social';
+          let tokenPdsEndpoint = storedPdsEndpoint;
+          
+          // Get the PDS endpoint from the 'iss' parameter in the callback URL
+          // This is critical for third-party PDS authentication
+          if (iss && iss.startsWith('https://')) {
+            console.log('Using iss from callback as PDS endpoint:', iss);
+            tokenPdsEndpoint = iss;
+            // Store this for later use
+            storeAuthData('pds_endpoint', iss);
+          }
           
           // Always use bsky.social for token exchange (even for custom PDS endpoints)
           console.log('Using auth server for token exchange:', authServer);
+          console.log('Original PDS endpoint (iss):', tokenPdsEndpoint);
           
           tokenResponse = await getAccessToken(
             code, 
             codeVerifier, 
             keyPair, 
-            authServer
+            authServer,
+            undefined, // No nonce yet
+            tokenPdsEndpoint // Pass the original PDS endpoint (from iss)
           );
         } catch (tokenError: any) {
           console.error('Token exchange error:', tokenError);

@@ -390,7 +390,8 @@ export async function getAccessToken(
   codeVerifier: string,
   keyPair: CryptoKeyPair,
   pdsEndpoint: string = DEFAULT_AUTH_SERVER,
-  dpopNonce?: string
+  dpopNonce?: string,
+  originalPdsEndpoint?: string // Added for third-party PDS support
 ): Promise<any> {
   const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
 
@@ -431,7 +432,8 @@ export async function getAccessToken(
       code,
       codeVerifier,
       dpopToken,
-      pdsEndpoint // Add PDS endpoint to the request
+      pdsEndpoint,       // Auth server endpoint (usually bsky.social)
+      originalPdsEndpoint // The original PDS endpoint (for third-party PDS)
     })
   });
 
