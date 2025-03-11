@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       // 2. Get daily flush counts for the chart
       const { data: dailyData, error: dailyError } = await supabase
         .from('flushing_records')
-        .select('created_at')
+        .select('created_at, did')
         .order('created_at', { ascending: true });
       
       if (dailyError) {
@@ -157,6 +157,8 @@ export async function GET(request: NextRequest) {
       
       // Group users by day
       recentRecords?.forEach(entry => {
+        if (!entry.did) return; // Skip entries without a DID
+        
         const date = new Date(entry.created_at);
         const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         
@@ -164,9 +166,7 @@ export async function GET(request: NextRequest) {
           dailyActiveUserCounts.set(dateKey, new Set<string>());
         }
         
-        if (entry.did) {
-          dailyActiveUserCounts.get(dateKey)!.add(entry.did);
-        }
+        dailyActiveUserCounts.get(dateKey)!.add(entry.did);
       });
       
       // Calculate average daily active users
