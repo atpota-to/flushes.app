@@ -165,7 +165,7 @@ function CallbackHandler() {
         console.log('Exchanging code for token...');
         let tokenResponse;
         try {
-          // CRITICAL FIX: For third-party PDS, we need special handling for token exchange
+          // CRITICAL FIX: Token exchange approach depends on PDS type
           let authServer = storedAuthServer || 'https://bsky.social';
           let tokenPdsEndpoint = storedPdsEndpoint;
           
@@ -177,15 +177,23 @@ function CallbackHandler() {
             // Store this for later use
             storeAuthData('pds_endpoint', iss);
             
-            // For third-party PDS, we need to ensure we're using the right auth server
-            if (!iss.includes('bsky.social')) {
-              // Always use bsky.social for token exchange with third-party PDS
+            // Choose the right auth server based on PDS type
+            if (iss.includes('bsky.network')) {
+              // For bsky.network PDSes, always use bsky.social
               authServer = 'https://bsky.social';
-              console.log('Third-party PDS detected, using bsky.social as auth server');
-              
-              // Also store the auth server
-              storeAuthData('auth_server', authServer);
+              console.log('bsky.network PDS detected, using bsky.social as auth server');
+            } else if (iss.includes('bsky.social')) {
+              // Already using bsky.social
+              authServer = 'https://bsky.social';
+              console.log('bsky.social detected, using it directly as auth server');
+            } else {
+              // For third-party PDSes, use their own endpoint for token exchange
+              authServer = iss;
+              console.log('Third-party PDS detected, using its own endpoint as auth server:', iss);
             }
+            
+            // Store the auth server
+            storeAuthData('auth_server', authServer);
           }
           
           console.log('Authentication servers:', { 

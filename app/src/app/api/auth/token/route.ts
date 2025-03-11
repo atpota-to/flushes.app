@@ -40,11 +40,27 @@ export async function POST(request: NextRequest) {
       dpopTokenProvided: !!dpopToken
     });
     
-    // Use the provided PDS endpoint or default to Bluesky's
-    // CRITICAL FIX: For third-party PDS, always use bsky.social for token requests
+    // CRITICAL FIX: Use the correct token endpoint based on PDS type
+    // - For bsky.network PDSes: always use bsky.social for token exchange
+    // - For third-party PDSes: use their own endpoint for token exchange
     let authServer = pdsEndpoint || DEFAULT_AUTH_SERVER;
-    if (pdsEndpoint && !pdsEndpoint.includes('bsky.social')) {
-      console.log(`[TOKEN ROUTE] Redirecting token request to bsky.social for third-party PDS: ${pdsEndpoint}`);
+    
+    if (pdsEndpoint) {
+      // If it's a bsky.network PDS, use bsky.social
+      if (pdsEndpoint.includes('bsky.network')) {
+        console.log(`[TOKEN ROUTE] Using bsky.social for bsky.network PDS: ${pdsEndpoint}`);
+        authServer = DEFAULT_AUTH_SERVER;
+      } else if (pdsEndpoint.includes('bsky.social')) {
+        // Already using bsky.social
+        console.log(`[TOKEN ROUTE] Using bsky.social endpoint directly`);
+      } else {
+        // For third-party PDSes, use their own endpoint for token exchange
+        console.log(`[TOKEN ROUTE] Using third-party PDS's own endpoint for token exchange: ${pdsEndpoint}`);
+        // Keep authServer as the original PDS endpoint
+      }
+    } else {
+      // Default to bsky.social if no PDS endpoint provided
+      console.log(`[TOKEN ROUTE] No PDS endpoint provided, using default: ${DEFAULT_AUTH_SERVER}`);
       authServer = DEFAULT_AUTH_SERVER;
     }
     
@@ -78,15 +94,12 @@ export async function POST(request: NextRequest) {
       code_verifier: codeVerifier
     });
     
-    // For third-party PDS, add the 'resource' AND 'issuer' parameters
-    // These are CRITICAL for the token exchange to work with third-party PDS servers
+    // CRITICAL FIX: We only need to add cross-domain parameters when using bsky.social 
+    // for a third-party PDS's code exchange (which we're no longer doing)
+    // But we'll keep this logic in case it's needed for specific PDS implementations
     if (originalPdsEndpoint && originalPdsEndpoint !== authServer) {
-      console.log(`[TOKEN ROUTE] Adding resource parameter for third-party PDS: ${originalPdsEndpoint}`);
-      formData.append('resource', originalPdsEndpoint);
-      
-      // Add the issuer parameter which is required for cross-domain OAuth
-      console.log(`[TOKEN ROUTE] Adding issuer parameter for third-party PDS: ${originalPdsEndpoint}`);
-      formData.append('issuer', originalPdsEndpoint);
+      console.log(`[TOKEN ROUTE] Cross-domain token exchange detected`);
+      console.log(`[TOKEN ROUTE] Not adding cross-domain parameters as we're using direct PDS endpoints`);
     }
     
     // Log the complete request for debugging
