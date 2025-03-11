@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getAccessToken, exportJWK, generateDPoPToken } from '@/lib/bluesky-auth';
 import { getProfile } from '@/lib/bluesky-api';
 import { useAuth } from '@/lib/auth-context';
-import { retrieveAuthData, clearAuthData } from '@/lib/storage-util';
+import { retrieveAuthData, clearAuthData, storeAuthData } from '@/lib/storage-util';
 import styles from './callback.module.css';
 
 // Loading component to show while waiting
