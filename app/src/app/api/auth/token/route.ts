@@ -112,7 +112,13 @@ export async function POST(request: NextRequest) {
     
     // Log response status and headers
     console.log(`[TOKEN ROUTE] Response status: ${response.status}`);
-    console.log('[TOKEN ROUTE] Response headers:', Object.fromEntries([...response.headers.entries()]));
+    
+    // Log headers in a TypeScript-compatible way
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('[TOKEN ROUTE] Response headers:', headers);
     
     // Get the response data
     const responseData = await response.json();
