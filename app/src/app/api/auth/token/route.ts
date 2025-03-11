@@ -32,7 +32,12 @@ export async function POST(request: NextRequest) {
     const { code, codeVerifier, dpopToken, pdsEndpoint } = body;
     
     // Use the provided PDS endpoint or default to Bluesky's
-    const authServer = pdsEndpoint || DEFAULT_AUTH_SERVER;
+    // CRITICAL FIX: For third-party PDS, always use bsky.social for token requests
+    let authServer = pdsEndpoint || DEFAULT_AUTH_SERVER;
+    if (pdsEndpoint && !pdsEndpoint.includes('bsky.social')) {
+      console.log(`Redirecting token request to bsky.social for third-party PDS: ${pdsEndpoint}`);
+      authServer = DEFAULT_AUTH_SERVER;
+    }
     
     if (!code || !codeVerifier || !dpopToken) {
       return NextResponse.json(

@@ -73,8 +73,18 @@ export async function refreshAccessToken(
     
     console.log('[TOKEN REFRESH] Refreshing token for PDS:', pdsEndpoint);
     
+    // CRITICAL FIX: For third-party PDS endpoints, use bsky.social for auth
+    // Third-party PDS hosts don't implement OAuth endpoints themselves
+    let authServer = pdsEndpoint;
+    
+    // Check if this is a third-party PDS (not bsky.social)
+    if (!pdsEndpoint.includes('bsky.social')) {
+      console.log('[TOKEN REFRESH] Using bsky.social for OAuth on third-party PDS');
+      authServer = 'https://bsky.social';
+    }
+    
     // Endpoint for token refresh
-    const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
+    const tokenEndpoint = `${authServer}/oauth/token`;
     
     // First, ALWAYS get a fresh nonce before attempting token refresh
     let dpopNonce = null;
@@ -271,9 +281,9 @@ export async function checkAuth(
       console.log('Access token is expired, attempting to refresh...');
       
       try {
-        // Try to refresh the token
+        // Try to refresh the token using bsky.social for auth on third-party PDS
         const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-          await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+          await refreshAccessToken(refreshToken, keyPair, authServer);
         
         // Update tokens in localStorage
         localStorage.setItem('accessToken', newAccessToken);
@@ -294,8 +304,15 @@ export async function checkAuth(
     
     console.log('Checking auth with PDS endpoint:', pdsEndpoint);
     
-    // Use the PDS endpoint for auth check
+    // For API calls, use the actual PDS endpoint
     const baseUrl = `${pdsEndpoint}/xrpc`;
+    
+    // But when we need to do token refresh, use bsky.social for auth on third-party servers
+    let authServer = pdsEndpoint;
+    if (!pdsEndpoint.includes('bsky.social')) {
+      console.log('[AUTH CHECK] Will use bsky.social for OAuth on third-party PDS');
+      authServer = 'https://bsky.social';
+    }
     
     // First, get the user's handle from their DID using repo.describeRepo
     const describeRepoEndpoint = `${baseUrl}/com.atproto.repo.describeRepo`;
@@ -376,8 +393,9 @@ export async function checkAuth(
         
         try {
           // Try to refresh the token with enhanced error handling
+          // Use authServer for token refresh (bsky.social for third-party PDS)
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-            await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+            await refreshAccessToken(refreshToken, keyPair, authServer);
           
           // Update tokens in localStorage
           if (typeof localStorage !== 'undefined') {

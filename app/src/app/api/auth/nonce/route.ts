@@ -9,10 +9,18 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body to get PDS endpoint
     const body = await request.json();
-    const pdsEndpoint = body.pdsEndpoint || DEFAULT_AUTH_SERVER;
+    let pdsEndpoint = body.pdsEndpoint || DEFAULT_AUTH_SERVER;
     
-    // Try to get a nonce from the specified PDS
-    const tokenEndpoint = `${pdsEndpoint}/oauth/token`;
+    // CRITICAL FIX: Third-party PDS servers don't implement OAuth endpoints
+    // Always use bsky.social for OAuth operations
+    let authServer = pdsEndpoint;
+    if (!pdsEndpoint.includes('bsky.social')) {
+      console.log('[NONCE API] Redirecting to bsky.social for OAuth on third-party PDS');
+      authServer = DEFAULT_AUTH_SERVER;
+    }
+    
+    // Try to get a nonce from the auth server, not the PDS itself
+    const tokenEndpoint = `${authServer}/oauth/token`;
     console.log(`[NONCE API] Attempting to get nonce from: ${tokenEndpoint}`);
     
     // Try multiple methods to get a nonce

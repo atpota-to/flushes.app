@@ -117,26 +117,19 @@ function CallbackHandler() {
         console.log('Exchanging code for token...');
         let tokenResponse;
         try {
-          // For bsky.network endpoints, we used bsky.social as the auth server
-          // but we'll use the actual PDS endpoint for API calls later
-          if (storedAuthServer) {
-            console.log('Using standard auth server for token exchange:', storedAuthServer);
-            tokenResponse = await getAccessToken(
-              code, 
-              codeVerifier, 
-              keyPair, 
-              storedAuthServer
-            );
-          } else {
-            // For custom PDS endpoints, use the same endpoint for everything
-            console.log('Using custom PDS for token exchange:', storedPdsEndpoint);
-            tokenResponse = await getAccessToken(
-              code, 
-              codeVerifier, 
-              keyPair, 
-              storedPdsEndpoint || undefined
-            );
-          }
+          // CRITICAL FIX: Use bsky.social for token exchange regardless of PDS host
+          // Third-party PDS servers don't implement OAuth endpoints
+          let authServer = storedAuthServer || 'https://bsky.social';
+          
+          // Always use bsky.social for token exchange (even for custom PDS endpoints)
+          console.log('Using auth server for token exchange:', authServer);
+          
+          tokenResponse = await getAccessToken(
+            code, 
+            codeVerifier, 
+            keyPair, 
+            authServer
+          );
         } catch (tokenError: any) {
           console.error('Token exchange error:', tokenError);
           setError(`Failed to get access token: ${tokenError.message}`);
