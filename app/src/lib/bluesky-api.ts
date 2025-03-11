@@ -122,14 +122,23 @@ export async function refreshAccessToken(
           dpopNonce = probeNonce;
         } else {
           // Try to parse the response body for a nonce in the error message
+          let probeText = '';
           try {
-            const probeData = await probeResponse.json();
-            if (probeData.error === 'use_dpop_nonce' && probeData.nonce) {
-              console.log('[TOKEN REFRESH] Got nonce from error body:', probeData.nonce);
-              dpopNonce = probeData.nonce;
+            // First try to get the response as text to avoid consuming the body
+            probeText = await probeResponse.text();
+            
+            // Then try to parse it as JSON
+            try {
+              const probeData = JSON.parse(probeText);
+              if (probeData.error === 'use_dpop_nonce' && probeData.nonce) {
+                console.log('[TOKEN REFRESH] Got nonce from error body:', probeData.nonce);
+                dpopNonce = probeData.nonce;
+              }
+            } catch (jsonError) {
+              console.warn('[TOKEN REFRESH] Failed to parse probe response as JSON:', jsonError);
             }
           } catch (e) {
-            console.warn('[TOKEN REFRESH] Failed to parse probe response:', e);
+            console.warn('[TOKEN REFRESH] Failed to get probe response text:', e);
           }
         }
       } catch (directError) {
@@ -271,13 +280,25 @@ export async function refreshAccessToken(
           })
         });
         
-        if (!retryResponse.ok) {
-          const errorText = await retryResponse.text();
-          console.error('[TOKEN REFRESH] Token refresh retry failed:', retryResponse.status, errorText);
-          throw new Error(`Token refresh retry failed: ${retryResponse.status}, ${errorText}`);
+        // Read the retry response body ONLY ONCE and store it
+        let retryData;
+        let retryErrorMessage = '';
+        
+        try {
+          // Try to parse as JSON first
+          retryData = await retryResponse.json();
+          retryErrorMessage = JSON.stringify(retryData);
+        } catch (e) {
+          console.warn('[TOKEN REFRESH] Failed to parse retry response as JSON');
+          retryData = {}; // Default to empty object
+          retryErrorMessage = 'Non-JSON response';
         }
         
-        const tokenData = await retryResponse.json();
+        if (!retryResponse.ok) {
+          console.error('[TOKEN REFRESH] Token refresh retry failed:', retryResponse.status, retryErrorMessage);
+          throw new Error(`Token refresh retry failed: ${retryResponse.status}, ${retryErrorMessage}`);
+        }
+        
         console.log('[TOKEN REFRESH] Successfully refreshed token on retry');
         
         // Store the new nonce for future requests
@@ -287,20 +308,32 @@ export async function refreshAccessToken(
         
         // Return the new tokens and nonce
         return {
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token || refreshToken,
+          accessToken: retryData.access_token,
+          refreshToken: retryData.refresh_token || refreshToken,
           dpopNonce: newNonce
         };
       }
     }
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[TOKEN REFRESH] Token refresh failed:', response.status, errorText);
-      throw new Error(`Token refresh failed: ${response.status}, ${errorText}`);
+    // Read the response body ONLY ONCE and store it
+    let responseData;
+    let errorMessage = '';
+    
+    try {
+      // Try to parse as JSON first
+      responseData = await response.json();
+      errorMessage = JSON.stringify(responseData);
+    } catch (e) {
+      // If JSON parsing fails, handle as regular text
+      console.warn('[TOKEN REFRESH] Failed to parse response as JSON, will use raw response');
+      responseData = {}; // Default to empty object
+      errorMessage = 'Non-JSON response';
     }
     
-    const tokenData = await response.json();
+    if (!response.ok) {
+      console.error('[TOKEN REFRESH] Token refresh failed:', response.status, errorMessage);
+      throw new Error(`Token refresh failed: ${response.status}, ${errorMessage}`);
+    }
     
     // Get any nonce from the response headers
     const responseNonce = response.headers.get('DPoP-Nonce');
@@ -314,8 +347,8 @@ export async function refreshAccessToken(
     
     // Return the new tokens and nonce
     return {
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token || refreshToken,
+      accessToken: responseData.access_token,
+      refreshToken: responseData.refresh_token || refreshToken,
       dpopNonce: responseNonce || dpopNonce
     };
   } catch (error) {
@@ -420,23 +453,30 @@ export async function checkAuth(
       return true;
     }
     
-    // Log detailed error information
+    // Log detailed error information and store the response body text ONCE
+    let responseText = '';
+    let responseBody = {};
+    
     try {
+      responseText = await response.text();
       console.error('Auth check response:', response.status, response.statusText);
-      const errorData = await response.text();
-      console.error('Auth check error data:', errorData);
+      console.error('Auth check error data:', responseText);
+      
+      // Try to parse as JSON if it looks like JSON
+      if (responseText.trim().startsWith('{')) {
+        try {
+          responseBody = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.warn('Error data is not valid JSON, using as text');
+        }
+      }
     } catch (parseError) {
-      console.error('Could not parse error response:', parseError);
+      console.error('Could not read response body:', parseError);
     }
     
     if (response.status === 401) {
-      // Try to parse error response
-      let responseBody;
-      try {
-        responseBody = await response.json();
-      } catch (e) {
-        responseBody = {};
-      }
+      // We already have the response body from above
+      console.log('Handling 401 error in auth check');
       
       const nonce = response.headers.get('DPoP-Nonce');
       if (nonce) {
