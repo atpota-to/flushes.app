@@ -124,7 +124,7 @@ function CallbackHandler() {
           
           // Get the PDS endpoint from the 'iss' parameter in the callback URL
           // This is critical for third-party PDS authentication
-          if (iss && iss.startsWith('https://')) {
+          if (typeof iss === 'string' && iss.startsWith('https://')) {
             console.log('Using iss from callback as PDS endpoint:', iss);
             tokenPdsEndpoint = iss;
             // Store this for later use
