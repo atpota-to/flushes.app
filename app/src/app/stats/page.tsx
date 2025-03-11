@@ -13,6 +13,8 @@ interface StatsData {
   leaderboard: { did: string; count: number; handle?: string }[];
   plumberFlushCount: number;
   totalFlushers: number;
+  monthlyActiveFlushers: number;
+  dailyActiveFlushers: number;
 }
 
 export default function StatsPage() {
@@ -185,6 +187,14 @@ export default function StatsPage() {
                 <div className={styles.statValue}>{statsData.totalFlushers}</div>
                 <div className={styles.statLabel}>Total flushers</div>
               </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>{statsData.monthlyActiveFlushers}</div>
+                <div className={styles.statLabel}>Monthly active flushers</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>{statsData.dailyActiveFlushers}</div>
+                <div className={styles.statLabel}>Daily active flushers (avg)</div>
+              </div>
             </div>
           </section>
 
@@ -262,7 +272,7 @@ export default function StatsPage() {
               className={styles.shareButton}
               onClick={() => {
                 // Generate share text
-                const statsText = `There have been ${statsData.totalCount} flushes by ${statsData.totalFlushers} unique users on @flushes.app! That's averaging ${statsData.flushesPerDay} flushes per active day. Check out the stats and leaderboard: https://flushes.app/stats`;
+                const statsText = `There have been ${statsData.totalCount} flushes by ${statsData.totalFlushers} unique users on @flushes.app! We have ${statsData.monthlyActiveFlushers} monthly active flushers and ${statsData.dailyActiveFlushers} daily active flushers on average. Check out the stats: https://flushes.app/stats`;
                 window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
               }}
             >

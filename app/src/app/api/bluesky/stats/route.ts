@@ -130,6 +130,55 @@ export async function GET(request: NextRequest) {
         flushesPerDay = parseFloat(((totalCount || 0) / activeDaysCount).toFixed(1));
       }
       
+      // Calculate Monthly Active Flushers (MAFs)
+      // This is the number of unique DIDs that have posted at least once in the past 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Filter records to get only those from the last 30 days
+      const recentRecords = dailyData?.filter(entry => 
+        new Date(entry.created_at) >= thirtyDaysAgo
+      );
+      
+      // Get unique DIDs from recent records
+      const recentUniqueDids = new Set<string>();
+      recentRecords?.forEach(entry => {
+        if (entry.did) {
+          recentUniqueDids.add(entry.did);
+        }
+      });
+      
+      const monthlyActiveFlushers = recentUniqueDids.size;
+      console.log(`Monthly Active Flushers (last 30 days): ${monthlyActiveFlushers}`);
+      
+      // Calculate Daily Active Flushers (DAFs)
+      // This is the average number of unique users who post per day over the last 30 days
+      const dailyActiveUserCounts = new Map<string, Set<string>>();
+      
+      // Group users by day
+      recentRecords?.forEach(entry => {
+        const date = new Date(entry.created_at);
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        if (!dailyActiveUserCounts.has(dateKey)) {
+          dailyActiveUserCounts.set(dateKey, new Set<string>());
+        }
+        
+        if (entry.did) {
+          dailyActiveUserCounts.get(dateKey)!.add(entry.did);
+        }
+      });
+      
+      // Calculate average daily active users
+      let dailyActiveFlushers = 0;
+      if (dailyActiveUserCounts.size > 0) {
+        const totalDailyActiveUsers = Array.from(dailyActiveUserCounts.values()).reduce(
+          (total, users) => total + users.size, 0
+        );
+        dailyActiveFlushers = parseFloat((totalDailyActiveUsers / dailyActiveUserCounts.size).toFixed(1));
+      }
+      console.log(`Daily Active Flushers (average over last 30 days): ${dailyActiveFlushers}`);
+      
       // 3. Get top flushers (leaderboard) - excluding test accounts
       const { data: leaderboardData, error: leaderboardError } = await supabase
         .from('flushing_records')
@@ -194,7 +243,9 @@ export async function GET(request: NextRequest) {
         chartData: chartData.slice(-30), // Last 30 days
         leaderboard,
         plumberFlushCount,
-        totalFlushers
+        totalFlushers,
+        monthlyActiveFlushers,
+        dailyActiveFlushers
       });
     } else {
       // If no Supabase credentials, return mock data
@@ -204,7 +255,9 @@ export async function GET(request: NextRequest) {
         chartData: generateMockChartData(),
         leaderboard: generateMockLeaderboard(),
         plumberFlushCount: 15,
-        totalFlushers: 28
+        totalFlushers: 28,
+        monthlyActiveFlushers: 18,
+        dailyActiveFlushers: 5.2
       });
     }
   } catch (error: any) {
