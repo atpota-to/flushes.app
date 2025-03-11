@@ -275,6 +275,14 @@ export async function checkAuth(
       return false;
     }
     
+    // For API calls, use the actual PDS endpoint
+    // But when we need to do token refresh, use bsky.social for auth on third-party servers
+    let authServer = pdsEndpoint;
+    if (!pdsEndpoint.includes('bsky.social')) {
+      console.log('[AUTH CHECK] Will use bsky.social for OAuth on third-party PDS');
+      authServer = 'https://bsky.social';
+    }
+
     // First check if the token is expired by decoding it
     const tokenExpired = isTokenExpired(accessToken);
     if (tokenExpired && refreshToken) {
@@ -306,13 +314,6 @@ export async function checkAuth(
     
     // For API calls, use the actual PDS endpoint
     const baseUrl = `${pdsEndpoint}/xrpc`;
-    
-    // But when we need to do token refresh, use bsky.social for auth on third-party servers
-    let authServer = pdsEndpoint;
-    if (!pdsEndpoint.includes('bsky.social')) {
-      console.log('[AUTH CHECK] Will use bsky.social for OAuth on third-party PDS');
-      authServer = 'https://bsky.social';
-    }
     
     // First, get the user's handle from their DID using repo.describeRepo
     const describeRepoEndpoint = `${baseUrl}/com.atproto.repo.describeRepo`;
@@ -393,9 +394,15 @@ export async function checkAuth(
         
         try {
           // Try to refresh the token with enhanced error handling
-          // Use authServer for token refresh (bsky.social for third-party PDS)
+          // Use bsky.social for token refresh with third-party PDS
+          let refreshAuthServer = pdsEndpoint;
+          if (!pdsEndpoint.includes('bsky.social')) {
+            console.log('[AUTH CHECK] Using bsky.social for token refresh with third-party PDS');
+            refreshAuthServer = 'https://bsky.social';
+          }
+          
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-            await refreshAccessToken(refreshToken, keyPair, authServer);
+            await refreshAccessToken(refreshToken, keyPair, refreshAuthServer);
           
           // Update tokens in localStorage
           if (typeof localStorage !== 'undefined') {
