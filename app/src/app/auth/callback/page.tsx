@@ -135,13 +135,16 @@ function CallbackHandler() {
           console.log('Using auth server for token exchange:', authServer);
           console.log('Original PDS endpoint (iss):', tokenPdsEndpoint);
           
+          // Convert null to undefined for type compatibility
+          const originalPdsEndpoint = tokenPdsEndpoint === null ? undefined : tokenPdsEndpoint;
+          
           tokenResponse = await getAccessToken(
             code, 
             codeVerifier, 
             keyPair, 
             authServer,
             undefined, // No nonce yet
-            tokenPdsEndpoint // Pass the original PDS endpoint (from iss)
+            originalPdsEndpoint // Pass the original PDS endpoint (converted from null to undefined if needed)
           );
         } catch (tokenError: any) {
           console.error('Token exchange error:', tokenError);
