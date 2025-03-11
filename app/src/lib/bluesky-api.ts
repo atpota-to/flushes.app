@@ -92,44 +92,90 @@ export async function refreshAccessToken(
     // Endpoint for token refresh
     const tokenEndpoint = `${authServer}/oauth/token`;
     
-    // First, ALWAYS get a fresh nonce before attempting token refresh
+    // For third-party PDS, directly get nonce from PDS endpoint
+    // This is critical because third-party PDSes need their own specific nonce
     let dpopNonce = null;
-    try {
-      // Try server-side nonce retrieval first
-      console.log('[TOKEN REFRESH] Getting fresh nonce from server API');
-      const nonceResponse = await fetch('/api/auth/nonce', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pdsEndpoint })
-      });
-      
-      if (nonceResponse.ok) {
-        const nonceData = await nonceResponse.json();
-        if (nonceData.nonce) {
-          dpopNonce = nonceData.nonce;
-          console.log('[TOKEN REFRESH] Got fresh nonce from server API:', dpopNonce);
-        }
-      }
-      
-      // If server-side retrieval fails, try client-side
-      if (!dpopNonce) {
-        console.log('[TOKEN REFRESH] Trying HEAD request for nonce');
-        const headResponse = await fetch(tokenEndpoint, { method: 'HEAD' });
-        dpopNonce = headResponse.headers.get('DPoP-Nonce');
-      }
-      
-      // If still no nonce, try POST probe
-      if (!dpopNonce) {
-        console.log('[TOKEN REFRESH] Trying POST probe for nonce');
+    
+    // Special handling for third-party PDS token refresh
+    if (!authServer.includes('bsky.social') && !authServer.includes('bsky.network')) {
+      try {
+        // For third-party PDS, use a two-step approach to get the valid nonce:
+        console.log('[TOKEN REFRESH] Direct nonce retrieval from third-party PDS');
+        
+        // Step 1: Send an empty token refresh request to get a nonce error
+        // This ensures we get the exact format of nonce the PDS expects
+        console.log('[TOKEN REFRESH] Step 1: Sending probe request to get nonce');
         const probeResponse = await fetch(tokenEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({})  // Empty body to trigger error response with nonce
+          body: new URLSearchParams({
+            'grant_type': 'refresh_token',
+            'refresh_token': refreshToken,
+            'client_id': 'https://flushes.app/client-metadata.json'
+          })
         });
-        dpopNonce = probeResponse.headers.get('DPoP-Nonce');
+        
+        // Get the nonce from the error response
+        const probeNonce = probeResponse.headers.get('DPoP-Nonce');
+        if (probeNonce) {
+          console.log('[TOKEN REFRESH] Got DPoP-Nonce from probe response:', probeNonce);
+          dpopNonce = probeNonce;
+        } else {
+          // Try to parse the response body for a nonce in the error message
+          try {
+            const probeData = await probeResponse.json();
+            if (probeData.error === 'use_dpop_nonce' && probeData.nonce) {
+              console.log('[TOKEN REFRESH] Got nonce from error body:', probeData.nonce);
+              dpopNonce = probeData.nonce;
+            }
+          } catch (e) {
+            console.warn('[TOKEN REFRESH] Failed to parse probe response:', e);
+          }
+        }
+      } catch (directError) {
+        console.warn('[TOKEN REFRESH] Direct nonce retrieval failed:', directError);
       }
-    } catch (nonceError) {
-      console.warn('[TOKEN REFRESH] Failed to get initial nonce:', nonceError);
+    }
+    
+    // Fall back to standard nonce retrieval methods if direct method failed
+    if (!dpopNonce) {
+      try {
+        // Try server-side nonce retrieval first
+        console.log('[TOKEN REFRESH] Getting fresh nonce from server API');
+        const nonceResponse = await fetch('/api/auth/nonce', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdsEndpoint: authServer }) // Use the correct server
+        });
+        
+        if (nonceResponse.ok) {
+          const nonceData = await nonceResponse.json();
+          if (nonceData.nonce) {
+            dpopNonce = nonceData.nonce;
+            console.log('[TOKEN REFRESH] Got fresh nonce from server API:', dpopNonce);
+          }
+        }
+        
+        // If server-side retrieval fails, try client-side
+        if (!dpopNonce) {
+          console.log('[TOKEN REFRESH] Trying HEAD request for nonce');
+          const headResponse = await fetch(tokenEndpoint, { method: 'HEAD' });
+          dpopNonce = headResponse.headers.get('DPoP-Nonce');
+        }
+        
+        // If still no nonce, try POST probe
+        if (!dpopNonce) {
+          console.log('[TOKEN REFRESH] Trying POST probe for nonce');
+          const probeResponse = await fetch(tokenEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({})  // Empty body to trigger error response with nonce
+          });
+          dpopNonce = probeResponse.headers.get('DPoP-Nonce');
+        }
+      } catch (nonceError) {
+        console.warn('[TOKEN REFRESH] Failed to get initial nonce:', nonceError);
+      }
     }
     
     if (!dpopNonce) {
@@ -165,7 +211,7 @@ export async function refreshAccessToken(
     });
     
     // Handle nonce error explicitly - this is the critical part!
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 400) {
       let responseBody;
       try {
         responseBody = await response.json();
@@ -173,14 +219,31 @@ export async function refreshAccessToken(
         responseBody = {};
       }
       
-      const newNonce = response.headers.get('DPoP-Nonce');
+      // Try to get nonce from multiple sources
+      let newNonce = response.headers.get('DPoP-Nonce');
+      
+      // Also check for nonce in the response body (some PDSes return it there)
+      if (!newNonce && responseBody.nonce) {
+        newNonce = responseBody.nonce;
+        console.log('[TOKEN REFRESH] Found nonce in response body:', newNonce);
+      }
+      
+      // Some servers use DPoP-Nonce header instead of nonce in body
+      if (!newNonce && response.headers.get('DPoP-Nonce')) {
+        newNonce = response.headers.get('DPoP-Nonce');
+        console.log('[TOKEN REFRESH] Found DPoP-Nonce in response headers:', newNonce);
+      }
       
       // Check for DPoP nonce error
-      if (
-        (responseBody.error === 'use_dpop_nonce' || 
-        (responseBody.error_description && responseBody.error_description.includes('nonce'))) && 
-        newNonce
-      ) {
+      const isNonceError = 
+        responseBody.error === 'use_dpop_nonce' || 
+        responseBody.error === 'invalid_dpop_proof' ||
+        (responseBody.error_description && (
+          responseBody.error_description.includes('nonce') || 
+          responseBody.error_description.includes('DPoP')
+        ));
+      
+      if (isNonceError && newNonce) {
         console.log('[TOKEN REFRESH] Received nonce error, retrying with new nonce:', newNonce);
         
         // Generate new DPoP token with the provided nonce
@@ -414,6 +477,12 @@ export async function checkAuth(
             // For third-party PDSes, use their own endpoint
             console.log('[AUTH CHECK] Will use third-party PDS\'s own endpoint:', pdsEndpoint);
             // Keep refreshAuthServer as the original PDS endpoint
+            
+            // Ensure we update the PDS endpoint everywhere
+            if (typeof localStorage !== 'undefined') {
+              localStorage.setItem('pdsEndpoint', pdsEndpoint);
+              localStorage.setItem('bsky_auth_pdsEndpoint', pdsEndpoint);
+            }
           }
           
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 

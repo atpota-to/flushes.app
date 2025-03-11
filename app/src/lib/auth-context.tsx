@@ -88,8 +88,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Refresh the token with enhanced error handling
         try {
+          // CRITICAL FIX: Follow the same server selection logic as in refreshAccessToken
+          let refreshAuthServer = pdsEndpoint;
+          
+          // For bsky.network PDSes, use bsky.social
+          if (pdsEndpoint.includes('bsky.network')) {
+            console.log('[AUTH CONTEXT] Using bsky.social for token refresh with bsky.network PDS');
+            refreshAuthServer = 'https://bsky.social';
+          } else if (pdsEndpoint.includes('bsky.social')) {
+            // Already using bsky.social
+            console.log('[AUTH CONTEXT] Using bsky.social directly for token refresh');
+          } else {
+            // For third-party PDSes, use their own endpoint
+            console.log('[AUTH CONTEXT] Using third-party PDS\'s own endpoint for token refresh:', pdsEndpoint);
+          }
+          
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-            await refreshAccessToken(refreshToken, keyPair, pdsEndpoint);
+            await refreshAccessToken(refreshToken, keyPair, refreshAuthServer);
           
           // Update state
           setAccessToken(newAccessToken);
@@ -101,6 +116,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             localStorage.setItem('accessToken', newAccessToken);
             localStorage.setItem('refreshToken', newRefreshToken);
             if (newNonce) localStorage.setItem('dpopNonce', newNonce);
+            // Ensure we have the PDS endpoint stored consistently
+            localStorage.setItem('pdsEndpoint', pdsEndpoint);
+            localStorage.setItem('bsky_auth_pdsEndpoint', pdsEndpoint);
           }
           
           setLastTokenRefresh(Date.now());
