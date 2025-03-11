@@ -112,8 +112,8 @@ export default function ProfilePage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>im.flushing 🧻</h1>
-          <p className={styles.subtitle}>https://flushing.im 🚽</p>
+          <h1 className={styles.title}>Flushes 🧻</h1>
+          <p className={styles.subtitle}>https://flushes.app 🚽</p>
           <p className={styles.description}>
             The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.
           </p>
@@ -181,7 +181,7 @@ export default function ProfilePage() {
                 className={styles.shareStatsButton}
                 onClick={() => {
                   // Open a new window to compose a post on Bluesky
-                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (averaging ${flushesPerDay} per active day)` : ''} on @flushing.im. Flush with me here: https://flushing.im/profile/${handle}`;
+                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (averaging ${flushesPerDay} per active day)` : ''} on @flushes.app. Flush with me here: https://flushes.app/profile/${handle}`;
                   window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
                 }}
               >

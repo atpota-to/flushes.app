@@ -12,6 +12,7 @@ interface StatsData {
   chartData: { date: string; count: number }[];
   leaderboard: { did: string; count: number; handle?: string }[];
   plumberFlushCount: number;
+  totalFlushers: number;
 }
 
 export default function StatsPage() {
@@ -97,8 +98,8 @@ export default function StatsPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>im.flushing 🧻</h1>
-          <p className={styles.subtitle}>https://flushing.im 🚽</p>
+          <h1 className={styles.title}>Flushes 🧻</h1>
+          <p className={styles.subtitle}>https://flushes.app 🚽</p>
           <p className={styles.description}>
             The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
@@ -126,7 +127,7 @@ export default function StatsPage() {
       <div className={styles.statsHeader}>
         <h2>Plumbing Stats 🪠</h2>
         <p className={styles.statsSubtitle}>
-          Global statistics for the im.flushing network
+          Global statistics for the Flushes network
         </p>
       </div>
 
@@ -160,7 +161,7 @@ export default function StatsPage() {
           <section className={styles.overallStats}>
             <h2>Overall Flush Activity</h2>
             <a 
-              href="https://bsky.app/profile/plumber.flushing.im" 
+              href="https://bsky.app/profile/plumber.flushes.app" 
               target="_blank" 
               rel="noopener noreferrer"
               className={styles.plumberProfileLink}
@@ -179,6 +180,10 @@ export default function StatsPage() {
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.plumberFlushCount}</div>
                 <div className={styles.statLabel}>Emergency plumber flushes</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>{statsData.totalFlushers}</div>
+                <div className={styles.statLabel}>Total flushers</div>
               </div>
             </div>
           </section>
@@ -257,7 +262,7 @@ export default function StatsPage() {
               className={styles.shareButton}
               onClick={() => {
                 // Generate share text
-                const statsText = `There have been ${statsData.totalCount} flushes on @flushing.im! That's averaging ${statsData.flushesPerDay} flushes per active day. Check out the stats and leaderboard: https://flushing.im/stats`;
+                const statsText = `There have been ${statsData.totalCount} flushes by ${statsData.totalFlushers} unique users on @flushes.app! That's averaging ${statsData.flushesPerDay} flushes per active day. Check out the stats and leaderboard: https://flushes.app/stats`;
                 window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
               }}
             >

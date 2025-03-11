@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const DEFAULT_AUTH_SERVER = 'https://bsky.social';
-const REDIRECT_URI = 'https://flushing.im/auth/callback';
-const CLIENT_ID = 'https://flushing.im/client-metadata.json';
+const REDIRECT_URI = 'https://flushes.app/auth/callback';
+const CLIENT_ID = 'https://flushes.app/client-metadata.json';
 
 // Function to get a nonce from the specified PDS
 async function getNonce(pdsEndpoint: string): Promise<string | null> {

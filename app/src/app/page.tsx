@@ -59,8 +59,11 @@ export default function Home() {
   
   // Check rate limit - 2 posts per 30 minutes, except for the plumber account
   const checkRateLimit = (): boolean => {
+    // Define the plumber's DID
+    const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw3lgwz22';
+    
     // Exempt the plumber account from rate limiting
-    if (did === 'did:plc:fouf3svmcxzn6bpiw3lgwz22') {
+    if (did === PLUMBER_DID) {
       console.log('Plumber account detected - bypassing rate limits');
       return true; // Always return true (under limit) for the plumber account
     }

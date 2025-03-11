@@ -11,19 +11,19 @@ import { Analytics } from "@vercel/analytics/react"
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: "im.flushing",
+  title: "Flushes",
   description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
   openGraph: {
-    title: 'im.flushing',
+    title: 'Flushes',
     description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
-    url: 'https://flushing.im',
-    siteName: 'im.flushing',
+    url: 'https://flushes.app',
+    siteName: 'Flushes',
     images: [
       {
-        url: 'https://flushing.im/og-image.png',
+        url: 'https://flushes.app/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'im.flushing',
+        alt: 'Flushes',
       }
     ],
     locale: 'en_US',
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'im.flushing',
+    title: 'Flushes',
     description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
-    images: ['https://flushing.im/og-image.png'],
+    images: ['https://flushes.app/og-image.png'],
   }
 };
 

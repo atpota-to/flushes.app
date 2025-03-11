@@ -37,6 +37,12 @@ export async function GET(request: NextRequest) {
       );
     }
     
+    // Special case for plumber account redirect
+    if (handle === 'plumber.flushing.im') {
+      console.log('Redirecting from old plumber.flushing.im handle to plumber.flushes.app');
+      return NextResponse.redirect(new URL(`/profile/plumber.flushes.app`, request.url));
+    }
+    
     // Step 1: Get the user's DID from their handle
     let did = handle;
     // If the handle doesn't look like a DID, resolve it
@@ -259,6 +265,13 @@ export async function POST(request: NextRequest) {
     // First get the user's DID if we're looking up a handle
     let userDid = handle;
     let userHandle = handle;
+    
+    // Special case for plumber account handles
+    if (handle === 'plumber.flushing.im') {
+      console.log('Converting old plumber.flushing.im handle to plumber.flushes.app in API');
+      handle = 'plumber.flushes.app'; 
+      userHandle = 'plumber.flushes.app';
+    }
     
     try {
       if (!handle.startsWith('did:')) {

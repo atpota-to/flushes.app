@@ -143,24 +143,31 @@ export async function GET(request: NextRequest) {
       // Count flushes by DID
       const didCounts = new Map<string, number>();
       
-      // Special count for the plumber
+      // Special count for the plumber account
       let plumberFlushCount = 0;
+      
+      // Define the plumber's DID - this is the official plumber account DID
+      const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw3lgwz22';
       
       // List of DIDs to exclude from leaderboard
       const excludedDids = [
-        'did:plc:fouf3svmcxzn6bpiw3lgwz22', // plumber.flushing.im
+        PLUMBER_DID, // plumber.flushes.app (formerly plumber.flushing.im)
         'did:plc:fnhrjbkwjiw6iyxxg2o3rljw'  // testing.dame.is
       ];
       
       // List of handles to exclude from leaderboard (as fallback)
+      // Include both the old and new plumber handles for backward compatibility
       const excludedHandles = [
-        'plumber.flushing.im',
+        'plumber.flushes.app',  // New plumber handle
+        'plumber.flushing.im',  // Old plumber handle (for backward compatibility)
         'testing.dame.is'
       ];
       
       leaderboardData?.forEach(entry => {
-        // Check if this is the plumber or test account
-        if (entry.did === 'did:plc:fouf3svmcxzn6bpiw3lgwz22' || entry.handle === 'plumber.flushing.im') {
+        // Check if this is the plumber account (by DID or either handle)
+        if (entry.did === PLUMBER_DID || 
+            entry.handle === 'plumber.flushes.app' ||
+            entry.handle === 'plumber.flushing.im') {
           plumberFlushCount++;
         } 
         // Only count towards leaderboard if not an excluded account
@@ -176,13 +183,18 @@ export async function GET(request: NextRequest) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10); // Get top 10
       
+      // Calculate total unique flushers (count of unique DIDs)
+      const totalFlushers = didCounts.size;
+      console.log(`Total unique flushers: ${totalFlushers}`);
+      
       // Return the data
       return NextResponse.json({
         totalCount,
         flushesPerDay,
         chartData: chartData.slice(-30), // Last 30 days
         leaderboard,
-        plumberFlushCount
+        plumberFlushCount,
+        totalFlushers
       });
     } else {
       // If no Supabase credentials, return mock data
@@ -191,7 +203,8 @@ export async function GET(request: NextRequest) {
         flushesPerDay: 3.5,
         chartData: generateMockChartData(),
         leaderboard: generateMockLeaderboard(),
-        plumberFlushCount: 15
+        plumberFlushCount: 15,
+        totalFlushers: 28
       });
     }
   } catch (error: any) {
