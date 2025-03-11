@@ -48,14 +48,41 @@ function CallbackHandler() {
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const iss = searchParams.get('iss');
+        const error = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
+        
+        // Log all URL parameters for debugging
+        console.log('Callback URL parameters:', {
+          code: code ? code.substring(0, 6) + '...' : null,
+          state: state ? state.substring(0, 5) + '...' : null,
+          iss,
+          error,
+          errorDescription,
+          // Log any additional parameters
+          allParams: Object.fromEntries(searchParams)
+        });
+        
+        // Check for error parameters in the callback
+        if (error) {
+          console.error(`OAuth error in callback: ${error} - ${errorDescription}`);
+          setError(`Authentication error: ${errorDescription || error}`);
+          return;
+        }
         
         if (!code || !state || !iss) {
-          setError('Invalid callback parameters');
+          const missing = [];
+          if (!code) missing.push('code');
+          if (!state) missing.push('state');
+          if (!iss) missing.push('iss');
+          
+          console.error(`Missing required callback parameters: ${missing.join(', ')}`);
+          setError(`Invalid callback parameters. Missing: ${missing.join(', ')}`);
           return;
         }
 
         // Get stored values from our robust storage utility
         if (typeof window === 'undefined') {
+          console.error('Browser environment not available');
           setError('Browser environment not available');
           return;
         }
@@ -64,21 +91,42 @@ function CallbackHandler() {
         const codeVerifier = retrieveAuthData('code_verifier');
         const serializedKeyPair = retrieveAuthData('key_pair');
         
+        // Log stored auth data for debugging
+        console.log('Stored auth data:', {
+          storedStateExists: !!storedState,
+          storedStatePrefix: storedState ? storedState.substring(0, 5) + '...' : null,
+          codeVerifierExists: !!codeVerifier,
+          codeVerifierLength: codeVerifier ? codeVerifier.length : 0,
+          serializedKeyPairExists: !!serializedKeyPair,
+          storageFunctioning: typeof localStorage !== 'undefined' && typeof sessionStorage !== 'undefined'
+        });
+        
         // Check if we have the stored values
         if (!storedState) {
-          setError('Session data lost. Please try logging in again.');
+          console.error('Session state data lost. Storage might be disabled or corrupted.');
+          setError('Session data lost. Please try logging in again, ensuring cookies and local storage are enabled.');
           return;
         }
 
         // Validate state
         if (state !== storedState) {
-          console.error('State mismatch. Received:', state, 'Stored:', storedState);
+          console.error('State mismatch:', {
+            received: state ? state.substring(0, 10) + '...' : null,
+            stored: storedState ? storedState.substring(0, 10) + '...' : null,
+            match: state === storedState
+          });
           setError('Invalid state parameter. This may be due to an expired session or a security issue.');
           return;
         }
 
+        // Validate the rest of the auth data
         if (!codeVerifier || !serializedKeyPair) {
-          setError('Missing authorization data');
+          const missing = [];
+          if (!codeVerifier) missing.push('code_verifier');
+          if (!serializedKeyPair) missing.push('key_pair');
+          
+          console.error(`Missing authorization data: ${missing.join(', ')}`);
+          setError(`Missing authorization data: ${missing.join(', ')}. Please try logging in again.`);
           return;
         }
 
@@ -117,8 +165,7 @@ function CallbackHandler() {
         console.log('Exchanging code for token...');
         let tokenResponse;
         try {
-          // CRITICAL FIX: For third-party PDS, we need to use bsky.social for token exchange
-          // But we must pass the original PDS endpoint (iss param) as well
+          // CRITICAL FIX: For third-party PDS, we need special handling for token exchange
           let authServer = storedAuthServer || 'https://bsky.social';
           let tokenPdsEndpoint = storedPdsEndpoint;
           
@@ -129,11 +176,23 @@ function CallbackHandler() {
             tokenPdsEndpoint = iss;
             // Store this for later use
             storeAuthData('pds_endpoint', iss);
+            
+            // For third-party PDS, we need to ensure we're using the right auth server
+            if (!iss.includes('bsky.social')) {
+              // Always use bsky.social for token exchange with third-party PDS
+              authServer = 'https://bsky.social';
+              console.log('Third-party PDS detected, using bsky.social as auth server');
+              
+              // Also store the auth server
+              storeAuthData('auth_server', authServer);
+            }
           }
           
-          // Always use bsky.social for token exchange (even for custom PDS endpoints)
-          console.log('Using auth server for token exchange:', authServer);
-          console.log('Original PDS endpoint (iss):', tokenPdsEndpoint);
+          console.log('Authentication servers:', { 
+            authServer,
+            originalPdsEndpoint: tokenPdsEndpoint,
+            isThirdPartyPds: tokenPdsEndpoint !== authServer
+          });
           
           // Convert null to undefined for type compatibility
           const originalPdsEndpoint = tokenPdsEndpoint === null ? undefined : tokenPdsEndpoint;

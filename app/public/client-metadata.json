@@ -7,6 +7,9 @@
   "tos_uri": "https://flushes.app/terms",
   "policy_uri": "https://flushes.app/privacy",
   "dpop_bound_access_tokens": true,
+  "authorization_endpoint": "https://bsky.social/oauth/authorize",
+  "token_endpoint": "https://bsky.social/oauth/token",
+  "issuer": "https://bsky.social",
   "grant_types": [
     "authorization_code",
     "refresh_token"

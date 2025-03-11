@@ -55,7 +55,7 @@ export default function LoginPage() {
       
       // For bsky.network endpoints, use the default AUTH_SERVER (bsky.social)
       // For other PDS servers, use their actual endpoint
-      let authUrl, state, codeVerifier, keyPair;
+      let authUrl, state, codeVerifier, keyPair, authorizationEndpoint;
       
       if (isBskyNetwork) {
         console.log('Using standard Bluesky OAuth flow for bsky.network PDS');
@@ -65,6 +65,14 @@ export default function LoginPage() {
         state = authData.state;
         codeVerifier = authData.codeVerifier;
         keyPair = authData.keyPair;
+        authorizationEndpoint = authData.pdsEndpoint;
+        
+        console.log('Standard OAuth flow details:', {
+          pdsType: 'bsky.network',
+          authEndpoint: authorizationEndpoint,
+          statePrefix: state.substring(0, 5) + '...',
+          codeVerifierLength: codeVerifier.length
+        });
       } else {
         console.log('Using custom PDS OAuth flow for:', pdsEndpoint);
         // Use the custom PDS endpoint for OAuth
@@ -73,6 +81,16 @@ export default function LoginPage() {
         state = authData.state;
         codeVerifier = authData.codeVerifier;
         keyPair = authData.keyPair;
+        authorizationEndpoint = authData.pdsEndpoint;
+        
+        console.log('Custom PDS OAuth flow details:', {
+          pdsType: 'third-party',
+          pdsEndpoint,
+          authEndpoint: authorizationEndpoint,
+          statePrefix: state.substring(0, 5) + '...',
+          codeVerifierLength: codeVerifier.length,
+          redirectUri: 'https://flushes.app/auth/callback' // Expected to be this
+        });
       }
       
       // Store auth state
