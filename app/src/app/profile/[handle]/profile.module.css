@@ -263,6 +263,31 @@
   margin-bottom: 1rem;
 }
 
+.smallLoader {
+  border: 3px solid var(--input-background);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+  margin-top: 0.5rem;
+  display: inline-block;
+}
+
+.profileLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.smallError {
+  color: var(--timestamp-color);
+  font-size: 0.9rem;
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

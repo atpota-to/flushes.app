@@ -25,21 +25,58 @@ export default function ProfilePage() {
   const [entries, setEntries] = useState<FlushingEntry[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
+  // Match Bluesky's API response format
   interface ProfileData {
-    did?: string;
-    handle?: string;
+    did: string;
+    handle: string;
     displayName?: string;
     description?: string;
+    avatar?: string;
+    banner?: string;
+    followersCount?: number;
+    followsCount?: number;
+    postsCount?: number;
+    indexedAt?: string;
+    viewer?: any;
   }
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
   useEffect(() => {
-    // Fetch the user's statuses when the component mounts
+    // Fetch the user's statuses and profile data when the component mounts
     fetchUserStatuses();
+    fetchProfileData();
   }, [handle]);
+  
+  // Function to fetch the user's profile data directly
+  const fetchProfileData = async () => {
+    try {
+      setProfileLoading(true);
+      setProfileError(null);
+      
+      // Fetch profile data directly from Bluesky API
+      const profileResponse = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`);
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        setProfileData(profileData);
+        console.log("Fetched profile data:", profileData);
+      } else {
+        const errorText = await profileResponse.text();
+        console.warn(`Failed to fetch profile data: ${profileResponse.statusText}`, errorText);
+        setProfileError(`Failed to fetch profile: ${profileResponse.status}`);
+      }
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+      setProfileError(error.message || "Failed to fetch profile data");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   // Function to fetch the user's statuses
   const fetchUserStatuses = async () => {
@@ -65,10 +102,7 @@ export default function ProfilePage() {
       setEntries(userEntries);
       setTotalCount(data.count || 0);
       
-      // Set profile data if available
-      if (data.profile) {
-        setProfileData(data.profile);
-      }
+      // We now fetch profile data separately
       
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
@@ -125,17 +159,31 @@ export default function ProfilePage() {
       
       <div className={styles.profileHeader}>
         <div className={styles.profileInfo}>
-          {profileData?.displayName ? (
-            <>
-              <h2 className={`${styles.profileTitle} font-bold`}>{profileData.displayName}</h2>
-              <h3 className={`${styles.profileHandle} font-medium`}>@{handle}</h3>
-            </>
+          {profileLoading ? (
+            <div className={styles.profileLoading}>
+              <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+              <div className={styles.smallLoader}></div>
+            </div>
+          ) : profileError ? (
+            <div>
+              <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+              <p className={styles.smallError}>Unable to load profile details</p>
+            </div>
           ) : (
-            <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
-          )}
-          
-          {profileData?.description && (
-            <p className={`${styles.description} font-regular`}>{profileData.description}</p>
+            <>
+              {profileData?.displayName ? (
+                <>
+                  <h2 className={`${styles.profileTitle} font-bold`}>{profileData.displayName}</h2>
+                  <h3 className={`${styles.profileHandle} font-medium`}>@{handle}</h3>
+                </>
+              ) : (
+                <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+              )}
+              
+              {profileData?.description && (
+                <p className={`${styles.description} font-regular`}>{profileData.description}</p>
+              )}
+            </>
           )}
           
           <a 
