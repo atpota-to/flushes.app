@@ -85,7 +85,9 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   margin-top: 1rem;
+  padding-top: 1rem;
 }
+
 
 .downloadButton:hover {
   background-color: var(--primary-hover);
