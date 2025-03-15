@@ -16,10 +16,31 @@ export default function ProfileSearch() {
   const [suggestions, setSuggestions] = useState<UserSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [placeholder, setPlaceholder] = useState('Search user @handle');
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Update placeholder text based on screen width
+  useEffect(() => {
+    const updatePlaceholder = () => {
+      if (window.innerWidth <= 480) {
+        setPlaceholder('@handle');
+      } else {
+        setPlaceholder('Search user @handle');
+      }
+    };
+    
+    // Initial check
+    updatePlaceholder();
+    
+    // Listen for resize events
+    window.addEventListener('resize', updatePlaceholder);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', updatePlaceholder);
+  }, []);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -80,7 +101,7 @@ export default function ProfileSearch() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search user @handle"
+          placeholder={placeholder}
           className={`${styles.searchInput} font-regular`}
           aria-label="Search for a user profile"
         />

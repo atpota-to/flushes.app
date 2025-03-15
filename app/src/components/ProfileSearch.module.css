@@ -186,6 +186,7 @@
   .searchContainer {
     min-width: 140px;
     flex: 1;
+    max-width: 100%;
   }
   
   .searchInput::placeholder {
@@ -194,5 +195,9 @@
   
   .searchForm {
     height: 36px;
+  }
+  
+  .searchInput {
+    font-size: 0.75rem;
   }
 }
