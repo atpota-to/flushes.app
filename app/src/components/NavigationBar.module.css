@@ -122,7 +122,6 @@
   }
 
   .navLinks {
-    overflow-x: auto;
     white-space: nowrap;
     gap: 0.5rem;
     -ms-overflow-style: none;  /* IE and Edge */
@@ -146,6 +145,7 @@
 @media (max-width: 600px) {
   .logo {
     font-size: 1.25rem;
+    margin-right: 0rem;
   }
 
   .navLink {
