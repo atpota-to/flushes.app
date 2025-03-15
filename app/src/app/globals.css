@@ -191,6 +191,14 @@ h1 {
   line-height: 2.5rem;
 }
 
+h2 {
+  line-height: 2rem;
+}
+
+h3 {
+  line-height: 2rem;
+}
+
 main {
   min-height: calc(100vh - 60px);
   width: 100%;
