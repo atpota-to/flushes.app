@@ -356,8 +356,6 @@ export default function Home() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1 className={styles.title}>Flushes 🧻</h1>
-          <p className={styles.subtitle}>https://flushes.app 🚽</p>
           <p className={styles.description}>
             The world&apos;s 1st decentralized social media app for sharing when you&apos;re on the toilet. Powered by the AT Protocol. Your flushes are saved to your PDS via the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
@@ -366,24 +364,7 @@ export default function Home() {
             </span>
           </p>
         </div>
-        <div className={styles.headerActions}>
-          {isAuthenticated ? (
-            <>
-              <Link href={`/profile/${handle}`} className={styles.userInfo}>@{handle}</Link>
-              <button onClick={handleLogout} className={styles.logoutButton}>
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link href="/auth/login" className={styles.loginButton}>
-              Login with Bluesky
-            </Link>
-          )}
-        </div>
       </header>
-
-      {/* Plumbing Stats link - visible to all users */}
-      <Link href="/stats" className={styles.statsLink}>View Plumbing Stats 🪠</Link>
 
       {/* Status update section - only visible when logged in */}
       {isAuthenticated && (
