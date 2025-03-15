@@ -146,7 +146,7 @@
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
-  padding-top: 0.7rem;
+  padding-top: 10px;
 }
 
 .refreshButton:hover:not(:disabled) {
@@ -167,6 +167,7 @@
   padding: 0.5rem 1rem;
   font-size: 1rem;
   transition: all 0.2s;
+  padding-top: 10px;
 }
 
 .homeLink:hover {
