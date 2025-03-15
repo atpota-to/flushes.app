@@ -67,8 +67,9 @@ export default function FeedPage() {
   // Function to load older entries
   const loadOlderEntries = async () => {
     try {
-      // Save current scroll position
-      const scrollPosition = window.scrollY;
+      // Save reference to the "Load older flushes" button element to measure its position
+      const loadMoreButton = document.getElementById('load-more-button');
+      const buttonPosition = loadMoreButton?.getBoundingClientRect();
       
       setLoading(true);
       setError(null);
@@ -97,17 +98,32 @@ export default function FeedPage() {
       const data = await response.json();
       
       if (data.entries && data.entries.length > 0) {
-        // Append the new entries to our existing list
-        setEntries([...entries, ...data.entries]);
+        // Get the current document height before adding new content
+        const oldDocumentHeight = document.body.scrollHeight;
         
-        // Wait for DOM to update with new entries
-        setTimeout(() => {
-          // Restore scroll position after state update and render
-          window.scrollTo({
-            top: scrollPosition,
-            behavior: 'instant' // Use instant to avoid additional animation
+        // Append the new entries to our existing list
+        setEntries(prevEntries => [...prevEntries, ...data.entries]);
+        
+        // After state update, maintain position relative to the Load More button
+        if (buttonPosition) {
+          // Use requestAnimationFrame to ensure DOM has updated
+          requestAnimationFrame(() => {
+            // Get the button's new position
+            const newButtonElement = document.getElementById('load-more-button');
+            
+            if (newButtonElement) {
+              // Calculate where to scroll to keep the button in the same viewport position
+              const newButtonPosition = newButtonElement.getBoundingClientRect();
+              const newScrollY = window.scrollY + (newButtonPosition.top - buttonPosition.top);
+              
+              // Scroll to the calculated position
+              window.scrollTo({
+                top: newScrollY,
+                behavior: 'instant' // Use instant to avoid animation
+              });
+            }
           });
-        }, 0);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching older entries:', err);
@@ -182,6 +198,7 @@ export default function FeedPage() {
             
             <button 
               className={styles.loadMoreButton}
+              id="load-more-button"
               onClick={(e) => {
                 e.preventDefault(); // Prevent default action
                 loadOlderEntries();

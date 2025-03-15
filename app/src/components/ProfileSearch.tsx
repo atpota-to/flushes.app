@@ -26,9 +26,9 @@ export default function ProfileSearch() {
   useEffect(() => {
     const updatePlaceholder = () => {
       if (window.innerWidth <= 480) {
-        setPlaceholder('@handle');
+        setPlaceholder('@handle or DID');
       } else {
-        setPlaceholder('Search user @handle');
+        setPlaceholder('Search user @handle or did:plc:...');
       }
     };
     
@@ -60,16 +60,56 @@ export default function ProfileSearch() {
     };
   }, []);
 
-  // Suggestions fetch is disabled for now
+  // Enable suggestions with debouncing
   useEffect(() => {
     // Clear previous timer if it exists
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
-    // Always hide suggestions
-    setSuggestions([]);
-    setShowSuggestions(false);
+    // Don't search for very short queries
+    if (!query || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Set a debounce timer to avoid too many requests
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        setLoading(true);
+        
+        // Format the query - remove @ if it exists
+        const searchQuery = query.trim().startsWith('@') 
+          ? query.trim().substring(1) 
+          : query.trim();
+          
+        // Call the Bluesky API for typeahead suggestions
+        const response = await fetch(
+          `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(searchQuery)}&limit=5`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.actors && Array.isArray(data.actors)) {
+            // Map to our UserSuggestion type
+            setSuggestions(data.actors.map((actor: any) => ({
+              did: actor.did,
+              handle: actor.handle,
+              displayName: actor.displayName,
+              avatar: actor.avatar
+            })));
+            setShowSuggestions(true);
+          }
+        } else {
+          console.error('Failed to fetch suggestions:', await response.text());
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+      } finally {
+        setLoading(false);
+      }
+    }, 300); // 300ms debounce delay
     
     return () => {
       if (debounceTimerRef.current) {
@@ -91,7 +131,12 @@ export default function ProfileSearch() {
     }
   };
 
-  // Removed handleSuggestionClick as it's no longer needed
+  // Handle clicking on a suggestion
+  const handleSuggestionClick = (suggestion: UserSuggestion) => {
+    router.push(`/profile/${suggestion.handle}`);
+    setShowSuggestions(false);
+    setQuery(''); // Clear the input
+  };
 
   return (
     <div className={styles.searchContainer}>
@@ -112,7 +157,48 @@ export default function ProfileSearch() {
           </svg>
         </button>
       </form>
-      {/* Suggestions dropdown removed */}
+      
+      {/* Suggestions dropdown */}
+      {showSuggestions && (
+        <div className={styles.suggestionsContainer} ref={suggestionsRef}>
+          {loading ? (
+            <div className={styles.loadingContainer}>
+              <div className={styles.loadingDot}></div>
+              <div className={styles.loadingDot}></div>
+              <div className={styles.loadingDot}></div>
+            </div>
+          ) : suggestions.length > 0 ? (
+            <ul className={styles.suggestionsList}>
+              {suggestions.map((suggestion) => (
+                <li key={suggestion.did} className={styles.suggestionItem}>
+                  <button 
+                    type="button" 
+                    className={styles.suggestionButton}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    {suggestion.avatar ? (
+                      <img 
+                        src={suggestion.avatar} 
+                        alt={suggestion.handle} 
+                        className={styles.avatar}
+                        width={28}
+                        height={28}
+                      />
+                    ) : (
+                      <div className={styles.avatarPlaceholder}></div>
+                    )}
+                    <div className={styles.suggestionInfo}>
+                      <span className={`${styles.handle} font-medium`}>@{suggestion.handle}</span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className={styles.noResults}>No results found</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

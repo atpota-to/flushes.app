@@ -200,7 +200,6 @@ h3 {
 }
 
 main {
-  min-height: calc(100vh - 60px);
   width: 100%;
   padding-bottom: 2rem;
   max-width: 800px;
@@ -254,13 +253,13 @@ button:hover {
   margin: 1rem 0;
   width: 100%;
   box-shadow: 0 2px 5px var(--shadow-color);
-  transition: transform 0.2s, box-shadow 0.2s;
+  /* Removed transitions */
   background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and increased box-shadow to prevent movement */
+  border-color: var(--primary-color);
 }
 
 .form-group {

@@ -135,13 +135,13 @@
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 2px 5px var(--shadow-color);
-  transition: transform 0.2s, box-shadow 0.2s;
+  /* Removed transition */
   background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
 
 .feedItem:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and increased box-shadow to prevent movement */
+  border-color: var(--primary-color);
 }
 
 .feedHeader {

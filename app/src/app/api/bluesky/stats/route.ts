@@ -28,6 +28,12 @@ export async function GET(request: NextRequest) {
       'testing.dame.is'
     ];
     
+    // Define a type for emoji statistics
+    type EmojiStat = {
+      emoji: string;
+      count: number;
+    };
+    
     // If we have Supabase credentials, fetch stats
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -108,10 +114,10 @@ export async function GET(request: NextRequest) {
       console.log(`Final total count: ${totalCount}`);
       
 
-      // 2. Get daily flush counts for the chart
+      // 2. Get daily flush counts for the chart and emoji data
       const { data: dailyData, error: dailyError } = await supabase
         .from('flushing_records')
-        .select('created_at, did, handle')
+        .select('created_at, did, handle, emoji')
         .order('created_at', { ascending: true });
       
       if (dailyError) {
@@ -265,6 +271,29 @@ export async function GET(request: NextRequest) {
         monthlyActiveFlushers = correctedMAF;
       }
       
+      // 4. Collect emoji statistics
+      console.log('Collecting emoji statistics...');
+      const emojiCounts = new Map<string, number>();
+      
+      // Process all flush records to count emojis
+      dailyData?.forEach(entry => {
+        if (entry.emoji) {
+          // Default to toilet emoji if empty
+          const emoji = entry.emoji.trim() || '🚽';
+          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+        } else {
+          // Count default toilet emoji if no emoji specified
+          emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+        }
+      });
+      
+      // Convert to array and sort by count (most popular first)
+      const emojiStats = Array.from(emojiCounts.entries())
+        .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+        .sort((a, b) => b.count - a.count);
+      
+      console.log(`Collected stats for ${emojiStats.length} different emojis`);
+      
       // Return the data
       return NextResponse.json({
         totalCount,
@@ -274,7 +303,8 @@ export async function GET(request: NextRequest) {
         plumberFlushCount,
         totalFlushers,
         monthlyActiveFlushers,
-        dailyActiveFlushers
+        dailyActiveFlushers,
+        emojiStats
       });
     } else {
       // If no Supabase credentials, return mock data
@@ -286,7 +316,8 @@ export async function GET(request: NextRequest) {
         plumberFlushCount: 15,
         totalFlushers: 28,
         monthlyActiveFlushers: 18,
-        dailyActiveFlushers: 5.2
+        dailyActiveFlushers: 5.2,
+        emojiStats: generateMockEmojiStats()
       });
     }
   } catch (error: any) {
@@ -336,4 +367,18 @@ function generateMockLeaderboard() {
     did,
     count: 10 - index
   }));
+}
+
+// Generate mock emoji stats
+function generateMockEmojiStats() {
+  const popularEmojis = [
+    '🚽', '💩', '🧻', '💦', '🧼', '🪠', '🚿', '🛁', '🧴', '🌊',
+    '💨', '🔥', '🚫', '⚠️', '🚪', '🧫', '📱', '🎮', '📖', '😌'
+  ];
+  
+  return popularEmojis.map((emoji, index) => {
+    // Generate counts with descending values
+    const count = Math.floor(Math.random() * 20) + (20 - index);
+    return { emoji, count };
+  }).sort((a, b) => b.count - a.count); // Sort by count in descending order
 }

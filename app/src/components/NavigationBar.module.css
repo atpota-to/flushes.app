@@ -95,7 +95,7 @@
   height: 36px;
   display: flex;
   align-items: center;
-  padding-top: 15px;
+  padding-top: 0.5rem;
 }
 
 .authButton:hover {
@@ -221,6 +221,12 @@
   
   .secondRow {
     margin-top: 0rem;
-    gap: .25rem;
+    gap: 1rem;
+    flex-direction: column;
+  }
+
+  .navSearch {
+    flex: 0;
+    margin: 0 0;
   }
 }

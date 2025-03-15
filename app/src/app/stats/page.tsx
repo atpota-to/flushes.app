@@ -15,6 +15,7 @@ interface StatsData {
   totalFlushers: number;
   monthlyActiveFlushers: number;
   dailyActiveFlushers: number;
+  emojiStats: { emoji: string; count: number }[];
 }
 
 export default function StatsPage() {
@@ -153,7 +154,7 @@ export default function StatsPage() {
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.plumberFlushCount}</div>
-                <div className={styles.statLabel}>Emergency plumber flushes</div>
+                <div className={styles.statLabel}>Plumber test flushes</div>
               </div>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.totalFlushers}</div>
@@ -244,6 +245,23 @@ export default function StatsPage() {
               </div>
             ) : (
               <p className={styles.noDataMessage}>No leaderboard data available</p>
+            )}
+          </section>
+          
+          {/* Emoji Statistics */}
+          <section className={styles.emojiSection}>
+            <h2>Emoji Usage</h2>
+            {statsData.emojiStats && statsData.emojiStats.length > 0 ? (
+              <div className={styles.emojiGrid}>
+                {statsData.emojiStats.map((emojiStat, index) => (
+                  <div key={index} className={styles.emojiCard}>
+                    <div className={styles.emoji}>{emojiStat.emoji}</div>
+                    <div className={styles.emojiCount}>{emojiStat.count}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.noDataMessage}>No emoji data available</p>
             )}
           </section>
           

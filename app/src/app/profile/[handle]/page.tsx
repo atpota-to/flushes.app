@@ -58,8 +58,12 @@ export default function ProfilePage() {
       setProfileLoading(true);
       setProfileError(null);
       
+      // The handle could be either a DID or a regular handle
+      // Bluesky API's getProfile endpoint accepts both
+      const actor = handle;
+      
       // Fetch profile data directly from Bluesky API
-      const profileResponse = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(handle)}`);
+      const profileResponse = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(actor)}`);
       
       if (profileResponse.ok) {
         const profileData = await profileResponse.json();
@@ -85,6 +89,7 @@ export default function ProfilePage() {
       setError(null);
       
       // Call our API endpoint to get the user's statuses
+      // The endpoint parameter is named "handle" but it accepts both handles and DIDs
       const response = await fetch(`/api/bluesky/profile?handle=${encodeURIComponent(handle)}`, {
         cache: 'no-store',
         headers: {
@@ -161,12 +166,12 @@ export default function ProfilePage() {
         <div className={styles.profileInfo}>
           {profileLoading ? (
             <div className={styles.profileLoading}>
-              <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+              <h2 className={`${styles.profileTitle} font-bold`}>{handle.startsWith('did:') ? 'Loading Profile...' : `@${handle}`}</h2>
               <div className={styles.smallLoader}></div>
             </div>
           ) : profileError ? (
             <div>
-              <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+              <h2 className={`${styles.profileTitle} font-bold`}>{handle.startsWith('did:') ? 'Profile' : `@${handle}`}</h2>
               <p className={styles.smallError}>Unable to load profile details</p>
             </div>
           ) : (
@@ -174,10 +179,10 @@ export default function ProfilePage() {
               {profileData?.displayName ? (
                 <>
                   <h2 className={`${styles.profileTitle} font-bold`}>{profileData.displayName}</h2>
-                  <h3 className={`${styles.profileHandle} font-medium`}>@{handle}</h3>
+                  <h3 className={`${styles.profileHandle} font-medium`}>@{profileData.handle}</h3>
                 </>
               ) : (
-                <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+                <h2 className={`${styles.profileTitle} font-bold`}>{handle.startsWith('did:') ? 'Profile' : `@${handle}`}</h2>
               )}
               
               {profileData?.description && (
@@ -187,7 +192,7 @@ export default function ProfilePage() {
           )}
           
           <a 
-            href={`https://bsky.app/profile/${handle}`} 
+            href={profileData ? `https://bsky.app/profile/${profileData.handle}` : `https://bsky.app/profile/${handle}`} 
             target="_blank" 
             rel="noopener noreferrer" 
             className={styles.viewOnBluesky}
@@ -239,7 +244,9 @@ export default function ProfilePage() {
                 className={styles.shareStatsButton}
                 onClick={() => {
                   // Open a new window to compose a post on Bluesky
-                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (averaging ${flushesPerDay} per active day)` : ''} on @flushes.app. Flush with me here: https://flushes.app/profile/${handle}`;
+                  // Use handle from profile data if available, otherwise use the URL parameter
+                  const shareHandle = profileData?.handle || handle;
+                  const statsText = `I've made ${totalCount} decentralized ${totalCount === 1 ? 'flush' : 'flushes'}${flushesPerDay > 0 ? ` (averaging ${flushesPerDay} per active day)` : ''} on @flushes.app. Flush with me here: https://flushes.app/profile/${shareHandle}`;
                   window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(statsText)}`, '_blank');
                 }}
               >

@@ -11,7 +11,90 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [handle, setHandle] = useState('');
+  const [suggestions, setSuggestions] = useState<Array<{did: string, handle: string, avatar?: string}>>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target as Node) &&
+        !inputRef.current?.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Handle suggestions with debouncing
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Don't search for very short queries
+    if (!handle || handle.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Set debounce timer
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        setLoadingSuggestions(true);
+        
+        // Format query - remove @ if present
+        const searchQuery = handle.trim().startsWith('@') 
+          ? handle.trim().substring(1) 
+          : handle.trim();
+        
+        // Call Bluesky API
+        const response = await fetch(
+          `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(searchQuery)}&limit=5`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.actors && Array.isArray(data.actors)) {
+            setSuggestions(data.actors.map((actor: any) => ({
+              did: actor.did,
+              handle: actor.handle,
+              avatar: actor.avatar
+            })));
+            setShowSuggestions(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 300);
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [handle]);
+
+  // Handle selecting a suggestion
+  const handleSuggestionClick = (selectedHandle: string) => {
+    setHandle(selectedHandle);
+    setShowSuggestions(false);
+  };
+  
   // Process login with handle
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,14 +246,58 @@ export default function LoginPage() {
           
           <form onSubmit={handleLogin}>
             <div className={styles.inputGroup}>
-              <input
-                type="text"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="yourusername.bsky.social"
-                className={styles.input}
-                disabled={isLoading}
-              />
+              <div className={styles.inputWithSuggestions}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  placeholder="yourusername.bsky.social"
+                  className={styles.input}
+                  disabled={isLoading}
+                />
+                
+                {/* Suggestions dropdown */}
+                {showSuggestions && (
+                  <div className={styles.suggestionsContainer} ref={suggestionsRef}>
+                    {loadingSuggestions ? (
+                      <div className={styles.loadingContainer}>
+                        <div className={styles.loadingDot}></div>
+                        <div className={styles.loadingDot}></div>
+                        <div className={styles.loadingDot}></div>
+                      </div>
+                    ) : suggestions.length > 0 ? (
+                      <ul className={styles.suggestionsList}>
+                        {suggestions.map((suggestion) => (
+                          <li key={suggestion.did} className={styles.suggestionItem}>
+                            <button 
+                              type="button" 
+                              className={styles.suggestionButton}
+                              onClick={() => handleSuggestionClick(suggestion.handle)}
+                            >
+                              {suggestion.avatar ? (
+                                <img 
+                                  src={suggestion.avatar} 
+                                  alt={suggestion.handle} 
+                                  className={styles.avatar}
+                                  width={28}
+                                  height={28}
+                                />
+                              ) : (
+                                <div className={styles.avatarPlaceholder}></div>
+                              )}
+                              <span className={styles.handle}>@{suggestion.handle}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className={styles.noResults}>No results found</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               <button 
                 type="submit" 
                 className={styles.loginButton}

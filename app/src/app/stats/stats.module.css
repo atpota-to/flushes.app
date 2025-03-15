@@ -108,8 +108,7 @@
 
 .loginButton:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and box-shadow to prevent movement */
 }
 
 /* Stats Page Specific Styles */
@@ -219,7 +218,7 @@
   gap: 2rem;
 }
 
-.overallStats, .chartSection, .leaderboardSection {
+.overallStats, .chartSection, .leaderboardSection, .emojiSection {
   background: var(--card-background);
   border-radius: 8px;
   padding: 1.5rem;
@@ -227,7 +226,7 @@
   border: 1px solid var(--tile-border);
 }
 
-.overallStats h2, .chartSection h2, .leaderboardSection h2 {
+.overallStats h2, .chartSection h2, .leaderboardSection h2, .emojiSection h2 {
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
   text-align: left;
@@ -262,8 +261,8 @@
 }
 
 .statCard:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  /* Removed transform and box-shadow to prevent movement */
+  border-color: var(--primary-color);
 }
 
 .statValue {
@@ -290,7 +289,7 @@
 
 .plumberLink:hover {
   color: #e84142; /* A reddish color for plumber branding */
-  transform: scale(1.05);
+  /* Removed transform to prevent movement */
 }
 
 .plumberLink:after {
@@ -411,6 +410,37 @@
   text-align: right;
 }
 
+/* Emoji Grid */
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.emojiCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--input-background);
+  border-radius: 8px;
+  padding: 1rem 0.5rem;
+  border: 1px solid var(--tile-border);
+  text-align: center;
+}
+
+.emojiCard .emoji {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.emojiCard .emojiCount {
+  font-weight: bold;
+  color: var(--primary-color);
+  font-size: 1.2rem;
+}
+
 /* Share Button */
 .shareSection {
   display: flex;
@@ -431,8 +461,7 @@
 
 .shareButton:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and box-shadow to prevent movement */
 }
 
 /* Responsive Adjustments */
@@ -505,5 +534,29 @@
   .user a, .unknownUser {
     font-size: 0.85rem;
     max-width: 100%;
+  }
+  
+  /* Emoji grid responsive */
+  .emojiGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .emojiCard {
+    padding: 0.75rem 0.25rem;
+  }
+  
+  .emojiCard .emoji {
+    font-size: 1.75rem;
+  }
+  
+  .emojiCard .emojiCount {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .emojiGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

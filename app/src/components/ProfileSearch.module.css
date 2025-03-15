@@ -94,26 +94,52 @@
   cursor: pointer;
   transition: background-color 0.2s;
   color: var(--text-color);
+  gap: 10px;
 }
 
 .suggestionButton:hover {
   background-color: var(--button-hover);
+  /* No transform on hover */
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  opacity: 0.3;
+  flex-shrink: 0;
 }
 
 .suggestionInfo {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .displayName {
   font-weight: 600;
   font-size: 0.9rem;
   margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .handle {
-  font-size: 0.8rem;
-  color: var(--timestamp-color);
+  font-size: 0.9rem;
+  color: var(--link-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .noResults {

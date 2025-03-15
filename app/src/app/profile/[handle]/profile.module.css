@@ -87,7 +87,7 @@
 
 .viewOnBluesky:hover {
   text-decoration: underline;
-  transform: translateX(3px);
+  /* Removed transform to prevent movement */
 }
 
 /* Stats section and chart */
@@ -167,8 +167,7 @@
 
 .shareStatsButton:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and box-shadow to prevent movement */
 }
 
 .noDataMessage {
@@ -211,10 +210,15 @@
   .profileInfo {
     align-items: flex-start;
   }
+
+  .profileText {
+    margin-left: 0px;
+  }
   
   /* Content alignment for feed items */
   .contentLeft {
     align-items: center;
+    display: block;
   }
 }
 
@@ -232,8 +236,7 @@
 
 .backButton:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and box-shadow to prevent movement */
 }
 
 .error {
@@ -310,8 +313,8 @@
 }
 
 .feedItem:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
+  /* Removed transform and increased box-shadow to prevent movement */
+  box-shadow: 0 2px 5px var(--shadow-color);
 }
 
 @media (max-width: 600px) {
@@ -459,13 +462,14 @@
     width: 100%;
     text-align: left;
     margin-top: 0;
-    padding-left: 0.25rem;
+    padding-left: 0rem;
     font-size: 0.8rem;
     color: var(--timestamp-color);
   }
   
   .emoji {
     font-size: 1.3rem;
+    display: inline;
   }
   
   .text {
