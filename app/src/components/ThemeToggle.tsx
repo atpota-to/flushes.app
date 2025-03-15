@@ -89,21 +89,21 @@ export default function ThemeToggle() {
   // During SSR or before mounting, render a placeholder that won't try to use the context
   if (!mounted) {
     return (
-      <button className={styles.themeToggle} aria-label="Theme toggle">
+      <button className={`${styles.themeToggle} font-medium`} aria-label="Theme toggle">
         <LightIcon />
-        <span className={styles.themeLabel}>Lights On</span>
+        <span className={`${styles.themeLabel} font-medium`}>Lights On</span>
       </button>
     );
   }
 
   return (
     <button 
-      className={styles.themeToggle} 
+      className={`${styles.themeToggle} font-medium`} 
       onClick={toggleTheme} 
       aria-label={`Switch to ${themeState === 'light' ? 'dark' : themeState === 'dark' ? 'system' : 'light'} theme`}
     >
       {getIcon()}
-      <span className={styles.themeLabel}>{getLabel()}</span>
+      <span className={`${styles.themeLabel} font-medium`}>{getLabel()}</span>
     </button>
   );
 }

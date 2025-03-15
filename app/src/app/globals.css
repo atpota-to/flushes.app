@@ -143,6 +143,8 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  font-family: 'decoy', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
 /* Font definitions */
@@ -203,6 +205,11 @@ a:hover {
   text-decoration: underline;
 }
 
+button, input, select, textarea {
+  font-family: 'decoy', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
 button {
   cursor: pointer;
   background-color: var(--primary-color);
@@ -211,6 +218,7 @@ button {
   border-radius: 4px;
   padding: 0.5rem 1rem;
   font-size: 1rem;
+  font-weight: 500;
   transition: background-color 0.2s;
 }
 

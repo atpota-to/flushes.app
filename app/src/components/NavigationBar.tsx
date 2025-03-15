@@ -29,22 +29,22 @@ export default function NavigationBar() {
         </Link>
         
         <div className={styles.navLinks}>
-          <Link href="/" className={`${styles.navLink} ${isActive('/') ? styles.active : ''}`}>
+          <Link href="/" className={`${styles.navLink} font-medium ${isActive('/') ? styles.active : ''}`}>
             Feed
           </Link>
-          <Link href="/stats" className={`${styles.navLink} ${isActive('/stats') ? styles.active : ''}`}>
+          <Link href="/stats" className={`${styles.navLink} font-medium ${isActive('/stats') ? styles.active : ''}`}>
             Stats
           </Link>
-          <Link href="/shortcut" className={`${styles.navLink} ${isActive('/shortcut') ? styles.active : ''}`}>
+          <Link href="/shortcut" className={`${styles.navLink} font-medium ${isActive('/shortcut') ? styles.active : ''}`}>
             Shortcut
           </Link>
-          <Link href="/about" className={`${styles.navLink} ${isActive('/about') ? styles.active : ''}`}>
+          <Link href="/about" className={`${styles.navLink} font-medium ${isActive('/about') ? styles.active : ''}`}>
             About
           </Link>
           {isAuthenticated && handle && (
             <Link 
               href={`/profile/${handle}`} 
-              className={`${styles.navLink} ${pathname.startsWith('/profile/') ? styles.active : ''}`}
+              className={`${styles.navLink} font-medium ${pathname.startsWith('/profile/') ? styles.active : ''}`}
             >
               Profile
             </Link>
@@ -61,11 +61,11 @@ export default function NavigationBar() {
           <ThemeToggle />
           
           {isAuthenticated ? (
-            <button onClick={handleLogout} className={styles.authButton}>
+            <button onClick={handleLogout} className={`${styles.authButton} font-medium`}>
               Logout
             </button>
           ) : (
-            <Link href="/auth/login" className={styles.authButton}>
+            <Link href="/auth/login" className={`${styles.authButton} font-medium`}>
               Login
             </Link>
           )}
