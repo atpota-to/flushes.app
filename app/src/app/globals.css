@@ -187,6 +187,10 @@ body {
   min-height: 100vh;
 }
 
+h1 {
+  line-height: 2.5rem;
+}
+
 main {
   min-height: calc(100vh - 60px);
   width: 100%;

@@ -9,10 +9,10 @@
   align-items: center;
   background-color: var(--input-background);
   border: 1px solid var(--input-border);
-  border-radius: 24px;
   overflow: hidden;
   width: 100%;
   transition: all 0.2s ease;
+  border-radius: 8px;
 }
 
 .searchForm:focus-within {

@@ -187,7 +187,7 @@
 /* Small mobile layout */
 @media (max-width: 520px) {
   .navbar {
-    padding: 1rem 1rem 1.5rem;
+    padding: 1rem 1.5rem 1.5rem;
     gap: 0;
   }
   
@@ -220,5 +220,6 @@
   
   .secondRow {
     margin-top: 0rem;
+    gap: .25rem;
   }
 }

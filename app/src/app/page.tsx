@@ -360,7 +360,7 @@ export default function Home() {
             The world&apos;s 1st decentralized social media app for sharing when you&apos;re on the toilet. Powered by the AT Protocol. Your flushes are saved to your PDS via the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
-              Like the app? Donate to<a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>my toilet paper fund</a>.
+              Like the app? Donate to<a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> my toilet paper fund</a>.
             </span>
           </p>
         </div>
