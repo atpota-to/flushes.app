@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthorizationUrl, resolveHandleToDid } from '@/lib/bluesky-auth';
 import { storeAuthData } from '@/lib/storage-util';
