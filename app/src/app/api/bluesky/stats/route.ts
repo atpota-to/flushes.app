@@ -11,6 +11,23 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export async function GET(request: NextRequest) {
   try {
+    // Define the plumber's DID - this is the official plumber account DID
+    const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw3lgwz22';
+    
+    // List of DIDs to exclude from leaderboard
+    const excludedDids = [
+      PLUMBER_DID, // plumber.flushes.app (formerly plumber.flushing.im)
+      'did:plc:fnhrjbkwjiw6iyxxg2o3rljw'  // testing.dame.is
+    ];
+    
+    // List of handles to exclude from leaderboard (as fallback)
+    // Include both the old and new plumber handles for backward compatibility
+    const excludedHandles = [
+      'plumber.flushes.app',  // New plumber handle
+      'plumber.flushing.im',  // Old plumber handle (for backward compatibility)
+      'testing.dame.is'
+    ];
+    
     // If we have Supabase credentials, fetch stats
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -94,7 +111,7 @@ export async function GET(request: NextRequest) {
       // 2. Get daily flush counts for the chart
       const { data: dailyData, error: dailyError } = await supabase
         .from('flushing_records')
-        .select('created_at, did')
+        .select('created_at, did, handle')
         .order('created_at', { ascending: true });
       
       if (dailyError) {
@@ -144,9 +161,10 @@ export async function GET(request: NextRequest) {
       const recentUniqueDids = new Set<string>();
       recentRecords?.forEach(entry => {
         // Only count if not an excluded account
-        if (entry.did && 
-            !excludedDids.includes(entry.did) && 
-            !(entry.handle && excludedHandles.includes(entry.handle))) {
+        const isExcludedDid = entry.did && excludedDids.includes(entry.did);
+        const isExcludedHandle = entry.handle && typeof entry.handle === 'string' && excludedHandles.includes(entry.handle);
+        
+        if (entry.did && !isExcludedDid && !isExcludedHandle) {
           recentUniqueDids.add(entry.did);
         }
       });
@@ -163,8 +181,10 @@ export async function GET(request: NextRequest) {
         if (!entry.did) return; // Skip entries without a DID
         
         // Skip excluded accounts
-        if (excludedDids.includes(entry.did) || 
-            (entry.handle && excludedHandles.includes(entry.handle))) {
+        const isExcludedDid = excludedDids.includes(entry.did);
+        const isExcludedHandle = entry.handle && typeof entry.handle === 'string' && excludedHandles.includes(entry.handle);
+        
+        if (isExcludedDid || isExcludedHandle) {
           return;
         }
         
@@ -211,23 +231,6 @@ export async function GET(request: NextRequest) {
       
       // Special count for the plumber account
       let plumberFlushCount = 0;
-      
-      // Define the plumber's DID - this is the official plumber account DID
-      const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw3lgwz22';
-      
-      // List of DIDs to exclude from leaderboard
-      const excludedDids = [
-        PLUMBER_DID, // plumber.flushes.app (formerly plumber.flushing.im)
-        'did:plc:fnhrjbkwjiw6iyxxg2o3rljw'  // testing.dame.is
-      ];
-      
-      // List of handles to exclude from leaderboard (as fallback)
-      // Include both the old and new plumber handles for backward compatibility
-      const excludedHandles = [
-        'plumber.flushes.app',  // New plumber handle
-        'plumber.flushing.im',  // Old plumber handle (for backward compatibility)
-        'testing.dame.is'
-      ];
       
       leaderboardData?.forEach(entry => {
         // Check if this is the plumber account (by DID or either handle)
