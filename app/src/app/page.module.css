@@ -686,6 +686,7 @@
   justify-content: center;
   align-items: center;
   gap: 0.5rem;
+  padding-top: 1.1rem;
 }
 
 .loadMoreButton:hover {

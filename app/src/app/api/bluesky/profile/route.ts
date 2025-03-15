@@ -45,6 +45,8 @@ export async function GET(request: NextRequest) {
     
     // Step 1: Get the user's DID from their handle
     let did = handle;
+    let userProfile = null;
+    
     // If the handle doesn't look like a DID, resolve it
     if (!handle.startsWith('did:')) {
       try {
@@ -59,6 +61,20 @@ export async function GET(request: NextRequest) {
         
         const resolveData = await resolveResponse.json();
         did = resolveData.did;
+        
+        // Step 1.5: Get user profile data including description
+        try {
+          const profileResponse = await fetch(`https://bsky.social/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(did)}`);
+          
+          if (profileResponse.ok) {
+            userProfile = await profileResponse.json();
+            console.log(`Fetched profile data for ${handle}: ${userProfile.description ? 'Has description' : 'No description'}`);
+          } else {
+            console.warn(`Failed to fetch profile data: ${profileResponse.statusText}`);
+          }
+        } catch (profileError: any) {
+          console.warn(`Error fetching profile data: ${profileError.message}`);
+        }
       } catch (error: any) {
         return NextResponse.json(
           { error: `Failed to resolve handle: ${error.message}` },
@@ -148,7 +164,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({
             entries: transformedEntries,
             count: transformedEntries.length,
-            cursor: fallbackData.cursor
+            cursor: fallbackData.cursor,
+            profile: userProfile
           });
         }
         
@@ -185,7 +202,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         entries: transformedEntries,
         count: transformedEntries.length,
-        cursor: recordsData.cursor
+        cursor: recordsData.cursor,
+        profile: userProfile
       });
     } catch (error: any) {
       console.error('Error fetching records:', error);
@@ -227,7 +245,8 @@ export async function GET(request: NextRequest) {
         
         return NextResponse.json({
           entries: filteredEntries,
-          count: filteredEntries.length // Update count to reflect filtered entries
+          count: filteredEntries.length, // Update count to reflect filtered entries
+          profile: userProfile
         });
       }
       

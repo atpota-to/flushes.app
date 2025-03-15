@@ -28,6 +28,13 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
+  interface ProfileData {
+    did?: string;
+    handle?: string;
+    displayName?: string;
+    description?: string;
+  }
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
   useEffect(() => {
     // Fetch the user's statuses when the component mounts
@@ -57,6 +64,11 @@ export default function ProfilePage() {
       const userEntries = data.entries || [];
       setEntries(userEntries);
       setTotalCount(data.count || 0);
+      
+      // Set profile data if available
+      if (data.profile) {
+        setProfileData(data.profile);
+      }
       
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
@@ -110,24 +122,22 @@ export default function ProfilePage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <h1 className={styles.title}>Flushes 🧻</h1>
-          <p className={styles.subtitle}>https://flushes.app 🚽</p>
-          <p className={styles.description}>
-            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <Link href="/" className={styles.backButton}>
-            ← Back to Feed
-          </Link>
-        </div>
-      </header>
       
       <div className={styles.profileHeader}>
         <div className={styles.profileInfo}>
-          <h2 className={styles.profileTitle}>@{handle}</h2>
+          {profileData?.displayName ? (
+            <>
+              <h2 className={`${styles.profileTitle} font-bold`}>{profileData.displayName}</h2>
+              <h3 className={`${styles.profileHandle} font-medium`}>@{handle}</h3>
+            </>
+          ) : (
+            <h2 className={`${styles.profileTitle} font-bold`}>@{handle}</h2>
+          )}
+          
+          {profileData?.description && (
+            <p className={`${styles.description} font-regular`}>{profileData.description}</p>
+          )}
+          
           <a 
             href={`https://bsky.app/profile/${handle}`} 
             target="_blank" 
