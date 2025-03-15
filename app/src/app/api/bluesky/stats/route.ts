@@ -140,24 +140,33 @@ export async function GET(request: NextRequest) {
         new Date(entry.created_at) >= thirtyDaysAgo
       );
       
-      // Get unique DIDs from recent records
+      // Get unique DIDs from recent records - excluding test accounts and plumber
       const recentUniqueDids = new Set<string>();
       recentRecords?.forEach(entry => {
-        if (entry.did) {
+        // Only count if not an excluded account
+        if (entry.did && 
+            !excludedDids.includes(entry.did) && 
+            !(entry.handle && excludedHandles.includes(entry.handle))) {
           recentUniqueDids.add(entry.did);
         }
       });
       
-      const monthlyActiveFlushers = recentUniqueDids.size;
+      let monthlyActiveFlushers = recentUniqueDids.size;
       console.log(`Monthly Active Flushers (last 30 days): ${monthlyActiveFlushers}`);
       
       // Calculate Daily Active Flushers (DAFs)
       // This is the average number of unique users who post per day over the last 30 days
       const dailyActiveUserCounts = new Map<string, Set<string>>();
       
-      // Group users by day
+      // Group users by day - excluding test accounts and plumber
       recentRecords?.forEach(entry => {
         if (!entry.did) return; // Skip entries without a DID
+        
+        // Skip excluded accounts
+        if (excludedDids.includes(entry.did) || 
+            (entry.handle && excludedHandles.includes(entry.handle))) {
+          return;
+        }
         
         const date = new Date(entry.created_at);
         const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -178,6 +187,14 @@ export async function GET(request: NextRequest) {
         dailyActiveFlushers = parseFloat((totalDailyActiveUsers / dailyActiveUserCounts.size).toFixed(1));
       }
       console.log(`Daily Active Flushers (average over last 30 days): ${dailyActiveFlushers}`);
+      
+      // Sanity check: daily active flushers (average) should not exceed monthly active flushers
+      if (dailyActiveFlushers > monthlyActiveFlushers) {
+        console.error(`Warning: Daily active flushers avg (${dailyActiveFlushers}) exceeds monthly active flushers (${monthlyActiveFlushers}). This should not happen.`);
+        // Cap daily active flushers at the monthly active flushers value
+        dailyActiveFlushers = parseFloat(Math.min(monthlyActiveFlushers, dailyActiveFlushers).toFixed(1));
+        console.log(`Correcting daily active flushers to ${dailyActiveFlushers}`);
+      }
       
       // 3. Get top flushers (leaderboard) - excluding test accounts
       const { data: leaderboardData, error: leaderboardError } = await supabase
@@ -235,6 +252,15 @@ export async function GET(request: NextRequest) {
       // Calculate total unique flushers (count of unique DIDs)
       const totalFlushers = didCounts.size;
       console.log(`Total unique flushers: ${totalFlushers}`);
+      
+      // Sanity check: make sure monthly active flushers is not greater than total flushers
+      if (monthlyActiveFlushers > totalFlushers) {
+        console.error(`Warning: Monthly active flushers (${monthlyActiveFlushers}) exceeds total flushers (${totalFlushers}). This should never happen.`);
+        // If we somehow still have an inconsistency, cap the monthly active flushers
+        const correctedMAF = Math.min(totalFlushers, monthlyActiveFlushers);
+        console.log(`Correcting monthly active flushers from ${monthlyActiveFlushers} to ${correctedMAF}`);
+        monthlyActiveFlushers = correctedMAF;
+      }
       
       // Return the data
       return NextResponse.json({

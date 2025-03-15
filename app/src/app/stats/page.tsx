@@ -216,23 +216,31 @@ export default function StatsPage() {
                   <span className={styles.user}>User</span>
                   <span className={styles.count}>Flushes</span>
                 </div>
-                {statsData.leaderboard.map((item, index) => (
-                  <div key={index} className={`${styles.leaderboardItem} ${index === 0 ? styles.topRank : ''}`}>
-                    <span className={styles.rank}>#{index + 1}</span>
-                    <span className={styles.user}>
-                      {item.handle ? (
-                        <Link href={`/profile/${item.handle}`}>
-                          @{item.handle}
-                        </Link>
-                      ) : (
-                        <span className={styles.unknownUser}>
-                          {item.did.substring(0, 10)}...
-                        </span>
-                      )}
-                    </span>
-                    <span className={styles.count}>{item.count}</span>
-                  </div>
-                ))}
+                {statsData.leaderboard.map((item, index) => {
+                  // Determine rank style class based on position
+                  let rankClass = '';
+                  if (index === 0) rankClass = styles.topRank;
+                  else if (index === 1) rankClass = styles.secondRank;
+                  else if (index === 2) rankClass = styles.thirdRank;
+                  
+                  return (
+                    <div key={index} className={`${styles.leaderboardItem} ${rankClass}`}>
+                      <span className={styles.rank}>#{index + 1}</span>
+                      <span className={styles.user}>
+                        {item.handle ? (
+                          <Link href={`/profile/${item.handle}`} title={`@${item.handle}`}>
+                            @{item.handle}
+                          </Link>
+                        ) : (
+                          <span className={styles.unknownUser}>
+                            {item.did.substring(0, 10)}...
+                          </span>
+                        )}
+                      </span>
+                      <span className={styles.count}>{item.count}</span>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className={styles.noDataMessage}>No leaderboard data available</p>

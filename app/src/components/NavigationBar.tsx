@@ -25,7 +25,7 @@ export default function NavigationBar() {
     <nav className={styles.navbar}>
       <div className={styles.navStart}>
         <Link href="/" className={styles.logo}>
-          <span className={styles.logoText}>Flushes 🧻</span>
+          <span className={`${styles.logoText} font-black`}>Flushes 🧻</span>
         </Link>
         
         <div className={styles.navLinks}>

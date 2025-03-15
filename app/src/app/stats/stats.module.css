@@ -369,7 +369,15 @@
 }
 
 .topRank {
-  background-color: rgba(255, 193, 7, 0.1);
+  background-color: rgba(255, 193, 7, 0.1); /* Gold - 1st place */
+}
+
+.secondRank {
+  background-color: rgba(192, 192, 192, 0.1); /* Silver - 2nd place */
+}
+
+.thirdRank {
+  background-color: rgba(205, 127, 50, 0.1); /* Bronze - 3rd place */
 }
 
 .rank {
@@ -381,6 +389,11 @@
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .user a:hover {
@@ -478,8 +491,18 @@
   }
   
   .leaderboardHeader, .leaderboardItem {
-    grid-template-columns: 60px 1fr 80px;
+    grid-template-columns: 50px 1fr 70px;
     padding: 0.75rem;
     font-size: 0.9rem;
+  }
+  
+  .user {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  
+  .user a, .unknownUser {
+    font-size: 0.85rem;
+    max-width: 100%;
   }
 }
