@@ -115,7 +115,7 @@
 /* Stats Page Specific Styles */
 .statsHeader {
   text-align: left;
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .statsHeader h2 {
@@ -146,6 +146,7 @@
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  padding-top: 0.7rem;
 }
 
 .refreshButton:hover:not(:disabled) {
@@ -226,7 +227,6 @@
 }
 
 .overallStats h2, .chartSection h2, .leaderboardSection h2 {
-  color: var(--primary-color);
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
   text-align: left;

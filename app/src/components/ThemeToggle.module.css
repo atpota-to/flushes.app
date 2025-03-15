@@ -11,6 +11,7 @@
   transition: all 0.2s;
   margin-left: auto;
   white-space: nowrap;
+  padding-top: 0.7rem;
 }
 
 .themeToggle:hover {

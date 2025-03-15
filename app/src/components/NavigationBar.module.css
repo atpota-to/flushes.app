@@ -95,6 +95,7 @@
   height: 36px;
   display: flex;
   align-items: center;
+  padding-top: 0.7rem;
 }
 
 .authButton:hover {
