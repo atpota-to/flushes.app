@@ -455,7 +455,13 @@ export async function checkAuth(
     
     // Log detailed error information and store the response body text ONCE
     let responseText = '';
-    let responseBody = {};
+    // Define responseBody with appropriate type that includes optional error fields
+    let responseBody: { 
+      error?: string; 
+      error_description?: string; 
+      message?: string; 
+      [key: string]: any 
+    } = {};
     
     try {
       responseText = await response.text();
@@ -488,8 +494,8 @@ export async function checkAuth(
         }
         
         // Check if this is a nonce error
-        if (responseBody.error === 'use_dpop_nonce' || 
-            (responseBody.error_description && responseBody.error_description.includes('nonce'))) {
+        if ((responseBody?.error === 'use_dpop_nonce') || 
+            (responseBody?.error_description && responseBody.error_description.includes('nonce'))) {
           console.log('[AUTH CHECK] DPoP nonce error detected, retrying with new nonce');
         }
         
