@@ -1,9 +1,19 @@
 /* Light mode variables */
 :root {
   --primary-color: #5badf0;
+  --primary-hover: #4a97d8;
   --secondary-color: #1968a8;
+  --secondary-hover: #155690;
+  --success-color: #4caf50;
+  --success-hover: #43a047;
   --background-color: #f9f9f9;
+  --background-start-rgb: 249, 249, 249;
+  --background-end-rgb: 255, 255, 255;
   --card-background: #ffffff;
+  --card-rgb: 255, 255, 255;
+  --foreground-rgb: #333333;
+  --secondary-foreground: #666666;
+  --link-color: #0070f3;
   --text-color: #333;
   --title-color: #272727;
   --error-color: #ff5252;
@@ -30,14 +40,25 @@
   --emoji-button-border: #ddd;
   --emoji-grid-bg: #fcfcfc;
   --tile-border: rgba(0, 0, 0, 0.1);
+  --hover-overlay: rgba(0, 0, 0, 0.05);
 }
 
 /* Dark mode variables */
 [data-theme="dark"] {
   --primary-color: #5badf0;
+  --primary-hover: #4a97d8;
   --secondary-color: #69c0ff;
+  --secondary-hover: #5aafeb;
+  --success-color: #4caf50;
+  --success-hover: #43a047;
   --background-color: #121212;
+  --background-start-rgb: 18, 18, 18;
+  --background-end-rgb: 30, 30, 30;
   --card-background: #1e1e1e;
+  --card-rgb: 30, 30, 30;
+  --foreground-rgb: #dddddd;
+  --secondary-foreground: #aaaaaa;
+  --link-color: #5badf0;
   --text-color: #dddddd;
   --title-color: #e0e0e0;
   --error-color: #ff7070;
@@ -64,15 +85,26 @@
   --emoji-button-border: #444;
   --emoji-grid-bg: #252525;
   --tile-border: rgba(255, 255, 255, 0.1);
+  --hover-overlay: rgba(255, 255, 255, 0.05);
 }
 
 /* Automatically use dark mode if user prefers it */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --primary-color: #5badf0;
+    --primary-hover: #4a97d8;
     --secondary-color: #69c0ff;
+    --secondary-hover: #5aafeb;
+    --success-color: #4caf50;
+    --success-hover: #43a047;
     --background-color: #121212;
+    --background-start-rgb: 18, 18, 18;
+    --background-end-rgb: 30, 30, 30;
     --card-background: #1e1e1e;
+    --card-rgb: 30, 30, 30;
+    --foreground-rgb: #dddddd;
+    --secondary-foreground: #aaaaaa;
+    --link-color: #5badf0;
     --text-color: #dddddd;
     --title-color: #e0e0e0;
     --error-color: #ff7070;
@@ -99,6 +131,7 @@
     --emoji-button-border: #444;
     --emoji-grid-bg: #252525;
     --tile-border: rgba(255, 255, 255, 0.1);
+    --hover-overlay: rgba(255, 255, 255, 0.05);
   }
   
   body {
@@ -123,9 +156,9 @@ body {
 }
 
 main {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
+  min-height: calc(100vh - 60px);
+  width: 100%;
+  padding-bottom: 2rem;
 }
 
 a {

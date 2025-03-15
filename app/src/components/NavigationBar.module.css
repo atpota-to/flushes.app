@@ -1,0 +1,124 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--card-background);
+  border-bottom: 1px solid var(--tile-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+}
+
+.navStart, .navEnd {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navSearch {
+  flex: 0 1 300px;
+  margin: 0 1rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--foreground-rgb);
+  font-weight: bold;
+  font-size: 1.5rem;
+  margin-right: 1.5rem;
+}
+
+.logoText {
+  display: inline-block;
+  color: var(--primary-color);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.navLinks {
+  display: flex;
+  gap: 1rem;
+}
+
+.navLink {
+  color: var(--foreground-rgb);
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.navLink:hover {
+  background-color: var(--hover-overlay);
+}
+
+.navLink.active {
+  font-weight: 600;
+  color: var(--link-color);
+}
+
+.authButton {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.authButton:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    padding: 0.5rem 1rem;
+  }
+
+  .navStart {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .navLinks {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.25rem;
+    gap: 0.5rem;
+  }
+
+  .navSearch {
+    flex: 1 1 100%;
+    order: 3;
+    margin: 0.5rem 0;
+  }
+
+  .navEnd {
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .navLink {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+  }
+}

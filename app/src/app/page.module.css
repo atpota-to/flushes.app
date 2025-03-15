@@ -1,7 +1,6 @@
 .container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 2rem 1rem;
 }
 
 .header {
@@ -36,10 +35,10 @@
 }
 
 .description {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: var(--text-color);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.4;
   word-wrap: break-word;
 }
 

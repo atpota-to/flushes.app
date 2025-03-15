@@ -359,10 +359,10 @@ export default function Home() {
           <h1 className={styles.title}>Flushes 🧻</h1>
           <p className={styles.subtitle}>https://flushes.app 🚽</p>
           <p className={styles.description}>
-            The world&apos;s first decentralized social media app for sharing when you&apos;re on the toilet. Connect with other bathroom enjoyers all over the world by posting &quot;flushes&quot;! Powered by the AT Protocol. Your status updates are saved to your PDS with the im.flushing lexicon.<br />
+            The world&apos;s 1st decentralized social media app for sharing when you&apos;re on the toilet. Powered by the AT Protocol. Your flushes are saved to your PDS via the im.flushing lexicon.<br />
             <span className={styles.creditLine}>
               Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
-              Like the app? Consider contributing to <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>my toilet paper fund</a>.
+              Like the app? Donate to<a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>my toilet paper fund</a>.
             </span>
           </p>
         </div>
@@ -466,7 +466,7 @@ export default function Home() {
           <div className={styles.feedHeaderLeft}>
             <h2>Recent flushes</h2>
             <p className={styles.feedSubheader}>
-              Click on a username to see their flushing profile.
+              Click on a username to see their flushes profile.
             </p>
           </div>
           <button 

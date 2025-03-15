@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { ThemeProvider } from '@/lib/theme-context';
-import ThemeToggle from '@/components/ThemeToggle';
 import ClientOnly from '@/components/ClientOnly';
-import ProfileSearch from '@/components/ProfileSearch';
+import NavigationBar from '@/components/NavigationBar';
 import { Analytics } from "@vercel/analytics/react"
 
 // Configure this layout as having dynamic runtime to fix SSR issues with theme
@@ -47,19 +46,9 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <ThemeProvider>
-            <header style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              padding: '0.5rem 1rem',
-              backgroundColor: 'var(--card-background)',
-              borderBottom: '1px solid var(--tile-border)'
-            }}>
+            <header>
               <ClientOnly>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <ProfileSearch />
-                  <ThemeToggle />
-                </div>
+                <NavigationBar />
               </ClientOnly>
             </header>
             <main>{children}</main>

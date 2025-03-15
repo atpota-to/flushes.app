@@ -1,0 +1,161 @@
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  color: var(--foreground-rgb);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--secondary-foreground);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.shortcutCard {
+  display: flex;
+  background-color: var(--card-background);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  margin-bottom: 3rem;
+  border: 1px solid var(--tile-border);
+}
+
+.cardContent {
+  flex: 1;
+  padding: 2rem;
+}
+
+.shortcutImage {
+  width: 300px;
+  background-color: var(--background-start-rgb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholderImage {
+  width: 200px;
+  height: 300px;
+  background-color: rgba(var(--card-rgb), 0.3);
+  border-radius: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5rem;
+}
+
+.featureList {
+  margin: 1.5rem 0;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.icon {
+  margin-right: 1rem;
+  font-size: 1.25rem;
+}
+
+.downloadButton {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 1rem;
+}
+
+.downloadButton:hover {
+  background-color: var(--primary-hover);
+}
+
+.alternativeSection,
+.helpSection {
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background-color: var(--card-background);
+  border-radius: 1rem;
+  border: 1px solid var(--tile-border);
+}
+
+.copyButton {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 1rem;
+}
+
+.copyButton:hover {
+  background-color: var(--secondary-hover);
+}
+
+.copied {
+  background-color: var(--success-color);
+}
+
+.copied:hover {
+  background-color: var(--success-hover);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .shortcutCard {
+    flex-direction: column;
+  }
+
+  .shortcutImage {
+    width: 100%;
+    padding: 2rem;
+  }
+
+  .placeholderImage {
+    width: 100%;
+    max-width: 200px;
+    height: 250px;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 1.5rem 1rem;
+  }
+
+  .title {
+    font-size: 1.75rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+}
