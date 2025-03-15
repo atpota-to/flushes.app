@@ -12,6 +12,10 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: "Flushes",
   description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
+  // Add the custom shortcut-version meta tag
+  other: {
+    'shortcut-version': '1.0',
+  },
   openGraph: {
     title: 'Flushes',
     description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',

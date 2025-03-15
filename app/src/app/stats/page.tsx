@@ -114,7 +114,7 @@ export default function StatsPage() {
           {loading ? 'Loading...' : 'Refresh Stats'}
         </button>
         <Link href="/" className={styles.homeLink}>
-          Back to Dashboard
+          Back to Feed
         </Link>
       </div>
 

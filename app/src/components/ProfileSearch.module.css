@@ -184,7 +184,6 @@
 
 @media (max-width: 480px) {
   .searchContainer {
-    max-width: 100%;
     min-width: 140px;
     flex: 1;
   }
