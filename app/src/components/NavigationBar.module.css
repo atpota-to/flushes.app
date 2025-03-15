@@ -185,7 +185,7 @@
 }
 
 /* Small mobile layout */
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .navbar {
     padding: 1rem 1rem 1.5rem;
     gap: 0;
@@ -196,6 +196,8 @@
     align-items: center;
     text-align: center;
     gap: 1rem;
+    display: inline;
+    margin-bottom: 1rem;
   }
   
   .logo {
