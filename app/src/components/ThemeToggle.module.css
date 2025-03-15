@@ -29,7 +29,7 @@
   font-weight: 500;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 800px) {
   .themeToggle {
     padding: 0.5rem 0.7rem;
   }
@@ -41,10 +41,20 @@
 
 @media (max-width: 600px) {
   .themeToggle {
-    padding: 0.4rem 0.6rem;
+    padding: 0.4rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
   }
   
   .themeLabel {
     display: none;
+  }
+  
+  .themeToggle svg {
+    width: 16px;
+    height: 16px;
   }
 }

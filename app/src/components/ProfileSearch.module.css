@@ -1,6 +1,7 @@
 .searchContainer {
   position: relative;
-  width: 300px;
+  width: 100%;
+  max-width: 300px;
 }
 
 .searchForm {
@@ -155,9 +156,24 @@
   }
 }
 
+@media (max-width: 800px) {
+  .searchContainer {
+    max-width: 250px;
+  }
+  
+  .searchInput {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.5rem;
+  }
+  
+  .searchButton {
+    padding: 0.4rem;
+  }
+}
+
 @media (max-width: 600px) {
   .searchContainer {
-    width: 180px;
+    max-width: 200px;
   }
   
   .searchInput {
@@ -166,12 +182,18 @@
   }
 }
 
-@media (max-width: 450px) {
+@media (max-width: 480px) {
   .searchContainer {
-    width: 140px;
+    max-width: 100%;
+    min-width: 140px;
+    flex: 1;
   }
   
   .searchInput::placeholder {
     font-size: 0.75rem;
+  }
+  
+  .searchForm {
+    height: 36px;
   }
 }

@@ -52,22 +52,24 @@ export default function NavigationBar() {
         </div>
       </div>
       
-      <div className={styles.navSearch}>
-        <ProfileSearch />
-      </div>
-      
-      <div className={styles.navEnd}>
-        <ThemeToggle />
+      <div className={styles.secondRow}>
+        <div className={styles.navSearch}>
+          <ProfileSearch />
+        </div>
         
-        {isAuthenticated ? (
-          <button onClick={handleLogout} className={styles.authButton}>
-            Logout
-          </button>
-        ) : (
-          <Link href="/auth/login" className={styles.authButton}>
-            Login
-          </Link>
-        )}
+        <div className={styles.navEnd}>
+          <ThemeToggle />
+          
+          {isAuthenticated ? (
+            <button onClick={handleLogout} className={styles.authButton}>
+              Logout
+            </button>
+          ) : (
+            <Link href="/auth/login" className={styles.authButton}>
+              Login
+            </Link>
+          )}
+        </div>
       </div>
     </nav>
   );
