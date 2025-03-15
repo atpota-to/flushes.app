@@ -28,6 +28,7 @@
   outline: none;
   background-color: transparent;
   color: var(--text-color);
+  margin-top: 2px;
 }
 
 .searchInput::placeholder {
