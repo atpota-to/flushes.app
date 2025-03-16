@@ -17,6 +17,30 @@ export default function AboutPage() {
       </div>
 
       <div className={styles.section}>
+        <h2>In the Press</h2>
+        <p>
+          Flushes has gained attention for its unique take on social media and creative use of AT Protocol:
+        </p>
+        <ul className={styles.pressList}>
+          <li>
+            <a href="https://mashable.com/article/bluesky-jay-graber-keynote-session-sxsw-2025" target="_blank" rel="noopener noreferrer">Mashable: Mentioned in Bluesky's SXSW 2025 keynote session</a>
+          </li>
+        </ul>
+        <div className={styles.videoContainer}>
+          <iframe 
+            width="560" 
+            height="315" 
+            src="https://www.youtube.com/embed/jjRCoDDqkfk?si=-_lgmX4CC5eMz8wt&amp;controls=0" 
+            title="YouTube video player" 
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerPolicy="strict-origin-when-cross-origin" 
+            allowFullScreen
+          ></iframe>
+        </div>
+      </div>
+
+      <div className={styles.section}>
         <h2>How It Works</h2>
         <p>
           Flushes uses the im.flushing.right.now lexicon, a custom record type
