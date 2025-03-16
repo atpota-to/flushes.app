@@ -154,7 +154,22 @@ export async function GET(request: NextRequest) {
     
     // Step 3: Call the repo.listRecords API to get the user's flushing statuses
     try {
-      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+      // Add logging for debugging handle/domain/serviceEndpoint relationships
+      console.log(`PROFILE DEBUG:
+  - Handle: ${handle}
+  - DID: ${did}
+  - PDS Service Endpoint: ${serviceEndpoint}
+  - Service PDS Host: ${servicePds || 'unknown'}
+      `);
+      
+      // Check if the serviceEndpoint includes "/xrpc" already, which some PDS endpoints might
+      let listRecordsUrl;
+      if (serviceEndpoint.endsWith('/xrpc')) {
+        listRecordsUrl = `${serviceEndpoint}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+      } else {
+        listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+      }
+      
       console.log(`Fetching records from ${listRecordsUrl}`);
       
       const recordsResponse = await fetch(listRecordsUrl, {
@@ -179,15 +194,43 @@ export async function GET(request: NextRequest) {
           if (servicePds) {
             try {
               console.log(`Trying direct PDS domain: https://${servicePds}`);
-              const pdsDirectUrl = `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
               
-              const pdsDirectResponse = await fetch(pdsDirectUrl, {
-                headers: { 'Accept': 'application/json' }
-              });
+              // Some PDS services have different URL structures
+              const urls = [
+                `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
+                // Try without /xrpc prefix in case it's already in the hostname
+                `https://${servicePds}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
+              ];
               
-              if (pdsDirectResponse.ok) {
+              // Start with the most common pattern
+              let pdsDirectResponse = null;
+              let pdsDirectUrl = '';
+              let directData = null;
+              let succeeded = false;
+              
+              for (const url of urls) {
+                try {
+                  console.log(`Attempting URL: ${url}`);
+                  pdsDirectUrl = url;
+                  pdsDirectResponse = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (pdsDirectResponse.ok) {
+                    console.log(`Success with URL: ${url}`);
+                    directData = await pdsDirectResponse.json();
+                    succeeded = true;
+                    break;
+                  } else {
+                    console.warn(`Failed with URL ${url}: ${pdsDirectResponse.status}`);
+                  }
+                } catch (urlErr) {
+                  console.error(`Error trying URL ${url}: ${urlErr}`);
+                }
+              }
+              
+              if (succeeded && directData) {
                 console.log(`Successfully accessed records directly from PDS domain: ${servicePds}`);
-                const directData = await pdsDirectResponse.json();
                 
                 // Process the direct response
                 const directEntries = directData.records
@@ -244,15 +287,39 @@ export async function GET(request: NextRequest) {
             const domain = handle.split('.').slice(1).join('.');
             try {
               console.log(`Trying handle domain access: https://${domain}`);
-              const domainUrl = `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
               
-              const domainResponse = await fetch(domainUrl, {
-                headers: { 'Accept': 'application/json' }
-              });
+              // Try multiple URL patterns for handle domain
+              const urls = [
+                `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
+                `https://${domain}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`
+              ];
               
-              if (domainResponse.ok) {
+              let domainResponse = null;
+              let domainData = null;
+              let succeeded = false;
+              
+              for (const url of urls) {
+                try {
+                  console.log(`Attempting URL: ${url}`);
+                  domainResponse = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (domainResponse.ok) {
+                    console.log(`Success with URL: ${url}`);
+                    domainData = await domainResponse.json();
+                    succeeded = true;
+                    break;
+                  } else {
+                    console.warn(`Failed with URL ${url}: ${domainResponse.status}`);
+                  }
+                } catch (urlErr) {
+                  console.error(`Error trying URL ${url}: ${urlErr}`);
+                }
+              }
+              
+              if (succeeded && domainData) {
                 console.log(`Successfully accessed records from handle domain: ${domain}`);
-                const domainData = await domainResponse.json();
                 
                 // Process the domain response
                 const domainEntries = domainData.records
