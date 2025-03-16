@@ -48,101 +48,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     try {
-      // Dynamically import isTokenExpired and refreshAccessToken
-      const { isTokenExpired, refreshAccessToken } = await import('./bluesky-api');
+      // TEMPORARILY DISABLED TOKEN REFRESH
+      // This fixes issues with third-party PDSs like geese.blue
+      console.log('[AUTH CONTEXT] Token refresh temporarily disabled for third-party PDS compatibility');
       
-      // Check if token is expired or expiring soon
-      if (isTokenExpired(accessToken)) {
-        console.log('[AUTH CONTEXT] Access token is expired or expiring soon, refreshing...');
-        
-        // Deserialize keypair
-        const keyPairData = JSON.parse(serializedKeyPair);
-        const publicKey = await window.crypto.subtle.importKey(
-          'jwk',
-          keyPairData.publicKey,
-          { name: 'ECDSA', namedCurve: 'P-256' },
-          true,
-          ['verify']
-        );
-        const privateKey = await window.crypto.subtle.importKey(
-          'jwk',
-          keyPairData.privateKey,
-          { name: 'ECDSA', namedCurve: 'P-256' },
-          true,
-          ['sign']
-        );
-        const keyPair = { publicKey, privateKey };
-        
-        // Get the current DPoP nonce from localStorage if available
-        let currentNonce = dpopNonce;
-        if (!currentNonce && typeof localStorage !== 'undefined') {
-          currentNonce = localStorage.getItem('dpopNonce');
-          if (currentNonce) {
-            console.log('[AUTH CONTEXT] Retrieved nonce from localStorage:', currentNonce);
-            // Update state with the nonce from localStorage
-            setDpopNonce(currentNonce);
-          }
-        }
-        
-        console.log('[AUTH CONTEXT] Refreshing token for PDS:', pdsEndpoint);
-        
-        // Refresh the token with enhanced error handling
-        try {
-          // CRITICAL FIX: Follow the same server selection logic as in refreshAccessToken
-          let refreshAuthServer = pdsEndpoint;
-          
-          // For bsky.network PDSes, use bsky.social
-          if (pdsEndpoint.includes('bsky.network')) {
-            console.log('[AUTH CONTEXT] Using bsky.social for token refresh with bsky.network PDS');
-            refreshAuthServer = 'https://bsky.social';
-          } else if (pdsEndpoint.includes('bsky.social')) {
-            // Already using bsky.social
-            console.log('[AUTH CONTEXT] Using bsky.social directly for token refresh');
-          } else {
-            // For third-party PDSes, use their own endpoint
-            console.log('[AUTH CONTEXT] Using third-party PDS\'s own endpoint for token refresh:', pdsEndpoint);
-          }
-          
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-            await refreshAccessToken(refreshToken, keyPair, refreshAuthServer);
-          
-          // Update state
-          setAccessToken(newAccessToken);
-          setRefreshToken(newRefreshToken);
-          if (newNonce) setDpopNonce(newNonce);
-          
-          // Update localStorage
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('accessToken', newAccessToken);
-            localStorage.setItem('refreshToken', newRefreshToken);
-            if (newNonce) localStorage.setItem('dpopNonce', newNonce);
-            // Ensure we have the PDS endpoint stored consistently
-            localStorage.setItem('pdsEndpoint', pdsEndpoint);
-            localStorage.setItem('bsky_auth_pdsEndpoint', pdsEndpoint);
-          }
-          
-          setLastTokenRefresh(Date.now());
-          console.log('[AUTH CONTEXT] Successfully refreshed access token');
-        } catch (refreshError) {
-          console.error('[AUTH CONTEXT] Token refresh failed:', refreshError);
-          
-          // If refresh fails, we'll still try to use any nonce we received
-          if (typeof localStorage !== 'undefined') {
-            const latestNonce = localStorage.getItem('dpopNonce');
-            if (latestNonce && latestNonce !== dpopNonce) {
-              console.log('[AUTH CONTEXT] Using latest nonce from localStorage:', latestNonce);
-              setDpopNonce(latestNonce);
-            }
-          }
-        }
-      } else {
-        // Even if token is not expired, make sure we have the latest nonce
-        if (typeof localStorage !== 'undefined') {
-          const latestNonce = localStorage.getItem('dpopNonce');
-          if (latestNonce && latestNonce !== dpopNonce) {
-            console.log('[AUTH CONTEXT] Updating nonce from localStorage:', latestNonce);
-            setDpopNonce(latestNonce);
-          }
+      // Still update the nonce from localStorage if available
+      if (typeof localStorage !== 'undefined') {
+        const latestNonce = localStorage.getItem('dpopNonce');
+        if (latestNonce && latestNonce !== dpopNonce) {
+          console.log('[AUTH CONTEXT] Updating nonce from localStorage:', latestNonce);
+          setDpopNonce(latestNonce);
         }
       }
     } catch (error) {

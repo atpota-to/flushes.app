@@ -228,7 +228,7 @@
 }
 
 .overallStats h2, .chartSection h2, .leaderboardSection h2, .emojiSection h2 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
   font-size: 1.5rem;
   text-align: left;
 }
@@ -271,6 +271,7 @@
   font-weight: bold;
   color: var(--primary-color);
   margin-bottom: 0.5rem;
+  margin-top: -10px;
 }
 
 .statLabel {

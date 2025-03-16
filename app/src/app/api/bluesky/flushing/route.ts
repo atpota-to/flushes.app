@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
     const createRecordUrl = `${apiUrl}/com.atproto.repo.createRecord`;
     console.log(`Creating record at ${createRecordUrl}`);
     
+    // Detailed logging for debugging third-party PDSs
+    console.log(`Making record creation request with:
+      - URL: ${createRecordUrl}
+      - PDS Endpoint: ${pdsEndpoint} 
+      - DID: ${did.substring(0, 10)}...
+      - Record type: ${FLUSHING_STATUS_NSID}
+    `);
+    
     // Make the request to user's PDS
     const response = await fetch(createRecordUrl, {
       method: 'POST',
@@ -98,36 +106,79 @@ export async function POST(request: NextRequest) {
         console.error('Error reading response:', e);
     }
     
-    // Check for DPoP nonce error
-    if (response.status === 401) {
-      const newNonce = response.headers.get('DPoP-Nonce');
-      
-      if (newNonce) {
+    // Enhanced handling for DPoP nonce errors
+    if (response.status === 401 || response.status === 400) {
+      // First check for nonce in headers (most common)
+      const headerNonce = response.headers.get('DPoP-Nonce');
+      if (headerNonce) {
+        console.log(`Found DPoP-Nonce in headers: ${headerNonce}`);
         return NextResponse.json({
           error: 'use_dpop_nonce',
-          nonce: newNonce,
+          nonce: headerNonce,
           originalError: responseData
         }, { status: 401 });
       }
       
-      // Try to extract nonce from error response body
+      // Log all headers for debugging
+      console.log('All response headers:');
+      response.headers.forEach((value, key) => {
+        console.log(`  ${key}: ${value}`);
+      });
+      
+      // Check for nonce in body (some third-party PDSs)
       if (typeof responseData === 'object' && responseData !== null) {
+        console.log('Checking response body for nonce information');
+        
+        // Check direct nonce field
+        if (responseData.nonce) {
+          console.log(`Found nonce directly in response body: ${responseData.nonce}`);
+          return NextResponse.json({
+            error: 'use_dpop_nonce',
+            nonce: responseData.nonce,
+            originalError: responseData
+          }, { status: 401 });
+        }
+        
+        // Check various error patterns
         if (
           responseData.error === 'InvalidDpop' || 
           responseData.error === 'InvalidToken' ||
-          (responseData.message && responseData.message.includes('nonce'))
+          responseData.error === 'use_dpop_nonce' ||
+          (responseData.message && (
+            responseData.message.includes('nonce') ||
+            responseData.message.includes('DPoP')
+          ))
         ) {
-          // Look for a nonce in the message
-          const nonceMatch = responseData.message?.match(/nonce: ([A-Za-z0-9_-]+)/);
-          if (nonceMatch && nonceMatch[1]) {
-            const extractedNonce = nonceMatch[1];
-            console.log('Extracted nonce from error message:', extractedNonce);
-            return NextResponse.json({
-              error: 'use_dpop_nonce',
-              nonce: extractedNonce,
-              originalError: responseData
-            }, { status: 401 });
+          // Extended regex pattern to match various nonce formats
+          const noncePatterns = [
+            /nonce: ([A-Za-z0-9_-]+)/,
+            /nonce="([A-Za-z0-9_-]+)"/,
+            /nonce=([A-Za-z0-9_-]+)/,
+            /DPoP-Nonce: ([A-Za-z0-9_-]+)/,
+            /DPoP nonce: ([A-Za-z0-9_-]+)/,
+            /dpop-nonce: ([A-Za-z0-9_-]+)/i,
+            /dpop nonce: ([A-Za-z0-9_-]+)/i,
+            /nonce '([A-Za-z0-9_-]+)'/,
+            /Nonce: ([A-Za-z0-9_-]+)/,
+            /"nonce":"([A-Za-z0-9_-]+)"/,
+          ];
+          
+          // Try each pattern
+          for (const pattern of noncePatterns) {
+            const match = responseData.message?.match(pattern);
+            if (match && match[1]) {
+              const extractedNonce = match[1];
+              console.log(`Extracted nonce from error message using pattern ${pattern}: ${extractedNonce}`);
+              return NextResponse.json({
+                error: 'use_dpop_nonce',
+                nonce: extractedNonce,
+                originalError: responseData
+              }, { status: 401 });
+            }
           }
+          
+          // If we couldn't extract a nonce but it seems like a nonce error
+          console.log('Potential nonce error detected but couldn\'t extract nonce value. Full error:', responseData);
         }
       }
     }

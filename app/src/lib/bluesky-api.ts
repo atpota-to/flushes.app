@@ -390,31 +390,13 @@ export async function checkAuth(
       console.log('[AUTH CHECK] Using the actual PDS endpoint for auth:', pdsEndpoint);
     }
 
-    // First check if the token is expired by decoding it
+    // TEMPORARILY DISABLED TOKEN REFRESH
+    // This fixes issues with third-party PDSs
     const tokenExpired = isTokenExpired(accessToken);
-    if (tokenExpired && refreshToken) {
-      console.log('Access token is expired, attempting to refresh...');
-      
-      try {
-        // Try to refresh the token using bsky.social for auth on third-party PDS
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-          await refreshAccessToken(refreshToken, keyPair, authServer);
-        
-        // Update tokens in localStorage
-        localStorage.setItem('accessToken', newAccessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-        if (newNonce) localStorage.setItem('dpopNonce', newNonce);
-        
-        console.log('Tokens updated in localStorage during checkAuth');
-        
-        console.log('Token refreshed successfully, retrying auth check with new token');
-        
-        // Return the result of checkAuth with the new token
-        return checkAuth(newAccessToken, keyPair, did, newNonce || null, pdsEndpoint, newRefreshToken);
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        return false;
-      }
+    if (tokenExpired) {
+      console.log('[AUTH CHECK] Token is expired but refresh is temporarily disabled');
+      console.log('[AUTH CHECK] User may need to re-authenticate if operations fail');
+      // Skip refresh and continue with current token
     }
     
     console.log('Checking auth with PDS endpoint:', pdsEndpoint);
@@ -826,7 +808,7 @@ export async function createFlushingStatus(
     throw new Error('Maximum retry attempts reached. Could not create status after 3 attempts.');
   }
   
-  // Preparing to create status record (attempt ${retryCount + 1})
+  console.log(`Creating flush status (attempt ${retryCount + 1}) for PDS: ${pdsEndpoint}`);
   
   try {
     // Validate inputs
@@ -846,21 +828,22 @@ export async function createFlushingStatus(
       statusText = `is ${statusText}`;
     }
     
-    // Use the PDS endpoint if available
+    // Use the PDS endpoint if available - THIS IS CRITICAL FOR THIRD-PARTY PDSs
     if (!pdsEndpoint) {
       console.error('Missing PDS endpoint. This will likely fail.');
     }
     
+    console.log(`Using PDS endpoint for create record: ${pdsEndpoint}`);
+    
     const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     
-    // Endpoint is set
+    console.log(`Endpoint for create record: ${endpoint}`);
     
     // Generate a DPoP token for the create request
     const publicKey = await exportJWK(keyPair.publicKey);
     
     // Generate token with appropriate claims for the request
-    
     const dpopToken = await generateDPoPToken(
       keyPair.privateKey, 
       publicKey, 
@@ -870,8 +853,9 @@ export async function createFlushingStatus(
       accessToken // Pass the access token for ath claim
     );
     
+    console.log(`Sending flush record creation request to API proxy with PDS: ${pdsEndpoint}`);
+    
     // Make the request via our proxy API
-    // Sending request
     const response = await fetch('/api/bluesky/flushing', {
       method: 'POST',
       headers: {
@@ -887,17 +871,28 @@ export async function createFlushingStatus(
       })
     });
     
+    console.log(`Flush API response status: ${response.status}`);
+    
     // Handle response
     if (response.ok) {
-      return await response.json();
+      const result = await response.json();
+      console.log('Flush record created successfully!');
+      return result;
     }
     
-    const errorData = await response.json().catch(() => ({}));
+    let errorData;
+    try {
+      errorData = await response.json();
+      console.error('Error creating flush record:', errorData);
+    } catch (e) {
+      errorData = { error: 'unknown', status: response.status };
+      console.error('Error parsing error response:', e);
+    }
     
-    // Handle nonce error with retry
+    // Handle nonce error with retry - THIS IS ESSENTIAL FOR PDS COMMUNICATION
     if (response.status === 401 && errorData.error === 'use_dpop_nonce' && errorData.nonce) {
       // This is normal operation - DPoP requires a nonce exchange
-      console.log('Received nonce from server, retrying request');
+      console.log('Received nonce from server, retrying request with new nonce:', errorData.nonce);
       
       // Retry with the new nonce and increment retry counter
       return createFlushingStatus(
@@ -913,58 +908,11 @@ export async function createFlushingStatus(
       );
     }
     
-    // Handle expired token with refresh
-    if (response.status === 401 && refreshToken) {
-      console.log('Authentication error (401), attempting token refresh...');
-      
-      try {
-        // CRITICAL FIX: Always use the user's actual PDS endpoint for token refresh
-        let refreshAuthServer = pdsEndpoint || 'https://bsky.social';
-        
-        // Only redirect bsky.network to bsky.social - all other third-party PDSes use their own endpoints
-        if (refreshAuthServer.includes('bsky.network')) {
-          console.log('[CREATE STATUS] Using bsky.social for token refresh with bsky.network PDS');
-          refreshAuthServer = 'https://bsky.social';
-        } else if (refreshAuthServer.includes('bsky.social')) {
-          // Already using bsky.social
-          console.log('[CREATE STATUS] Using bsky.social directly for token refresh');
-        } else {
-          // IMPORTANT: For third-party PDSes, always use their own endpoint
-          console.log('[CREATE STATUS] Using third-party PDS\'s own endpoint for token refresh:', refreshAuthServer);
-          // This is critical for third-party PDS support
-        }
-        
-        // Try to refresh the token
-        const { accessToken: newAccessToken, refreshToken: newRefreshToken, dpopNonce: newNonce } = 
-          await refreshAccessToken(refreshToken, keyPair, refreshAuthServer);
-        
-        // Update tokens in localStorage
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('accessToken', newAccessToken);
-          localStorage.setItem('refreshToken', newRefreshToken);
-          if (newNonce) localStorage.setItem('dpopNonce', newNonce);
-          
-          console.log('Tokens updated in localStorage during createFlushingStatus');
-        }
-        
-        console.log('Token refreshed successfully, retrying status creation');
-        
-        // Retry with the new token
-        return createFlushingStatus(
-          newAccessToken,
-          keyPair,
-          did,
-          statusText,
-          emoji,
-          newNonce || null,
-          pdsEndpoint,
-          retryCount + 1,
-          newRefreshToken
-        );
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        throw new Error('Authentication expired. Please log out and log in again.');
-      }
+    // TEMPORARILY DISABLE TOKEN REFRESH LOGIC - it's causing issues with third-party PDSes
+    // Just throw an error instead of attempting refresh
+    if (response.status === 401) {
+      console.error('Authentication expired or invalid. Please log out and log in again.');
+      throw new Error('Authentication expired. Please log out and log in again.');
     }
     
     // For other errors, throw with more details
