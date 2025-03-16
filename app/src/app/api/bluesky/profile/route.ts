@@ -31,15 +31,15 @@ interface ProfileResponse {
   emojiStats?: EmojiStat[];
 }
 
-const DEFAULT_API_URL = 'https://bsky.social/xrpc';
-const MAX_ENTRIES = 50;
-
 // Define approved emojis list - keep in sync with stats route
 const APPROVED_EMOJIS = [
   '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
   '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
   '1️⃣', '2️⃣', '🟡', '🟤'
 ];
+
+const DEFAULT_API_URL = 'https://bsky.social/xrpc';
+const MAX_ENTRIES = 50;
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
 // Supabase client - using environment variables

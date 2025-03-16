@@ -9,6 +9,13 @@ export const fetchCache = 'force-no-store';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// Define approved emojis list - shared across the route
+const APPROVED_EMOJIS = [
+  '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+  '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+  '1️⃣', '2️⃣', '🟡', '🟤'
+];
+
 export async function GET(request: NextRequest) {
   try {
     // Define the plumber's DID - this is the official plumber account DID
@@ -34,12 +41,7 @@ export async function GET(request: NextRequest) {
       count: number;
     };
     
-    // Define approved emojis list
-    const APPROVED_EMOJIS = [
-      '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
-      '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
-      '1️⃣', '2️⃣', '🟡', '🟤'
-    ];
+    // Use the approved emojis list defined at the top of the file
     
     // If we have Supabase credentials, fetch stats
     if (supabaseUrl && supabaseKey) {
