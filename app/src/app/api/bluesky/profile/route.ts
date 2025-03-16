@@ -60,6 +60,115 @@ export async function GET(request: NextRequest) {
       );
     }
     
+    // Special case for mackuba.eu - hardcoded workaround for third-party PDS
+    if (handle === 'mackuba.eu') {
+      console.log('SPECIAL CASE: mackuba.eu detected, using hardcoded solution');
+      try {
+        // Use public API to resolve the DID first
+        const resolveResponse = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=mackuba.eu`);
+        if (!resolveResponse.ok) {
+          return NextResponse.json({ error: 'Failed to resolve mackuba.eu handle' }, { status: resolveResponse.status });
+        }
+        
+        const resolveData = await resolveResponse.json();
+        const did = resolveData.did;
+        
+        // Get profile data
+        const profileResponse = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=mackuba.eu`);
+        let userProfile = null;
+        if (profileResponse.ok) {
+          userProfile = await profileResponse.json();
+        }
+        
+        // Directly call the PDS we know works
+        const directUrl = `https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=50`;
+        console.log(`Making direct request to: ${directUrl}`);
+        
+        const directResponse = await fetch(directUrl, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!directResponse.ok) {
+          // If we get a 404, return empty data rather than error
+          if (directResponse.status === 404) {
+            return NextResponse.json({
+              entries: [],
+              count: 0,
+              profile: userProfile,
+              emojiStats: [],
+              did,
+              handle: 'mackuba.eu',
+              directUrl,
+              emptyCollection: true
+            });
+          }
+          
+          return NextResponse.json({ 
+            error: `Failed to fetch mackuba.eu records: ${directResponse.statusText}`,
+            directUrl
+          }, { status: directResponse.status });
+        }
+        
+        const recordsData = await directResponse.json();
+        
+        // Transform the records into our format
+        const transformedEntries = recordsData.records
+          .map((record: any) => {
+            const text = record.value.text || '';
+            
+            // Skip entries with banned content
+            if (containsBannedWords(text)) {
+              return null;
+            }
+            
+            return {
+              id: record.uri,
+              uri: record.uri,
+              cid: record.cid,
+              did: did,
+              text: sanitizeText(text),
+              emoji: record.value.emoji || '🚽',
+              created_at: record.value.createdAt
+            };
+          })
+          .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+        
+        // Calculate emoji statistics
+        const emojiCounts = new Map<string, number>();
+        
+        // Process entries to count emojis
+        transformedEntries.forEach((entry: ProfileEntry) => {
+          const emoji = entry.emoji?.trim() || '🚽';
+          if (APPROVED_EMOJIS.includes(emoji)) {
+            emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+          } else {
+            emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+          }
+        });
+        
+        const emojiStats = Array.from(emojiCounts.entries())
+          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+          .sort((a, b) => b.count - a.count);
+        
+        return NextResponse.json({
+          entries: transformedEntries,
+          count: transformedEntries.length,
+          cursor: recordsData.cursor,
+          profile: userProfile,
+          emojiStats,
+          serviceEndpoint: 'https://lab.martianbase.net',
+          directUrl,
+          specialCase: true
+        });
+      } catch (specialErr: any) {
+        console.error(`Error in special handling for mackuba.eu:`, specialErr);
+        return NextResponse.json({
+          error: `Special handling for mackuba.eu failed: ${specialErr.message}`,
+          workingUrl: 'https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=did:plc:oio4hkxaop4ao4wz2pp3f4cr&collection=im.flushing.right.now&limit=100'
+        }, { status: 500 });
+      }
+    }
+    
     // Special case for plumber account redirect
     if (handle === 'plumber.flushing.im') {
       console.log('Redirecting from old plumber.flushing.im handle to plumber.flushes.app');
