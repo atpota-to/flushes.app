@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     
     // Step 2: Get the PDS service endpoint from PLC directory
     let serviceEndpoint = 'https://bsky.social'; // Start with bsky.social as fallback
-    let servicePds = null; // Store the actual PDS domain for logging
+    let servicePds: string | null = null; // Store the actual PDS domain for logging
     try {
       console.log(`Looking up PDS endpoint for DID: ${did}`);
       const plcResponse = await fetch(`https://plc.directory/${did}/data`);
@@ -203,9 +203,9 @@ export async function GET(request: NextRequest) {
               ];
               
               // Start with the most common pattern
-              let pdsDirectResponse = null;
+              let pdsDirectResponse: Response | null = null;
               let pdsDirectUrl = '';
-              let directData = null;
+              let directData: any = null;
               let succeeded = false;
               
               for (const url of urls) {
@@ -274,8 +274,15 @@ export async function GET(request: NextRequest) {
                   serviceEndpoint: `https://${servicePds}`,
                   directPds: true
                 });
+              } else if (pdsDirectResponse) {
+                try {
+                  const errorText = await pdsDirectResponse.text();
+                  console.warn(`PDS direct access failed: ${errorText}`);
+                } catch (e) {
+                  console.warn(`PDS direct access failed: Could not read response text`);
+                }
               } else {
-                console.warn(`PDS direct access failed: ${await pdsDirectResponse.text()}`);
+                console.warn(`PDS direct access failed: No valid response`);
               }
             } catch (pdsErr) {
               console.error(`Error with direct PDS domain access: ${pdsErr}`);
@@ -294,8 +301,8 @@ export async function GET(request: NextRequest) {
                 `https://${domain}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`
               ];
               
-              let domainResponse = null;
-              let domainData = null;
+              let domainResponse: Response | null = null;
+              let domainData: any = null;
               let succeeded = false;
               
               for (const url of urls) {
@@ -363,8 +370,15 @@ export async function GET(request: NextRequest) {
                   serviceEndpoint: `https://${domain}`,
                   handleDomain: true
                 });
+              } else if (domainResponse) {
+                try {
+                  const errorText = await domainResponse.text();
+                  console.warn(`Handle domain access failed: ${errorText}`);
+                } catch (e) {
+                  console.warn(`Handle domain access failed: Could not read response text`);
+                }
               } else {
-                console.warn(`Handle domain access failed: ${await domainResponse.text()}`);
+                console.warn(`Handle domain access failed: No valid response`);
               }
             } catch (domainErr) {
               console.error(`Error with handle domain access: ${domainErr}`);
