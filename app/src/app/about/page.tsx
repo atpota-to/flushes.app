@@ -19,7 +19,7 @@ export default function AboutPage() {
       <div className={styles.section}>
         <h2>In the Press</h2>
         <p>
-          Flushes has gained attention for its unique take on social media and creative use of AT Protocol:
+          Flushes was mentioned from the main stage at SXSW 2025 during Jay Graber's keynote.
         </p>
         <ul className={styles.pressList}>
           <li>
