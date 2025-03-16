@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
           const emojiCounts = new Map<string, number>();
           
           // Process entries to count emojis
-          transformedEntries.forEach(entry => {
+          transformedEntries.forEach((entry: ProfileEntry) => {
             if (entry.emoji) {
               // Default to toilet emoji if empty
               const emoji = entry.emoji.trim() || '🚽';
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
       const emojiCounts = new Map<string, number>();
       
       // Process entries to count emojis
-      transformedEntries.forEach(entry => {
+      transformedEntries.forEach((entry: ProfileEntry) => {
         if (entry.emoji) {
           // Default to toilet emoji if empty
           const emoji = entry.emoji.trim() || '🚽';

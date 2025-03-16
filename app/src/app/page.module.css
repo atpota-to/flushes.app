@@ -474,7 +474,7 @@
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.2s;
-  padding-top: 15px;
+  padding-top: 10px;
 }
 
 .refreshButton:hover {
