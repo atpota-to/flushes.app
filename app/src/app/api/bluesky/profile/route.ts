@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Step 2: Get the PDS service endpoint from PLC directory
-    let serviceEndpoint = 'https://public.api.bsky.app'; // Default fallback
+    let serviceEndpoint = 'https://bsky.social'; // Start with bsky.social as fallback
     try {
       const plcResponse = await fetch(`https://plc.directory/${did}/data`);
       
@@ -149,7 +149,74 @@ export async function GET(request: NextRequest) {
       });
       
       if (!recordsResponse.ok) {
-        // If failed with custom PDS service endpoint, try with the default public API endpoint
+        // Special case for handling third-party PDS
+        if (handle.includes('.') && !handle.endsWith('bsky.social') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
+          const domain = handle.split('.').slice(1).join('.');
+          
+          console.log(`Trying direct domain access before falling back: ${domain}`);
+          try {
+            const directUrl = `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+            
+            const directResponse = await fetch(directUrl, {
+              headers: { 'Accept': 'application/json' }
+            });
+            
+            if (directResponse.ok) {
+              console.log(`Successfully accessed records directly from ${domain}`);
+              const directData = await directResponse.json();
+              
+              // Process the direct response...
+              // Process the direct response...
+              const directEntries = directData.records
+                .map((record: any) => {
+                  const text = record.value.text || '';
+                  if (containsBannedWords(text)) return null;
+                  
+                  return {
+                    id: record.uri,
+                    uri: record.uri,
+                    cid: record.cid,
+                    did: did,
+                    text: sanitizeText(text),
+                    emoji: record.value.emoji || '🚽',
+                    created_at: record.value.createdAt
+                  };
+                })
+                .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+              
+              // Calculate emoji stats
+              const directEmojiCounts = new Map<string, number>();
+              directEntries.forEach((entry: ProfileEntry) => {
+                const emoji = entry.emoji?.trim() || '🚽';
+                if (APPROVED_EMOJIS.includes(emoji)) {
+                  directEmojiCounts.set(emoji, (directEmojiCounts.get(emoji) || 0) + 1);
+                } else {
+                  directEmojiCounts.set('🚽', (directEmojiCounts.get('🚽') || 0) + 1);
+                }
+              });
+              
+              const directEmojiStats = Array.from(directEmojiCounts.entries())
+                .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+                .sort((a, b) => b.count - a.count);
+              
+              return NextResponse.json({
+                entries: directEntries,
+                count: directEntries.length,
+                cursor: directData.cursor,
+                profile: userProfile,
+                emojiStats: directEmojiStats,
+                serviceEndpoint: `https://${domain}`,
+                directPds: true
+              });
+            } else {
+              console.warn(`Direct access failed: ${await directResponse.text()}`);
+            }
+          } catch (directErr) {
+            console.error(`Error with direct domain access: ${directErr}`);
+          }
+        }
+        
+        // If direct access failed or not applicable, try with public API endpoint
         if (serviceEndpoint !== 'https://public.api.bsky.app') {
           console.warn(`Failed to get records from ${serviceEndpoint}, trying public API endpoint`);
           // Log the error for debugging third-party PDS issues
@@ -229,7 +296,9 @@ export async function GET(request: NextRequest) {
             count: transformedEntries.length,
             cursor: fallbackData.cursor,
             profile: userProfile,
-            emojiStats
+            emojiStats,
+            serviceEndpoint: 'https://public.api.bsky.app', // Record which endpoint was used
+            fallback: true
           });
         }
         
@@ -289,12 +358,14 @@ export async function GET(request: NextRequest) {
         .map(([emoji, count]): EmojiStat => ({ emoji, count }))
         .sort((a, b) => b.count - a.count);
       
+      
       return NextResponse.json({
         entries: transformedEntries,
         count: transformedEntries.length,
         cursor: recordsData.cursor,
         profile: userProfile,
-        emojiStats
+        emojiStats,
+        serviceEndpoint // Include the endpoint we used for debugging
       });
     } catch (error: any) {
       console.error('Error fetching records:', error);
@@ -364,7 +435,9 @@ export async function GET(request: NextRequest) {
           entries: filteredEntries,
           count: filteredEntries.length, // Update count to reflect filtered entries
           profile: userProfile,
-          emojiStats
+          emojiStats,
+          source: 'supabase', // Record the data source
+          did
         });
       }
       
