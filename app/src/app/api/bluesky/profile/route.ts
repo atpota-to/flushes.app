@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
                     succeeded = true;
                     break;
                   } else {
-                    console.warn(`Failed with URL ${url}: ${pdsDirectResponse.status}`);
+                    console.warn(`Failed with URL ${url}: ${pdsDirectResponse?.status || 'unknown status'}`);
                   }
                 } catch (urlErr) {
                   console.error(`Error trying URL ${url}: ${urlErr}`);
@@ -311,7 +311,7 @@ export async function GET(request: NextRequest) {
                     succeeded = true;
                     break;
                   } else {
-                    console.warn(`Failed with URL ${url}: ${domainResponse.status}`);
+                    console.warn(`Failed with URL ${url}: ${domainResponse?.status || 'unknown status'}`);
                   }
                 } catch (urlErr) {
                   console.error(`Error trying URL ${url}: ${urlErr}`);
