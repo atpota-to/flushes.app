@@ -86,7 +86,7 @@ export async function refreshAccessToken(
     } else {
       // For third-party PDSes, use their own endpoint for token refresh
       console.log('[TOKEN REFRESH] Using third-party PDS\'s own endpoint for token refresh:', pdsEndpoint);
-      // Keep authServer as the original PDS endpoint
+      // Keep authServer as the original PDS endpoint for third-party servers
     }
     
     // Endpoint for token refresh
@@ -378,11 +378,16 @@ export async function checkAuth(
     }
     
     // For API calls, use the actual PDS endpoint
-    // But when we need to do token refresh, use bsky.social for auth on third-party servers
+    // For API calls, always use the user's actual PDS endpoint
     let authServer = pdsEndpoint;
-    if (!pdsEndpoint.includes('bsky.social')) {
-      console.log('[AUTH CHECK] Will use bsky.social for OAuth on third-party PDS');
+    
+    // Special case for token refresh only (not normal API calls)
+    // Only bsky.network PDSes should redirect to bsky.social
+    if (pdsEndpoint && pdsEndpoint.includes('bsky.network')) {
+      console.log('[AUTH CHECK] Will use bsky.social for OAuth on bsky.network PDS');
       authServer = 'https://bsky.social';
+    } else {
+      console.log('[AUTH CHECK] Using the actual PDS endpoint for auth:', pdsEndpoint);
     }
 
     // First check if the token is expired by decoding it
@@ -913,10 +918,10 @@ export async function createFlushingStatus(
       console.log('Authentication error (401), attempting token refresh...');
       
       try {
-        // CRITICAL FIX: Follow the same server selection logic as in refreshAccessToken
+        // CRITICAL FIX: Always use the user's actual PDS endpoint for token refresh
         let refreshAuthServer = pdsEndpoint || 'https://bsky.social';
         
-        // For bsky.network PDSes, use bsky.social
+        // Only redirect bsky.network to bsky.social - all other third-party PDSes use their own endpoints
         if (refreshAuthServer.includes('bsky.network')) {
           console.log('[CREATE STATUS] Using bsky.social for token refresh with bsky.network PDS');
           refreshAuthServer = 'https://bsky.social';
@@ -924,8 +929,9 @@ export async function createFlushingStatus(
           // Already using bsky.social
           console.log('[CREATE STATUS] Using bsky.social directly for token refresh');
         } else {
-          // For third-party PDSes, use their own endpoint
+          // IMPORTANT: For third-party PDSes, always use their own endpoint
           console.log('[CREATE STATUS] Using third-party PDS\'s own endpoint for token refresh:', refreshAuthServer);
+          // This is critical for third-party PDS support
         }
         
         // Try to refresh the token

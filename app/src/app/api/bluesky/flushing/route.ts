@@ -27,6 +27,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    console.log(`Using PDS endpoint: ${pdsEndpoint} for creating flush record`);
+    
     // Check for banned words in the text
     if (containsBannedWords(text)) {
       return NextResponse.json(
@@ -61,8 +63,11 @@ export async function POST(request: NextRequest) {
     
     // We're now doing nonce handling on the client side
     
+    const createRecordUrl = `${apiUrl}/com.atproto.repo.createRecord`;
+    console.log(`Creating record at ${createRecordUrl}`);
+    
     // Make the request to user's PDS
-    const response = await fetch(`${apiUrl}/com.atproto.repo.createRecord`, {
+    const response = await fetch(createRecordUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -71,6 +76,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body)
     });
+    
+    console.log(`Record creation response status: ${response.status}`);
     
     // Process the response
     let responseText = '';
