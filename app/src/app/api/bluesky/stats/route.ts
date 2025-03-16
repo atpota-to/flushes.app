@@ -34,6 +34,13 @@ export async function GET(request: NextRequest) {
       count: number;
     };
     
+    // Define approved emojis list
+    const APPROVED_EMOJIS = [
+      '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+      '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+      '1️⃣', '2️⃣', '🟡', '🟤'
+    ];
+    
     // If we have Supabase credentials, fetch stats
     if (supabaseUrl && supabaseKey) {
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -280,7 +287,13 @@ export async function GET(request: NextRequest) {
         if (entry.emoji) {
           // Default to toilet emoji if empty
           const emoji = entry.emoji.trim() || '🚽';
-          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+          // Only count approved emojis
+          if (APPROVED_EMOJIS.includes(emoji)) {
+            emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+          } else {
+            // Count as default toilet emoji if not approved
+            emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+          }
         } else {
           // Count default toilet emoji if no emoji specified
           emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
@@ -371,10 +384,8 @@ function generateMockLeaderboard() {
 
 // Generate mock emoji stats
 function generateMockEmojiStats() {
-  const popularEmojis = [
-    '🚽', '💩', '🧻', '💦', '🧼', '🪠', '🚿', '🛁', '🧴', '🌊',
-    '💨', '🔥', '🚫', '⚠️', '🚪', '🧫', '📱', '🎮', '📖', '😌'
-  ];
+  // Use the first 20 approved emojis for mock data
+  const popularEmojis = APPROVED_EMOJIS.slice(0, 20);
   
   return popularEmojis.map((emoji, index) => {
     // Generate counts with descending values

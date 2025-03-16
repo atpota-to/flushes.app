@@ -18,6 +18,12 @@ interface FlushingEntry {
   created_at: string;
 }
 
+// Interface for emoji statistics
+interface EmojiStat {
+  emoji: string;
+  count: number;
+}
+
 export default function ProfilePage() {
   const params = useParams();
   const handle = params.handle as string;
@@ -30,6 +36,7 @@ export default function ProfilePage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
+  const [emojiStats, setEmojiStats] = useState<EmojiStat[]>([]);
   // Match Bluesky's API response format
   interface ProfileData {
     did: string;
@@ -106,6 +113,7 @@ export default function ProfilePage() {
       const userEntries = data.entries || [];
       setEntries(userEntries);
       setTotalCount(data.count || 0);
+      setEmojiStats(data.emojiStats || []);
       
       // We now fetch profile data separately
       
@@ -255,6 +263,21 @@ export default function ProfilePage() {
             </>
           ) : (
             <p className={styles.noDataMessage}>Not enough data to display activity chart</p>
+          )}
+          
+          {/* Emoji Statistics Section */}
+          {emojiStats.length > 0 && (
+            <div className={styles.emojiStatsSection}>
+              <h4 className={styles.emojiStatsHeader}>Favorite Emoji</h4>
+              <div className={styles.emojiGrid}>
+                {emojiStats.slice(0, 8).map((stat, index) => (
+                  <div key={index} className={styles.emojiCard}>
+                    <div className={styles.emojiDisplay}>{stat.emoji}</div>
+                    <div className={styles.emojiCount}>{stat.count}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </section>
       )}

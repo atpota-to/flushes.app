@@ -16,8 +16,30 @@ interface ProfileEntry {
   created_at: string;
 }
 
+// Define type for emoji statistics
+interface EmojiStat {
+  emoji: string;
+  count: number;
+}
+
+// Define interface for profile response
+interface ProfileResponse {
+  entries: ProfileEntry[];
+  count: number;
+  cursor?: string;
+  profile?: any;
+  emojiStats?: EmojiStat[];
+}
+
 const DEFAULT_API_URL = 'https://bsky.social/xrpc';
 const MAX_ENTRIES = 50;
+
+// Define approved emojis list - keep in sync with stats route
+const APPROVED_EMOJIS = [
+  '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+  '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+  '1️⃣', '2️⃣', '🟡', '🟤'
+];
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
 // Supabase client - using environment variables
@@ -161,11 +183,38 @@ export async function GET(request: NextRequest) {
             })
             .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null); // Remove filtered entries
           
+          // Calculate emoji statistics
+          const emojiCounts = new Map<string, number>();
+          
+          // Process entries to count emojis
+          transformedEntries.forEach(entry => {
+            if (entry.emoji) {
+              // Default to toilet emoji if empty
+              const emoji = entry.emoji.trim() || '🚽';
+              // Only count approved emojis
+              if (APPROVED_EMOJIS.includes(emoji)) {
+                emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+              } else {
+                // Count as default toilet emoji if not approved
+                emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+              }
+            } else {
+              // Count default toilet emoji if no emoji specified
+              emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+            }
+          });
+          
+          // Convert to array and sort by count (most popular first)
+          const emojiStats = Array.from(emojiCounts.entries())
+            .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+            .sort((a, b) => b.count - a.count);
+          
           return NextResponse.json({
             entries: transformedEntries,
             count: transformedEntries.length,
             cursor: fallbackData.cursor,
-            profile: userProfile
+            profile: userProfile,
+            emojiStats
           });
         }
         
@@ -199,11 +248,38 @@ export async function GET(request: NextRequest) {
         })
         .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null); // Remove filtered entries
       
+      // Calculate emoji statistics
+      const emojiCounts = new Map<string, number>();
+      
+      // Process entries to count emojis
+      transformedEntries.forEach(entry => {
+        if (entry.emoji) {
+          // Default to toilet emoji if empty
+          const emoji = entry.emoji.trim() || '🚽';
+          // Only count approved emojis
+          if (APPROVED_EMOJIS.includes(emoji)) {
+            emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+          } else {
+            // Count as default toilet emoji if not approved
+            emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+          }
+        } else {
+          // Count default toilet emoji if no emoji specified
+          emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+        }
+      });
+      
+      // Convert to array and sort by count (most popular first)
+      const emojiStats = Array.from(emojiCounts.entries())
+        .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+        .sort((a, b) => b.count - a.count);
+      
       return NextResponse.json({
         entries: transformedEntries,
         count: transformedEntries.length,
         cursor: recordsData.cursor,
-        profile: userProfile
+        profile: userProfile,
+        emojiStats
       });
     } catch (error: any) {
       console.error('Error fetching records:', error);
@@ -243,10 +319,37 @@ export async function GET(request: NextRequest) {
           })
           .filter((entry: any): entry is any => entry !== null);
         
+        // Calculate emoji statistics for Supabase fallback entries
+        const emojiCounts = new Map<string, number>();
+        
+        // Process entries to count emojis
+        filteredEntries.forEach((entry: any) => {
+          if (entry.emoji) {
+            // Default to toilet emoji if empty
+            const emoji = entry.emoji.trim() || '🚽';
+            // Only count approved emojis
+            if (APPROVED_EMOJIS.includes(emoji)) {
+              emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+            } else {
+              // Count as default toilet emoji if not approved
+              emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+            }
+          } else {
+            // Count default toilet emoji if no emoji specified
+            emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+          }
+        });
+        
+        // Convert to array and sort by count (most popular first)
+        const emojiStats = Array.from(emojiCounts.entries())
+          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+          .sort((a, b) => b.count - a.count);
+        
         return NextResponse.json({
           entries: filteredEntries,
           count: filteredEntries.length, // Update count to reflect filtered entries
-          profile: userProfile
+          profile: userProfile,
+          emojiStats
         });
       }
       

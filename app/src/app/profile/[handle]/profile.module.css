@@ -177,6 +177,62 @@
   font-style: italic;
 }
 
+/* Emoji Statistics Section */
+.emojiStatsSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--tile-border);
+}
+
+.emojiStatsHeader {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 1rem 0;
+  color: var(--title-color);
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.emojiCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--input-background);
+  border-radius: 8px;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid var(--tile-border);
+}
+
+.emojiDisplay {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.emojiCount {
+  font-weight: bold;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .emojiGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .emojiDisplay {
+    font-size: 1.3rem;
+  }
+  
+  .emojiCount {
+    font-size: 0.85rem;
+  }
+}
+
 .headerActions {
   display: flex;
   gap: 1rem;
