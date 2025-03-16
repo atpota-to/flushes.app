@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 
+
 // Define interfaces for type safety
 interface ProfileEntry {
   id: string;
@@ -38,7 +39,7 @@ const APPROVED_EMOJIS = [
   '1️⃣', '2️⃣', '🟡', '🟤'
 ];
 
-const DEFAULT_API_URL = 'https://bsky.social/xrpc';
+const DEFAULT_API_URL = 'https://public.api.bsky.app/xrpc';
 const MAX_ENTRIES = 50;
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
@@ -72,7 +73,12 @@ export async function GET(request: NextRequest) {
     // If the handle doesn't look like a DID, resolve it
     if (!handle.startsWith('did:')) {
       try {
-        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+        // Use public.api.bsky.app for handle resolution - this endpoint handles third-party PDS users better
+        const resolveEndpoint = 'https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle';
+        console.log(`Resolving handle ${handle} using ${resolveEndpoint}`);
+        
+        // Make request to public API endpoint
+        const resolveResponse = await fetch(`${resolveEndpoint}?handle=${encodeURIComponent(handle)}`);
         
         if (!resolveResponse.ok) {
           return NextResponse.json(
@@ -86,7 +92,8 @@ export async function GET(request: NextRequest) {
         
         // Step 1.5: Get user profile data including description
         try {
-          const profileResponse = await fetch(`https://bsky.social/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(did)}`);
+          // Also use public API for profile data to support third-party PDS users
+          const profileResponse = await fetch(`https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=${encodeURIComponent(did)}`);
           
           if (profileResponse.ok) {
             userProfile = await profileResponse.json();
@@ -106,7 +113,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Step 2: Get the PDS service endpoint from PLC directory
-    let serviceEndpoint = 'https://bsky.social'; // Default fallback
+    let serviceEndpoint = 'https://public.api.bsky.app'; // Default fallback
     try {
       const plcResponse = await fetch(`https://plc.directory/${did}/data`);
       
@@ -133,6 +140,7 @@ export async function GET(request: NextRequest) {
     // Step 3: Call the repo.listRecords API to get the user's flushing statuses
     try {
       const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+      console.log(`Fetching records from ${listRecordsUrl}`);
       
       const recordsResponse = await fetch(listRecordsUrl, {
         headers: {
@@ -141,10 +149,17 @@ export async function GET(request: NextRequest) {
       });
       
       if (!recordsResponse.ok) {
-        // If failed with one endpoint, try with the default endpoint
-        if (serviceEndpoint !== 'https://bsky.social') {
-          console.warn(`Failed to get records from ${serviceEndpoint}, trying default endpoint`);
-          const fallbackUrl = `https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+        // If failed with custom PDS service endpoint, try with the default public API endpoint
+        if (serviceEndpoint !== 'https://public.api.bsky.app') {
+          console.warn(`Failed to get records from ${serviceEndpoint}, trying public API endpoint`);
+          // Log the error for debugging third-party PDS issues
+          try {
+            const errorText = await recordsResponse.text();
+            console.error(`Error response from ${serviceEndpoint}: ${errorText}`);
+          } catch (e) {
+            console.error(`Could not read error response: ${e}`);
+          }
+          const fallbackUrl = `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
           
           const fallbackResponse = await fetch(fallbackUrl, {
             headers: {
@@ -400,8 +415,8 @@ export async function POST(request: NextRequest) {
     
     try {
       if (!resolveHandle.startsWith('did:')) {
-        // Always use bsky.social for resolving handles to DIDs
-        const resolveResponse = await fetch(`https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(resolveHandle)}`);
+        // Use public.api.bsky.app for resolving handles to DIDs - better support for third-party PDS
+        const resolveResponse = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(resolveHandle)}`);
         
         if (!resolveResponse.ok) {
           console.error(`Failed to resolve handle ${resolveHandle}:`, await resolveResponse.text());
@@ -464,7 +479,7 @@ export async function POST(request: NextRequest) {
         
         // IMPORTANT: For third-party PDS users, we need to use the handle from describeRepo
         // which will be accurate for their PDS, rather than the handle we resolved earlier
-        if (pdsEndpoint && pdsEndpoint !== 'https://bsky.social' && data.handle) {
+        if (pdsEndpoint && pdsEndpoint !== 'https://bsky.social' && pdsEndpoint !== 'https://public.api.bsky.app' && data.handle) {
           console.log(`Using handle from PDS response: ${data.handle} instead of ${userHandle}`);
           userHandle = data.handle;
         }
