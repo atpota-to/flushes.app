@@ -195,11 +195,80 @@ export async function GET(request: NextRequest) {
             try {
               console.log(`Trying direct PDS domain: https://${servicePds}`);
               
+              // Special case for known working domains
+              if (handle === 'mackuba.eu') {
+                console.log('Detected mackuba.eu, using known working endpoint');
+                try {
+                  const specialUrl = `https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+                  console.log(`Trying special URL: ${specialUrl}`);
+                  
+                  const specialResponse = await fetch(specialUrl, {
+                    headers: { 'Accept': 'application/json' }
+                  });
+                  
+                  if (specialResponse.ok) {
+                    console.log('Special URL succeeded!');
+                    const specialData = await specialResponse.json();
+                    
+                    // Process the special response
+                    const specialEntries = specialData.records
+                      .map((record: any) => {
+                        const text = record.value.text || '';
+                        if (containsBannedWords(text)) return null;
+                        
+                        return {
+                          id: record.uri,
+                          uri: record.uri,
+                          cid: record.cid,
+                          did: did,
+                          text: sanitizeText(text),
+                          emoji: record.value.emoji || '🚽',
+                          created_at: record.value.createdAt
+                        };
+                      })
+                      .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+                    
+                    // Calculate emoji stats
+                    const specialEmojiCounts = new Map<string, number>();
+                    specialEntries.forEach((entry: ProfileEntry) => {
+                      const emoji = entry.emoji?.trim() || '🚽';
+                      if (APPROVED_EMOJIS.includes(emoji)) {
+                        specialEmojiCounts.set(emoji, (specialEmojiCounts.get(emoji) || 0) + 1);
+                      } else {
+                        specialEmojiCounts.set('🚽', (specialEmojiCounts.get('🚽') || 0) + 1);
+                      }
+                    });
+                    
+                    const specialEmojiStats = Array.from(specialEmojiCounts.entries())
+                      .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+                      .sort((a, b) => b.count - a.count);
+                    
+                    return NextResponse.json({
+                      entries: specialEntries,
+                      count: specialEntries.length,
+                      cursor: specialData.cursor,
+                      profile: userProfile,
+                      emojiStats: specialEmojiStats,
+                      serviceEndpoint: 'https://lab.martianbase.net',
+                      specialHandling: true
+                    });
+                  } else {
+                    console.warn(`Special URL failed: ${specialResponse.status}`);
+                  }
+                } catch (specialErr) {
+                  console.error(`Error with special URL: ${specialErr}`);
+                }
+              }
+
               // Some PDS services have different URL structures
               const urls = [
                 `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
                 // Try without /xrpc prefix in case it's already in the hostname
                 `https://${servicePds}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
+                // Try explicit lab subdomain if we're using martianbase.net
+                ...(servicePds.includes('martianbase.net') ? 
+                  [`https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`] : 
+                  [])
               ];
               
               // Start with the most common pattern
@@ -603,8 +672,31 @@ export async function GET(request: NextRequest) {
         });
       }
       
+      // If we get a 404, return empty entries rather than an error
+      // This handles PDS servers that return 404 instead of empty arrays
+      if (error instanceof Error && error.message.includes('404')) {
+        console.log(`Returning empty entries list instead of 404 error for ${did}`);
+        return NextResponse.json({
+          entries: [],
+          count: 0,
+          profile: userProfile,
+          emojiStats: [],
+          did,
+          handle,
+          serviceEndpoint,
+          servicePds,
+          emptyCollection: true
+        });
+      }
+      
       return NextResponse.json(
-        { error: `Failed to fetch records: ${error.message}` },
+        { 
+          error: `Failed to fetch records: ${error.message}`,
+          did,
+          handle,
+          serviceEndpoint,
+          servicePds
+        },
         { status: 500 }
       );
     }
