@@ -114,11 +114,14 @@ export async function GET(request: NextRequest) {
     
     // Step 2: Get the PDS service endpoint from PLC directory
     let serviceEndpoint = 'https://bsky.social'; // Start with bsky.social as fallback
+    let servicePds = null; // Store the actual PDS domain for logging
     try {
+      console.log(`Looking up PDS endpoint for DID: ${did}`);
       const plcResponse = await fetch(`https://plc.directory/${did}/data`);
       
       if (plcResponse.ok) {
         const plcData = await plcResponse.json();
+        console.log(`Got PLC directory data for ${did}`);
         
         // Extract service endpoint from PLC data
         if (plcData && plcData.service) {
@@ -129,8 +132,19 @@ export async function GET(request: NextRequest) {
           
           if (pdsService && pdsService.endpoint) {
             serviceEndpoint = pdsService.endpoint;
+            
+            // Extract just the domain for reference
+            try {
+              const serviceUrl = new URL(pdsService.endpoint);
+              servicePds = serviceUrl.hostname;
+              console.log(`Found PDS service for ${handle} at ${serviceEndpoint} (${servicePds})`);
+            } catch (e) {
+              console.warn(`Could not parse service URL: ${pdsService.endpoint}`);
+            }
           }
         }
+      } else {
+        console.warn(`PLC directory lookup failed for ${did}: ${plcResponse.status} ${plcResponse.statusText}`);
       }
     } catch (error: any) {
       console.warn(`Failed to get service endpoint from PLC directory: ${error.message}`);
@@ -149,83 +163,148 @@ export async function GET(request: NextRequest) {
       });
       
       if (!recordsResponse.ok) {
-        // Special case for handling third-party PDS
-        if (handle.includes('.') && !handle.endsWith('bsky.social') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
-          const domain = handle.split('.').slice(1).join('.');
-          
-          console.log(`Trying direct domain access before falling back: ${domain}`);
-          try {
-            const directUrl = `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
-            
-            const directResponse = await fetch(directUrl, {
-              headers: { 'Accept': 'application/json' }
-            });
-            
-            if (directResponse.ok) {
-              console.log(`Successfully accessed records directly from ${domain}`);
-              const directData = await directResponse.json();
-              
-              // Process the direct response...
-              // Process the direct response...
-              const directEntries = directData.records
-                .map((record: any) => {
-                  const text = record.value.text || '';
-                  if (containsBannedWords(text)) return null;
-                  
-                  return {
-                    id: record.uri,
-                    uri: record.uri,
-                    cid: record.cid,
-                    did: did,
-                    text: sanitizeText(text),
-                    emoji: record.value.emoji || '🚽',
-                    created_at: record.value.createdAt
-                  };
-                })
-                .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
-              
-              // Calculate emoji stats
-              const directEmojiCounts = new Map<string, number>();
-              directEntries.forEach((entry: ProfileEntry) => {
-                const emoji = entry.emoji?.trim() || '🚽';
-                if (APPROVED_EMOJIS.includes(emoji)) {
-                  directEmojiCounts.set(emoji, (directEmojiCounts.get(emoji) || 0) + 1);
-                } else {
-                  directEmojiCounts.set('🚽', (directEmojiCounts.get('🚽') || 0) + 1);
-                }
-              });
-              
-              const directEmojiStats = Array.from(directEmojiCounts.entries())
-                .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-                .sort((a, b) => b.count - a.count);
-              
-              return NextResponse.json({
-                entries: directEntries,
-                count: directEntries.length,
-                cursor: directData.cursor,
-                profile: userProfile,
-                emojiStats: directEmojiStats,
-                serviceEndpoint: `https://${domain}`,
-                directPds: true
-              });
-            } else {
-              console.warn(`Direct access failed: ${await directResponse.text()}`);
-            }
-          } catch (directErr) {
-            console.error(`Error with direct domain access: ${directErr}`);
-          }
+        // Log complete error information - this helps diagnose third-party PDS issues
+        console.warn(`Failed to get records from ${serviceEndpoint}`);
+        try {
+          const errorText = await recordsResponse.text();
+          console.error(`Error response from ${serviceEndpoint}: ${errorText}`);
+        } catch (e) {
+          console.error(`Could not read error response: ${e}`);
         }
         
-        // If direct access failed or not applicable, try with public API endpoint
+        // Try appropriate fallback, with different strategies for different PDS hosts
         if (serviceEndpoint !== 'https://public.api.bsky.app') {
-          console.warn(`Failed to get records from ${serviceEndpoint}, trying public API endpoint`);
-          // Log the error for debugging third-party PDS issues
-          try {
-            const errorText = await recordsResponse.text();
-            console.error(`Error response from ${serviceEndpoint}: ${errorText}`);
-          } catch (e) {
-            console.error(`Could not read error response: ${e}`);
+          // 1. If we have a servicePds from the PLC directory, try using it directly
+          if (servicePds) {
+            try {
+              console.log(`Trying direct PDS domain: https://${servicePds}`);
+              const pdsDirectUrl = `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+              
+              const pdsDirectResponse = await fetch(pdsDirectUrl, {
+                headers: { 'Accept': 'application/json' }
+              });
+              
+              if (pdsDirectResponse.ok) {
+                console.log(`Successfully accessed records directly from PDS domain: ${servicePds}`);
+                const directData = await pdsDirectResponse.json();
+                
+                // Process the direct response
+                const directEntries = directData.records
+                  .map((record: any) => {
+                    const text = record.value.text || '';
+                    if (containsBannedWords(text)) return null;
+                    
+                    return {
+                      id: record.uri,
+                      uri: record.uri,
+                      cid: record.cid,
+                      did: did,
+                      text: sanitizeText(text),
+                      emoji: record.value.emoji || '🚽',
+                      created_at: record.value.createdAt
+                    };
+                  })
+                  .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+                
+                // Calculate emoji stats
+                const directEmojiCounts = new Map<string, number>();
+                directEntries.forEach((entry: ProfileEntry) => {
+                  const emoji = entry.emoji?.trim() || '🚽';
+                  if (APPROVED_EMOJIS.includes(emoji)) {
+                    directEmojiCounts.set(emoji, (directEmojiCounts.get(emoji) || 0) + 1);
+                  } else {
+                    directEmojiCounts.set('🚽', (directEmojiCounts.get('🚽') || 0) + 1);
+                  }
+                });
+                
+                const directEmojiStats = Array.from(directEmojiCounts.entries())
+                  .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+                  .sort((a, b) => b.count - a.count);
+                
+                return NextResponse.json({
+                  entries: directEntries,
+                  count: directEntries.length,
+                  cursor: directData.cursor,
+                  profile: userProfile,
+                  emojiStats: directEmojiStats,
+                  serviceEndpoint: `https://${servicePds}`,
+                  directPds: true
+                });
+              } else {
+                console.warn(`PDS direct access failed: ${await pdsDirectResponse.text()}`);
+              }
+            } catch (pdsErr) {
+              console.error(`Error with direct PDS domain access: ${pdsErr}`);
+            }
           }
+          
+          // 2. For third-party domain handles, try using the handle's domain
+          if (handle.includes('.') && !handle.endsWith('bsky.social') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
+            const domain = handle.split('.').slice(1).join('.');
+            try {
+              console.log(`Trying handle domain access: https://${domain}`);
+              const domainUrl = `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
+              
+              const domainResponse = await fetch(domainUrl, {
+                headers: { 'Accept': 'application/json' }
+              });
+              
+              if (domainResponse.ok) {
+                console.log(`Successfully accessed records from handle domain: ${domain}`);
+                const domainData = await domainResponse.json();
+                
+                // Process the domain response
+                const domainEntries = domainData.records
+                  .map((record: any) => {
+                    const text = record.value.text || '';
+                    if (containsBannedWords(text)) return null;
+                    
+                    return {
+                      id: record.uri,
+                      uri: record.uri,
+                      cid: record.cid,
+                      did: did,
+                      text: sanitizeText(text),
+                      emoji: record.value.emoji || '🚽',
+                      created_at: record.value.createdAt
+                    };
+                  })
+                  .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+                
+                // Calculate emoji stats
+                const domainEmojiCounts = new Map<string, number>();
+                domainEntries.forEach((entry: ProfileEntry) => {
+                  const emoji = entry.emoji?.trim() || '🚽';
+                  if (APPROVED_EMOJIS.includes(emoji)) {
+                    domainEmojiCounts.set(emoji, (domainEmojiCounts.get(emoji) || 0) + 1);
+                  } else {
+                    domainEmojiCounts.set('🚽', (domainEmojiCounts.get('🚽') || 0) + 1);
+                  }
+                });
+                
+                const domainEmojiStats = Array.from(domainEmojiCounts.entries())
+                  .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+                  .sort((a, b) => b.count - a.count);
+                
+                return NextResponse.json({
+                  entries: domainEntries,
+                  count: domainEntries.length,
+                  cursor: domainData.cursor,
+                  profile: userProfile,
+                  emojiStats: domainEmojiStats,
+                  serviceEndpoint: `https://${domain}`,
+                  handleDomain: true
+                });
+              } else {
+                console.warn(`Handle domain access failed: ${await domainResponse.text()}`);
+              }
+            } catch (domainErr) {
+              console.error(`Error with handle domain access: ${domainErr}`);
+            }
+          }
+          
+          // 3. Last resort: try public API
+          console.warn(`All direct approaches failed, trying public API fallback`);
           const fallbackUrl = `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
           
           const fallbackResponse = await fetch(fallbackUrl, {
@@ -365,7 +444,8 @@ export async function GET(request: NextRequest) {
         cursor: recordsData.cursor,
         profile: userProfile,
         emojiStats,
-        serviceEndpoint // Include the endpoint we used for debugging
+        serviceEndpoint, // Include the endpoint we used for debugging
+        servicePds // Include the extracted PDS domain
       });
     } catch (error: any) {
       console.error('Error fetching records:', error);
