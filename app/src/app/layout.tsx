@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   other: {
     'shortcut-version': '1.0',
   },
+  icons: {
+    icon: '/favicon.png',
+  },
   openGraph: {
     title: 'Flushes',
     description: 'The world\'s first decentralized social media app for sharing the most universal human experience. Post your flushes and connect with other bathroom enjoyers.',
