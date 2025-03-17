@@ -51,6 +51,7 @@
 .logoImage {
   height: auto;
   object-fit: contain;
+  width: 100%;
 }
 
 .navLinks {
@@ -199,11 +200,13 @@
   .logo {
     margin: 0 auto;
     justify-content: center;
-    width: auto;
+    width: 80%;
+    max-width: 240px;
   }
   
   .logoImage {
     margin: 0 auto;
+    width: 100%;
   }
   
   .navLinks {
@@ -211,6 +214,7 @@
     width: 100%;
     overflow-x: auto;
     gap: 0.4rem;
+    margin-top: 1rem;
   }
   
   .secondRow {

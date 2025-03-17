@@ -25,12 +25,13 @@ export default function NavigationBar() {
   return (
     <nav className={styles.navbar}>
       <div className={styles.navStart}>
-        <Link href="/" className={styles.logo}>
+      <Link href="/" className={styles.logo}>
           <Image
             src="/flushes-logo-horizontal.png"
             alt="Flushes Logo"
-            width={150}
-            height={40}
+            width={200}
+            height={53}
+            priority
             className={styles.logoImage}
           />
         </Link>
