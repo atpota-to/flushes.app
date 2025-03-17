@@ -26,9 +26,9 @@ export default function ProfileSearch() {
   useEffect(() => {
     const updatePlaceholder = () => {
       if (window.innerWidth <= 480) {
-        setPlaceholder('Search handle or DID');
+        setPlaceholder('Search handle');
       } else {
-        setPlaceholder('Search handle or DID');
+        setPlaceholder('Search handle');
       }
     };
     
