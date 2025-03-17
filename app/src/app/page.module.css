@@ -5,48 +5,54 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
   margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  text-align: center;
+  width: 100%;
 }
 
 .headerContent {
-  flex: 1 1 300px;
-  min-width: 0;
+  flex: 1;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.title {
-  font-size: 2.5rem;
-  margin-bottom: 0.25rem;
+.tagline {
+  font-size: 1.5rem;
+  margin-bottom: 0.6rem;
   color: var(--primary-color);
   word-wrap: break-word;
   hyphens: auto;
-  line-height: 1.2;
-}
-
-.subtitle {
-  font-size: 1rem;
-  color: var(--timestamp-color);
-  margin: 0 0 0.5rem 0;
-  font-weight: normal;
-  word-wrap: break-word;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .description {
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: var(--text-color);
-  margin: 0;
-  line-height: 1.4;
+  margin: 0 0 0.6rem 0;
+  line-height: 1.5;
   word-wrap: break-word;
+  text-align: center;
+}
+
+.donateText {
+  font-size: 1rem;
+  color: var(--text-color);
+  margin: 0 0 0.6rem 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+  text-align: center;
 }
 
 .creditLine {
-  display: block;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
   color: var(--timestamp-color);
+  text-align: center;
 }
 
 .kofiLink {
@@ -59,36 +65,28 @@
   text-decoration: underline;
 }
 
-.headerActions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .tagline {
+    font-size: 1.3rem;
+  }
+  
+  .description {
+    font-size: 1rem;
+  }
+  
+  .donateText {
+    font-size: 0.9rem;
+  }
 }
 
-@media (max-width: 600px) {
-  /* Header styles */
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
+@media (max-width: 400px) {
+  .tagline {
+    font-size: 1.2rem;
   }
   
-  .headerContent {
-    flex: 1 1 100%;
-    text-align: left;
-  }
-  
-  .headerActions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-  
-  .title {
-    font-size: 2rem;
-  }
-  
-  /* Content alignment for feed items */
-  .contentLeft {
-    align-items: center;
+  .description, .donateText {
+    font-size: 0.85rem;
   }
 }
 

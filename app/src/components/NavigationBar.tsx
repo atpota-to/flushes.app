@@ -1,7 +1,6 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import styles from './NavigationBar.module.css';
 import ProfileSearch from './ProfileSearch';
@@ -25,7 +24,13 @@ export default function NavigationBar() {
     <nav className={styles.navbar}>
       <div className={styles.navStart}>
         <Link href="/" className={styles.logo}>
-          <span className={`${styles.logoText} font-black`}>Flushes 🧻</span>
+          <Image
+            src="/flushes-logo-horizontal.png"
+            alt="Flushes Logo"
+            width={150}
+            height={40}
+            className={styles.logoImage}
+          />
         </Link>
         
         <div className={styles.navLinks}>

@@ -356,12 +356,18 @@ export default function Home() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
+          {/* New header layout with 4 center-aligned lines */}
+          <h1 className={styles.tagline}>
+            The Decentralized Toilet Network of Planet Earth & Simulation 12B
+          </h1>
           <p className={styles.description}>
-            The world&apos;s 1st decentralized social media app for sharing when you&apos;re on the toilet. Powered by the AT Protocol. Your flushes are saved to your PDS via the im.flushing lexicon.<br />
-            <span className={styles.creditLine}>
-              Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a>. 
-              Like the app? Donate to<a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}> my toilet paper fund</a>.
-            </span>
+            Share a "flush" whenever you're in the bathroom.
+          </p>
+          <p className={styles.donateText}>
+            Like the app? Donate to <a href="https://ko-fi.com/dameis" target="_blank" rel="noopener noreferrer" className={styles.kofiLink}>our toilet paper fund</a>.
+          </p>
+          <p className={styles.creditLine}>
+            Made by <a href="https://bsky.app/profile/dame.is" target="_blank" rel="noopener noreferrer">@dame.is</a> and <a href="https://bsky.app/profile/atpota.to" target="_blank" rel="noopener noreferrer">@atpota.to</a>
           </p>
         </div>
       </header>

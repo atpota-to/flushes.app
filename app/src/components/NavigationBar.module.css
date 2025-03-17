@@ -44,17 +44,13 @@
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: var(--foreground-rgb);
-  font-weight: bold;
-  font-size: 1.5rem;
   margin-right: 1.5rem;
   width: 150px;
 }
 
-.logoText {
-  display: inline-block;
-  color: var(--primary-color);
-  font-weight: 900;
+.logoImage {
+  height: auto;
+  object-fit: contain;
 }
 
 .navLinks {
@@ -144,7 +140,6 @@
 
 @media (max-width: 600px) {
   .logo {
-    font-size: 1.25rem;
     margin-right: 0rem;
   }
 
@@ -205,11 +200,10 @@
     margin: 0 auto;
     justify-content: center;
     width: auto;
-    font-size: 2.5rem;
   }
   
-  .logoText {
-    text-align: center;
+  .logoImage {
+    margin: 0 auto;
   }
   
   .navLinks {
