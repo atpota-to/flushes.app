@@ -429,7 +429,7 @@ export default function Home() {
                     />
                   </div>
                   <div className={styles.charCount}>
-                    {text.length}/60
+                    {text.length}/59
                   </div>
                 </div>
 
