@@ -438,7 +438,7 @@ export default function Home() {
                   className={styles.submitButton}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Updating...' : 'Update Status'}
+                  {isSubmitting ? 'Flushing...' : 'Post Flush'}
                 </button>
               </form>
             </div>
