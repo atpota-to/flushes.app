@@ -191,7 +191,7 @@ export default function FeedPage() {
                 </div>
                 <div className={styles.content}>
                   <span className={styles.emoji}>{entry.emoji}</span>
-                  <span className={styles.text}>{entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text}</span>
+                  <span className={styles.text}>{entry.text.length > 59 ? `${entry.text.substring(0, 59)}...` : entry.text}</span>
                 </div>
               </div>
             ))}
