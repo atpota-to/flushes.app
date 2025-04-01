@@ -283,12 +283,12 @@ export default function DashboardPage() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="What's happening in the bathroom... (optional)"
-                maxLength={59}
+                maxLength={60}
                 className={styles.input}
                 disabled={isSubmitting}
               />
               <div className={styles.charCount}>
-                {text.length}/59
+                {text.length}/60
               </div>
             </div>
 
@@ -351,7 +351,7 @@ export default function DashboardPage() {
                       </a>
                       <span className={styles.text}>
                         {entry.text ? 
-                          (entry.text.length > 59 ? `${entry.text.substring(0, 59)}...` : entry.text) : 
+                          (entry.text.length > 60 ? `${entry.text.substring(0, 60)}...` : entry.text) : 
                           'is flushing'}
                       </span>
                     </div>

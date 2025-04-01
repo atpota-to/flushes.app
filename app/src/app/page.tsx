@@ -423,7 +423,7 @@ export default function Home() {
                       value={text.startsWith("is ") ? text.substring(3) : text}
                       onChange={(e) => setText(`is ${e.target.value}`)}
                       placeholder="flushing"
-                      maxLength={57} /* 60 - 3 for "is " */
+                      maxLength={56} /* 60 - 3 for "is " */
                       className={styles.inputWithPrefix}
                       disabled={isSubmitting}
                     />
