@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { OAuthSession } from '@atproto/oauth-client-browser';
-import { initializeOAuthClient, oauthClient, signIn, restoreSession, signOut, onSessionDeleted } from './oauth-client';
 
 interface AuthContextType {
   session: OAuthSession | null;
@@ -28,13 +27,23 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<OAuthSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
-  // Initialize the OAuth client on mount
+  // Track if we're on the client side
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Initialize the OAuth client on mount (client-side only)
+  useEffect(() => {
+    if (!isClient) return;
+
     async function initialize() {
       try {
         setIsLoading(true);
         
+        // Dynamic import to ensure client-side only execution
+        const { initializeOAuthClient } = await import('./oauth-client');
         const result = await initializeOAuthClient();
         
         if (result) {
@@ -49,20 +58,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     initialize();
-  }, []);
+  }, [isClient]);
 
-  // Set up session deletion listener
+  // Set up session deletion listener (client-side only)
   useEffect(() => {
-    const handleSessionDeleted = ({ sub, cause }: { sub: string; cause: any }) => {
-      console.error(`Session for ${sub} was invalidated:`, cause);
-      setSession(null);
-    };
+    if (!isClient) return;
 
-    onSessionDeleted(handleSessionDeleted);
-  }, []);
+    async function setupListener() {
+      try {
+        const { onSessionDeleted } = await import('./oauth-client');
+        
+        const handleSessionDeleted = ({ sub, cause }: { sub: string; cause: any }) => {
+          console.error(`Session for ${sub} was invalidated:`, cause);
+          setSession(null);
+        };
+
+        onSessionDeleted(handleSessionDeleted);
+      } catch (error) {
+        console.error('Failed to set up session listener:', error);
+      }
+    }
+
+    setupListener();
+  }, [isClient]);
 
   const handleSignIn = async (handle: string) => {
+    if (!isClient) {
+      throw new Error('Sign in can only be called on the client side');
+    }
+
     try {
+      const { signIn } = await import('./oauth-client');
       await signIn(handle);
       // Note: This will redirect, so we won't reach this point
     } catch (error) {
@@ -72,7 +98,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const handleSignOut = async () => {
+    if (!isClient) {
+      throw new Error('Sign out can only be called on the client side');
+    }
+
     try {
+      const { signOut } = await import('./oauth-client');
       await signOut();
       setSession(null);
     } catch (error) {
@@ -82,7 +113,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const handleRestoreSession = async (did: string) => {
+    if (!isClient) {
+      throw new Error('Restore session can only be called on the client side');
+    }
+
     try {
+      const { restoreSession } = await import('./oauth-client');
       const restoredSession = await restoreSession(did);
       setSession(restoredSession);
       return restoredSession;
@@ -95,7 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue: AuthContextType = {
     session,
     isAuthenticated: !!session,
-    isLoading,
+    isLoading: isLoading || !isClient, // Keep loading until client-side hydration
     signIn: handleSignIn,
     signOut: handleSignOut,
     restoreSession: handleRestoreSession,

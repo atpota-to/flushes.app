@@ -54,16 +54,18 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://use.typekit.net/gik3riw.css" />
       </head>
       <body>
-        <AuthProvider>
-          <ThemeProvider>
-            <header>
-              <ClientOnly>
-                <NavigationBar />
-              </ClientOnly>
-            </header>
-            <main>{children}</main>
-          </ThemeProvider>
-        </AuthProvider>
+        <ClientOnly>
+          <AuthProvider>
+            <ThemeProvider>
+              <header>
+                <ClientOnly>
+                  <NavigationBar />
+                </ClientOnly>
+              </header>
+              <main>{children}</main>
+            </ThemeProvider>
+          </AuthProvider>
+        </ClientOnly>
         <Analytics />
       </body>
     </html>

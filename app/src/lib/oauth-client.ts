@@ -17,19 +17,45 @@ const CLIENT_METADATA = {
   "token_endpoint_auth_method": "none" as const
 }
 
-// Create the OAuth client instance
-export const oauthClient = new BrowserOAuthClient({
-  clientMetadata: CLIENT_METADATA as any, // Type assertion to avoid strict typing issues
-  // Use Bluesky's public handle resolver
-  handleResolver: 'https://bsky.social',
-  // Use fragment for better SPA support
-  responseMode: 'fragment'
-})
+// Lazy OAuth client - only initialize on client side
+let _oauthClient: BrowserOAuthClient | null = null
+
+// Get or create the OAuth client instance - client-side only
+function getOAuthClient(): BrowserOAuthClient {
+  // Ensure we're on the client side
+  if (typeof window === 'undefined') {
+    throw new Error('OAuth client can only be used on the client side')
+  }
+
+  if (!_oauthClient) {
+    _oauthClient = new BrowserOAuthClient({
+      clientMetadata: CLIENT_METADATA as any,
+      handleResolver: 'https://bsky.social',
+      responseMode: 'fragment'
+    })
+  }
+
+  return _oauthClient
+}
+
+// Export the getter function instead of the instance
+export const oauthClient = {
+  get instance() {
+    return getOAuthClient()
+  }
+}
 
 // Initialize the client - this should be called once when the app loads
 export async function initializeOAuthClient() {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    console.log('Skipping OAuth client initialization on server side')
+    return null
+  }
+
   try {
-    const result = await oauthClient.init()
+    const client = getOAuthClient()
+    const result = await client.init()
     
     if (result) {
       const { session } = result
@@ -58,10 +84,16 @@ export async function signIn(handle: string, options?: {
   state?: string
   signal?: AbortSignal
 }) {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    throw new Error('Sign in can only be called on the client side')
+  }
+
   try {
     console.log(`Initiating OAuth flow for ${handle}`)
     
-    await oauthClient.signIn(handle, {
+    const client = getOAuthClient()
+    await client.signIn(handle, {
       state: options?.state || `signin-${Date.now()}`,
       signal: options?.signal
     })
@@ -75,9 +107,15 @@ export async function signIn(handle: string, options?: {
 
 // Restore a specific session by DID
 export async function restoreSession(did: string) {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    throw new Error('Restore session can only be called on the client side')
+  }
+
   try {
     console.log(`Restoring session for ${did}`)
-    const session = await oauthClient.restore(did)
+    const client = getOAuthClient()
+    const session = await client.restore(did)
     console.log(`Successfully restored session for ${session.sub}`)
     return session
   } catch (error) {
@@ -88,10 +126,12 @@ export async function restoreSession(did: string) {
 
 // Sign out the current session
 export async function signOut() {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    throw new Error('Sign out can only be called on the client side')
+  }
+
   try {
-    // The BrowserOAuthClient doesn't expose a direct signOut method
-    // We need to manually clear the session and redirect
-    // For now, we'll clear local storage and redirect
     console.log('Signing out user')
     
     // Clear any remaining localStorage items from the old implementation
@@ -117,9 +157,20 @@ export async function signOut() {
 
 // Event listener for session deletion/invalidation
 export function onSessionDeleted(callback: (event: { sub: string, cause: any }) => void) {
-  oauthClient.addEventListener('deleted', (event: any) => {
-    const { sub, cause } = event.detail
-    console.error(`Session for ${sub} was invalidated:`, cause)
-    callback({ sub, cause })
-  })
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    console.log('Skipping session deleted listener setup on server side')
+    return
+  }
+
+  try {
+    const client = getOAuthClient()
+    client.addEventListener('deleted', (event: any) => {
+      const { sub, cause } = event.detail
+      console.error(`Session for ${sub} was invalidated:`, cause)
+      callback({ sub, cause })
+    })
+  } catch (error) {
+    console.error('Failed to set up session deleted listener:', error)
+  }
 } 

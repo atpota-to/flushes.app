@@ -14,6 +14,11 @@ export async function createPost(session: OAuthSession, options: {
   langs?: string[];
   createdAt?: string;
 }) {
+  // Ensure we're on the client side
+  if (typeof window === 'undefined') {
+    throw new Error('API client can only be used on the client side');
+  }
+
   try {
     // For now, we'll make a direct API call to our existing endpoint
     // Later this can be improved to use the OAuth session directly
