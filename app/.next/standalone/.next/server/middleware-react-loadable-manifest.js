@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/dashboard/page.tsx -> @/lib/api-client":{"id":3227,"files":["static/chunks/227.4845be1eb521e49f.js"]},"app/page.tsx -> @/lib/api-client":{"id":3227,"files":["static/chunks/227.4845be1eb521e49f.js"]}}';

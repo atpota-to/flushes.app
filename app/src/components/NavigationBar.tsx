@@ -11,10 +11,11 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function NavigationBar() {
   const pathname = usePathname();
-  const { isAuthenticated, clearAuth, handle } = useAuth();
+  const { isAuthenticated, signOut, session } = useAuth();
+  const handle = null; // Will be fetched when needed
 
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await signOut();
   };
 
   // Check if a link is active

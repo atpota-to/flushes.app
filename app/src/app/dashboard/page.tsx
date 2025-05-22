@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { createFlushingStatus, checkAuth } from '@/lib/bluesky-api';
 import styles from './dashboard.module.css';
 import Link from 'next/link';
 
@@ -28,7 +27,9 @@ interface FlushingEntry {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { isAuthenticated, accessToken, did, handle, serializedKeyPair, dpopNonce, pdsEndpoint, clearAuth } = useAuth();
+  const { isAuthenticated, session, signOut } = useAuth();
+  const did = session?.sub;
+  const handle = null; // Will be fetched when needed
   
   const [text, setText] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
@@ -106,8 +107,8 @@ export default function DashboardPage() {
   };
 
   // Logout handler
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await signOut();
     router.push('/');
   };
 
@@ -127,13 +128,8 @@ export default function DashboardPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!accessToken || !did || !serializedKeyPair) {
-      setError('Authentication information missing');
-      return;
-    }
-    
-    if (!pdsEndpoint) {
-      setError('PDS endpoint is missing. Cannot proceed without it.');
+    if (!session || !isAuthenticated) {
+      setError('Please sign in to post a flush');
       return;
     }
 
@@ -142,54 +138,16 @@ export default function DashboardPage() {
     setSuccess(null);
 
     try {
-      console.log('Submitting status update with DID:', did);
-      console.log('Using PDS endpoint:', pdsEndpoint);
+      // Use the new simplified API client
+      const { createPost } = await import('@/lib/api-client');
       
-      // Deserialize key pair
-      const keyPairData = JSON.parse(serializedKeyPair);
-      const publicKey = await window.crypto.subtle.importKey(
-        'jwk',
-        keyPairData.publicKey,
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        true,
-        ['verify']
-      );
-      const privateKey = await window.crypto.subtle.importKey(
-        'jwk',
-        keyPairData.privateKey,
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        true,
-        ['sign']
-      );
-      const keyPair = { publicKey, privateKey };
+      // Create the status update with the simplified API
+      const statusText = `${handle || 'Someone'} is ${text || 'flushing'} ${selectedEmoji}`;
       
-      // First, check if auth is valid
-      const isAuthValid = await checkAuth(
-        accessToken,
-        keyPair,
-        did,
-        dpopNonce || null,
-        pdsEndpoint
-      );
-      
-      if (!isAuthValid) {
-        setError('Authentication check failed. Your login may have expired.');
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // If we're authenticated, proceed with creating the status
-      console.log('Authentication verified, creating status...');
-      
-      const result = await createFlushingStatus(
-        accessToken, 
-        keyPair, 
-        did, 
-        text, 
-        selectedEmoji,
-        dpopNonce || null,
-        pdsEndpoint
-      );
+      const result = await createPost(session, {
+        text: statusText,
+        langs: ['en']
+      });
       
       console.log('Status update result:', result);
       

@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/auth/nonce":{},"/api/auth/token":{},"/api/bluesky/feed-direct":{},"/api/bluesky/flushing":{},"/api/bluesky/search":{},"/api/bluesky/stats":{},"/api/bluesky/feed-simple":{},"/api/bluesky/feed":{},"/api/bluesky/profile":{}}}

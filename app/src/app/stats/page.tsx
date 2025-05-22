@@ -19,14 +19,15 @@ interface StatsData {
 }
 
 export default function StatsPage() {
-  const { isAuthenticated, handle, clearAuth } = useAuth();
+  const { isAuthenticated, session, signOut } = useAuth();
+  const handle = null; // Will be fetched when needed
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Function to handle logout
-  const handleLogout = () => {
-    clearAuth();
+  const handleLogout = async () => {
+    await signOut();
   };
 
   useEffect(() => {
