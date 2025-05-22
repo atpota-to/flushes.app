@@ -125,10 +125,9 @@ export default function Home() {
       }
       
       // Create the status update with the simplified API
-      const statusText = `${handle || 'Someone'} ${formattedText} ${selectedEmoji}`;
-      
+      // Just send the formatted text with emoji - no need to add handle/name since OAuth session handles user identity
       const result = await createPost(session, {
-        text: statusText,
+        text: `${formattedText} ${selectedEmoji}`,
         langs: ['en']
       });
       

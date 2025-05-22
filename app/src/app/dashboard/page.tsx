@@ -141,11 +141,10 @@ export default function DashboardPage() {
       // Use the new simplified API client
       const { createPost } = await import('@/lib/api-client');
       
-      // Create the status update with the simplified API
-      const statusText = `${handle || 'Someone'} is ${text || 'flushing'} ${selectedEmoji}`;
-      
+      // Create the status update with the simplified API  
+      // Just send the text with emoji - no need to add handle/name since OAuth session handles user identity
       const result = await createPost(session, {
-        text: statusText,
+        text: `is ${text || 'flushing'} ${selectedEmoji}`,
         langs: ['en']
       });
       
