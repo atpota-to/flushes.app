@@ -1,9 +1,9 @@
 import { OAuthSession } from '@atproto/oauth-client-browser';
+import { Agent } from '@atproto/api';
 
-// Simplified API client for OAuth session
-// TODO: Implement proper API integration after authentication is working
+// API client for OAuth session using @atproto/api Agent
 
-// Create a post using the OAuth session as a fetch handler
+// Create a post using the OAuth session with @atproto/api Agent
 export async function createPost(session: OAuthSession, options: {
   text: string;
   reply?: {
@@ -23,6 +23,9 @@ export async function createPost(session: OAuthSession, options: {
     console.log('Creating post with session:', session.sub);
     console.log('Post text:', options.text);
     
+    // Create an Agent instance using the OAuth session
+    const agent = new Agent(session);
+    
     // Extract emoji from text if present, default to toilet
     let emoji = '🚽';
     let cleanText = options.text;
@@ -41,30 +44,23 @@ export async function createPost(session: OAuthSession, options: {
       }
     }
     
-    // Use regular fetch to call our own API endpoint
-    // TODO: Later we can modify this to call the user's PDS directly using session.fetchHandler
-    const response = await fetch('/api/bluesky/flushing', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: cleanText,
-        emoji,
-        did: session.sub,
-        // For now, we'll just pass the session info and let the API endpoint
-        // figure out how to use the OAuth session
-        sessionSub: session.sub
-      })
+    // Create a record directly using the Agent, following the cred.blue pattern
+    const flushRecord = {
+      $type: 'im.flushing.right.now',
+      text: cleanText,
+      emoji: emoji,
+      createdAt: new Date().toISOString(),
+    };
+    
+    console.log('Creating flush record:', flushRecord);
+    
+    // Use the agent to create the record directly in the user's PDS
+    const result = await agent.api.com.atproto.repo.createRecord({
+      repo: session.sub, // Use the user's DID
+      collection: 'im.flushing.right.now',
+      record: flushRecord,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('API response error:', errorData);
-      throw new Error(`Failed to create post: ${response.status}`);
-    }
-
-    const result = await response.json();
+    
     console.log('Post created successfully:', result);
     return result;
   } catch (error) {
