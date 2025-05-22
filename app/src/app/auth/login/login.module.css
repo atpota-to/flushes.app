@@ -1,24 +1,126 @@
+/* Login page styling to match the about page card-like sections */
+
 .container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  color: var(--foreground-rgb);
+  min-height: 70vh;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.loginBox {
+  background-color: var(--card-background);
+  border-radius: 1rem;
+  padding: 2rem;
+  border: 1px solid var(--tile-border);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+  text-align: center;
+  margin-top: 0;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--secondary-foreground);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-style: italic;
+}
+
+.form {
+  margin-bottom: 2rem;
+}
+
+.inputGroup {
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--foreground-rgb);
+}
+
+.input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background-color: var(--input-background);
+  color: var(--text-color);
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
+}
+
+.hint {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--secondary-foreground);
+  margin-bottom: 0;
+}
+
+.error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+
+.submitButton {
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 70vh;
-  padding: 2rem;
+  gap: 0.5rem;
 }
 
-.loaderContainer, .errorContainer {
-  text-align: center;
+.submitButton:hover:not(:disabled) {
+  background-color: var(--secondary-color);
+  transform: translateY(-1px);
 }
 
-.loader {
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid var(--primary-color);
+.submitButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
   animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
 }
 
 @keyframes spin {
@@ -26,247 +128,81 @@
   100% { transform: rotate(360deg); }
 }
 
-.loginForm {
-  max-width: 500px;
-  width: 100%;
-  padding: 2rem;
-  background-color: var(--card-background);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
-  text-align: center;
-}
-
-.loginForm h1 {
-  color: var(--primary-color);
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--timestamp-color);
-  font-size: 1.1rem;
-  margin: 0 0 1rem 0;
-  font-style: italic;
-}
-
-.description {
-  color: var(--text-color);
+.info {
   margin-bottom: 1.5rem;
-  line-height: 1.5;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--tile-border);
 }
 
-.inputGroup {
-  display: flex;
-  margin-bottom: 1rem;
+.info h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--foreground-rgb);
 }
 
-.inputWithSuggestions {
-  flex: 1;
-  position: relative;
-}
-
-.input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--input-border);
-  border-right: none;
-  border-radius: 4px 0 0 4px;
-  font-size: 1rem;
-  background-color: var(--input-background);
-  color: var(--text-color);
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--input-focus-border);
-}
-
-/* Suggestions styling */
-.suggestionsContainer {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 5px;
-  background-color: var(--card-background);
-  border: 1px solid var(--tile-border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 10;
-}
-
-.suggestionsList {
-  list-style: none;
-  padding: 0;
+.info ul {
   margin: 0;
+  padding-left: 1.5rem;
+  color: var(--secondary-foreground);
 }
 
-.suggestionItem {
-  padding: 0;
-  margin: 0;
-  border-bottom: 1px solid var(--tile-border);
+.info li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
 }
 
-.suggestionItem:last-child {
-  border-bottom: none;
-}
-
-.suggestionButton {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  text-align: left;
-  padding: 0.75rem 1rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: var(--text-color);
-  gap: 10px;
-}
-
-.suggestionButton:hover {
-  background-color: var(--button-hover);
-  /* No transform animation */
-}
-
-.avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.avatarPlaceholder {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background-color: var(--primary-color);
-  opacity: 0.3;
-}
-
-.handle {
-  font-size: 0.9rem;
-  color: var(--link-color);
-}
-
-.noResults {
-  padding: 1rem;
+.footer {
   text-align: center;
-  color: var(--timestamp-color);
-  font-style: italic;
-}
-
-.loadingContainer {
-  display: flex;
-  justify-content: center;
-  padding: 1rem;
-  gap: 0.3rem;
-}
-
-.loadingDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--primary-color);
-  animation: dotPulse 1.4s infinite ease-in-out;
-}
-
-.loadingDot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.loadingDot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes dotPulse {
-  0%, 80%, 100% { 
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% { 
-    transform: scale(1.2);
-    opacity: 1;
-  }
-}
-
-.loginButton {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 0 4px 4px 0;
-  padding: 0 1.5rem;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.loginButton:hover:not(:disabled) {
-  background-color: var(--secondary-color);
-}
-
-.loginButton:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.helpText {
-  color: var(--timestamp-color);
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-.error {
-  color: var(--error-color);
-  margin: 1rem 0;
-  padding: 0.75rem;
-  background-color: #ffebee;
-  border-radius: 4px;
-  text-align: left;
+  padding-top: 1rem;
+  border-top: 1px solid var(--tile-border);
 }
 
 .backButton {
   background: none;
   border: none;
-  color: var(--primary-color);
+  color: var(--link-color);
   cursor: pointer;
-  margin-top: 1.5rem;
-  text-decoration: underline;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  padding: 0.5rem;
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
+.backButton:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
   .container {
-    padding: 1rem;
+    padding: 1.5rem 1rem;
   }
-  
-  .loginForm {
+
+  .loginBox {
     padding: 1.5rem;
   }
-  
-  .inputGroup {
-    flex-direction: column;
+
+  .title {
+    font-size: 1.75rem;
   }
-  
-  .inputWithSuggestions {
-    margin-bottom: 0.5rem;
+
+  .subtitle {
+    font-size: 1rem;
   }
-  
-  .input {
-    border-right: 1px solid var(--input-border);
-    border-radius: 4px;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 1rem 0.5rem;
   }
-  
-  .loginButton {
-    border-radius: 4px;
-    padding: 0.75rem;
-    width: 100%;
+
+  .loginBox {
+    padding: 1.25rem;
   }
-  
-  .suggestionsContainer {
-    width: 100%;
+
+  .title {
+    font-size: 1.5rem;
   }
 }

@@ -1,1 +1,1 @@
-{"version":1,"functions":{"/api/bluesky/feed-direct":{},"/api/bluesky/flushing":{},"/api/bluesky/feed-simple":{},"/api/bluesky/search":{},"/api/auth/nonce":{},"/api/bluesky/stats":{},"/api/bluesky/profile":{},"/api/auth/token":{},"/api/bluesky/feed":{}}}
+{"version":1,"functions":{"/api/auth/token":{},"/api/auth/nonce":{},"/api/bluesky/flushing":{},"/api/bluesky/search":{},"/api/bluesky/feed-direct":{},"/api/bluesky/stats":{},"/api/bluesky/profile":{},"/api/bluesky/feed":{},"/api/bluesky/feed-simple":{}}}
