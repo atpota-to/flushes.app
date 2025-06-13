@@ -5,7 +5,7 @@ import { containsBannedWords, sanitizeText } from '@/lib/content-filter';
 export const dynamic = 'force-dynamic';
 
 // This is the default API URL, but we'll use the user's PDS endpoint instead if available
-const DEFAULT_API_URL = 'https://bsky.social/xrpc';
+const DEFAULT_API_URL = 'https://public.api.bsky.app/xrpc';
 const FLUSHING_STATUS_NSID = 'im.flushing.right.now';
 
 export async function POST(request: NextRequest) {

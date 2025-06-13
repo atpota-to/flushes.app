@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Make a direct fetch request to the Bluesky API endpoint
-    const apiUrl = `https://bsky.social/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(term)}&limit=5`;
+    const apiUrl = `https://public.api.bsky.app/xrpc/app.bsky.actor.searchActorsTypeahead?q=${encodeURIComponent(term)}&limit=5`;
     
     console.log('Fetching from API:', apiUrl);
     

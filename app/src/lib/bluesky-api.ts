@@ -1,7 +1,7 @@
 import { exportJWK, generateDPoPToken } from './bluesky-auth';
 
 // Bluesky API utilities
-const DEFAULT_API_URL = 'https://bsky.social/xrpc';
+const DEFAULT_API_URL = 'https://public.api.bsky.app/xrpc';
 
 // Create a custom lexicon schema for "im.flushing.right.now"
 // This would normally be registered with the AT Protocol
@@ -76,13 +76,13 @@ export async function refreshAccessToken(
     // CRITICAL FIX: Token refresh endpoint selection based on PDS type
     let authServer = pdsEndpoint;
     
-    // For bsky.network PDSes, use bsky.social
+    // For bsky.network PDSes, use public.api.bsky.app
     if (pdsEndpoint.includes('bsky.network')) {
-      console.log('[TOKEN REFRESH] Using bsky.social for bsky.network PDS');
-      authServer = 'https://bsky.social';
-    } else if (pdsEndpoint.includes('bsky.social')) {
-      // Already using bsky.social
-      console.log('[TOKEN REFRESH] Using bsky.social directly');
+      console.log('[TOKEN REFRESH] Using public.api.bsky.app for bsky.network PDS');
+      authServer = 'https://public.api.bsky.app';
+    } else if (pdsEndpoint.includes('public.api.bsky.app')) {
+      // Already using public.api.bsky.app
+      console.log('[TOKEN REFRESH] Using public.api.bsky.app directly');
     } else {
       // For third-party PDSes, use their own endpoint for token refresh
       console.log('[TOKEN REFRESH] Using third-party PDS\'s own endpoint for token refresh:', pdsEndpoint);
@@ -97,7 +97,7 @@ export async function refreshAccessToken(
     let dpopNonce = null;
     
     // Special handling for third-party PDS token refresh
-    if (!authServer.includes('bsky.social') && !authServer.includes('bsky.network')) {
+    if (!authServer.includes('public.api.bsky.app') && !authServer.includes('bsky.network')) {
       try {
         // For third-party PDS, use a two-step approach to get the valid nonce:
         console.log('[TOKEN REFRESH] Direct nonce retrieval from third-party PDS');
@@ -382,10 +382,10 @@ export async function checkAuth(
     let authServer = pdsEndpoint;
     
     // Special case for token refresh only (not normal API calls)
-    // Only bsky.network PDSes should redirect to bsky.social
-    if (pdsEndpoint && pdsEndpoint.includes('bsky.network')) {
-      console.log('[AUTH CHECK] Will use bsky.social for OAuth on bsky.network PDS');
-      authServer = 'https://bsky.social';
+    // Only bsky.network PDSes should redirect to public.api.bsky.app
+    if (pdsEndpoint.includes('bsky.network')) {
+      console.log('[AUTH CHECK] Will use public.api.bsky.app for OAuth on bsky.network PDS');
+      authServer = 'https://public.api.bsky.app';
     } else {
       console.log('[AUTH CHECK] Using the actual PDS endpoint for auth:', pdsEndpoint);
     }
@@ -499,13 +499,13 @@ export async function checkAuth(
           // Follow the same server selection logic as in refreshAccessToken
           let refreshAuthServer = pdsEndpoint;
           
-          // For bsky.network PDSes, use bsky.social
+          // For bsky.network PDSes, use public.api.bsky.app
           if (pdsEndpoint.includes('bsky.network')) {
-            console.log('[AUTH CHECK] Will use bsky.social for bsky.network PDS');
-            refreshAuthServer = 'https://bsky.social';
-          } else if (pdsEndpoint.includes('bsky.social')) {
-            // Already using bsky.social
-            console.log('[AUTH CHECK] Will use bsky.social directly');
+            console.log('[AUTH CHECK] Will use public.api.bsky.app for bsky.network PDS');
+            refreshAuthServer = 'https://public.api.bsky.app';
+          } else if (pdsEndpoint.includes('public.api.bsky.app')) {
+            // Already using public.api.bsky.app
+            console.log('[AUTH CHECK] Will use public.api.bsky.app directly');
           } else {
             // For third-party PDSes, use their own endpoint
             console.log('[AUTH CHECK] Will use third-party PDS\'s own endpoint:', pdsEndpoint);
@@ -703,7 +703,7 @@ export async function getProfile(
     const publicKey = await exportJWK(keyPair.publicKey);
     
     // Use the PDS endpoint if available
-    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
+    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://public.api.bsky.app/xrpc';
     
     // Step 1: If we have a DID, we want to get both the user's DID and handle
     let endpoint;
@@ -835,7 +835,7 @@ export async function createFlushingStatus(
     
     console.log(`Using PDS endpoint for create record: ${pdsEndpoint}`);
     
-    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://bsky.social/xrpc';
+    const baseUrl = pdsEndpoint ? `${pdsEndpoint}/xrpc` : 'https://public.api.bsky.app/xrpc';
     const endpoint = `${baseUrl}/com.atproto.repo.createRecord`;
     
     console.log(`Endpoint for create record: ${endpoint}`);

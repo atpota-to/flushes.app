@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Step 2: Get the PDS service endpoint from PLC directory
-    let serviceEndpoint = 'https://bsky.social'; // Start with bsky.social as fallback
+    let serviceEndpoint = 'https://public.api.bsky.app'; // Start with public.api.bsky.app as fallback
     let servicePds: string | null = null; // Store the actual PDS domain for logging
     try {
       console.log(`Looking up PDS endpoint for DID: ${did}`);
@@ -468,7 +468,7 @@ export async function GET(request: NextRequest) {
           }
           
           // 2. For third-party domain handles, try using the handle's domain
-          if (handle.includes('.') && !handle.endsWith('bsky.social') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
+          if (handle.includes('.') && !handle.endsWith('public.api.bsky.app') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
             const domain = handle.split('.').slice(1).join('.');
             try {
               console.log(`Trying handle domain access: https://${domain}`);
@@ -915,7 +915,7 @@ export async function POST(request: NextRequest) {
         
         // IMPORTANT: For third-party PDS users, we need to use the handle from describeRepo
         // which will be accurate for their PDS, rather than the handle we resolved earlier
-        if (pdsEndpoint && pdsEndpoint !== 'https://bsky.social' && pdsEndpoint !== 'https://public.api.bsky.app' && data.handle) {
+        if (pdsEndpoint && pdsEndpoint !== 'https://public.api.bsky.app' && data.handle) {
           console.log(`Using handle from PDS response: ${data.handle} instead of ${userHandle}`);
           userHandle = data.handle;
         }

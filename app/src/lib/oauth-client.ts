@@ -30,7 +30,7 @@ function getOAuthClient(): BrowserOAuthClient {
   if (!_oauthClient) {
     _oauthClient = new BrowserOAuthClient({
       clientMetadata: CLIENT_METADATA as any,
-      handleResolver: 'https://bsky.social',
+      handleResolver: 'https://public.api.bsky.app',
       responseMode: 'fragment'
     })
   }

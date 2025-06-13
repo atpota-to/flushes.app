@@ -94,7 +94,7 @@ export default function LoginPage() {
         <div className={styles.info}>
           <h3>Supported Services</h3>
           <ul>
-            <li>Bluesky (bsky.social)</li>
+            <li>Bluesky (public.api.bsky.app)</li>
             <li>Custom domains (e.g., alice.example.com)</li>
             <li>Third-party PDS servers</li>
             <li>Self-hosted instances</li>

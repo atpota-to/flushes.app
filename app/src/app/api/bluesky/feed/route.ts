@@ -45,7 +45,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Bluesky agent for public interactions (used to resolve DIDs to handles if needed)
 const agent = new BskyAgent({
-  service: 'https://bsky.social'
+  service: 'https://public.api.bsky.app'
 });
 
 export async function GET(request: NextRequest) {
@@ -486,7 +486,7 @@ function getMockEntries(): ProcessedEntry[] {
   
   // Create and filter mock entries
   const mockEntries: ProcessedEntry[] = [];
-  const handles = ['alice.bsky.social', 'bob.bsky.social', 'charlie.bsky.social', 'dana.bsky.social'];
+  const handles = ['alice.public.api.bsky.app', 'bob.public.api.bsky.app', 'charlie.public.api.bsky.app', 'dana.public.api.bsky.app'];
   const emojis = ['🚽', '📱', '📚', '💩', '🧻', '💭', '😌'];
   
   for (let i = 0; i < 6; i++) {
@@ -596,7 +596,7 @@ async function resolveDidToHandle(did: string): Promise<string> {
       
       // Create a new agent for this request
       const agent = new BskyAgent({
-        service: 'https://bsky.social'
+        service: 'https://public.api.bsky.app'
       });
       
       // Log in with empty credentials (still required by the API)

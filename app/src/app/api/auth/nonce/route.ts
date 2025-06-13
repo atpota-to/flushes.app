@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Configure this route as dynamic to fix static generation issues
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_AUTH_SERVER = 'https://bsky.social';
+const DEFAULT_AUTH_SERVER = 'https://public.api.bsky.app';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
     let pdsEndpoint = body.pdsEndpoint || DEFAULT_AUTH_SERVER;
     
     // CRITICAL FIX: Third-party PDS servers don't implement OAuth endpoints
-    // Always use bsky.social for OAuth operations
+    // Always use public.api.bsky.app for OAuth operations
     let authServer = pdsEndpoint;
-    if (!pdsEndpoint.includes('bsky.social')) {
-      console.log('[NONCE API] Redirecting to bsky.social for OAuth on third-party PDS');
+    if (!pdsEndpoint.includes('public.api.bsky.app')) {
+      console.log('[NONCE API] Redirecting to public.api.bsky.app for OAuth on third-party PDS');
       authServer = DEFAULT_AUTH_SERVER;
     }
     
