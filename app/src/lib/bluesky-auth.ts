@@ -40,7 +40,7 @@ export async function resolveHandleToDid(handle: string): Promise<{
     }
     
     // If not a DID, resolve the handle to a DID
-    const resolveResponse = await fetch(`https://api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+    const resolveResponse = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
     
     if (!resolveResponse.ok) {
       throw new Error(`Failed to resolve handle: ${resolveResponse.status}`);
@@ -432,7 +432,7 @@ export async function getAccessToken(
       code,
       codeVerifier,
       dpopToken,
-      pdsEndpoint,       // Auth server endpoint (usually bsky.social)
+      pdsEndpoint,       // Auth server endpoint (usually public.api.bsky.app)
       originalPdsEndpoint // The original PDS endpoint (for third-party PDS)
     })
   });

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     
     // CRITICAL FIX: Use the correct token endpoint based on PDS type
     // - For bsky.network PDSes: always use public.api.bsky.app for token exchange
-    // - For bsky.social: use it directly
+    // - For public.api.bsky.app: use it directly
     // - For third-party PDSes: use their own endpoint
     let authServer = pdsEndpoint;
     

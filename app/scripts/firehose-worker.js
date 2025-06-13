@@ -196,7 +196,7 @@ async function resolveDIDWithPLC(did) {
 async function resolveDIDWithBskyAPI(did) {
   return new Promise((resolve, reject) => {
     // The Bluesky API endpoint for DID-to-handle resolution
-    const url = `https://api.bsky.app/xrpc/com.atproto.repo.describeRepo?repo=${encodeURIComponent(did)}`;
+    const url = `https://public.api.bsky.app/xrpc/com.atproto.repo.describeRepo?repo=${encodeURIComponent(did)}`;
     console.log(`Making Bluesky API request to: ${url}`);
     
     const options = getRequestOptions(url);
@@ -259,7 +259,7 @@ async function resolveDIDWithHandleResolver(did) {
     }
     
     return new Promise((resolve, reject) => {
-      const url = `https://api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(did)}`;
+      const url = `https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(did)}`;
       console.log(`Making handle resolver request to: ${url}`);
       
       const options = getRequestOptions(url);
