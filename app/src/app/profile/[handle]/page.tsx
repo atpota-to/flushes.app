@@ -126,9 +126,7 @@ export default function ProfilePage() {
       console.log('PLC directory data:', plcData);
       
       // Find the PDS service
-      const pdsService = plcData.service?.find((s: any) => 
-        s.type === 'AtprotoPersonalDataServer' || s.type === 'AtprotoDataServer'
-      );
+      const pdsService = plcData.services?.atproto_pds;
       
       if (!pdsService?.endpoint) {
         throw new Error('No PDS service endpoint found');
