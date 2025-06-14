@@ -271,13 +271,8 @@ export async function GET(request: NextRequest) {
   - Service PDS Host: ${servicePds || 'unknown'}
       `);
       
-      // Check if the serviceEndpoint includes "/xrpc" already, which some PDS endpoints might
-      let listRecordsUrl;
-      if (serviceEndpoint.endsWith('/xrpc')) {
-        listRecordsUrl = `${serviceEndpoint}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
-      } else {
-        listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
-      }
+      // Construct the listRecords URL using the service endpoint
+      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
       
       console.log(`Fetching records from ${listRecordsUrl}`);
       
@@ -297,350 +292,105 @@ export async function GET(request: NextRequest) {
           console.error(`Could not read error response: ${e}`);
         }
         
-        // Try appropriate fallback, with different strategies for different PDS hosts
-        if (serviceEndpoint !== 'https://public.api.bsky.app') {
-          // 1. If we have a servicePds from the PLC directory, try using it directly
-          if (servicePds) {
-            try {
-              console.log(`Trying direct PDS domain: https://${servicePds}`);
-              
-              // Special case for known working domains
-              if (handle === 'mackuba.eu') {
-                console.log('Detected mackuba.eu, using known working endpoint');
-                try {
-                  const specialUrl = `https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
-                  console.log(`Trying special URL: ${specialUrl}`);
-                  
-                  const specialResponse = await fetch(specialUrl, {
-                    headers: { 'Accept': 'application/json' }
-                  });
-                  
-                  if (specialResponse.ok) {
-                    console.log('Special URL succeeded!');
-                    const specialData = await specialResponse.json();
-                    
-                    // Process the special response
-                    const specialEntries = specialData.records
-                      .map((record: any) => {
-                        const text = record.value.text || '';
-                        if (containsBannedWords(text)) return null;
-                        
-                        return {
-                          id: record.uri,
-                          uri: record.uri,
-                          cid: record.cid,
-                          did: did,
-                          text: sanitizeText(text),
-                          emoji: record.value.emoji || '🚽',
-                          created_at: record.value.createdAt
-                        };
-                      })
-                      .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
-                    
-                    // Calculate emoji stats
-                    const specialEmojiCounts = new Map<string, number>();
-                    specialEntries.forEach((entry: ProfileEntry) => {
-                      const emoji = entry.emoji?.trim() || '🚽';
-                      if (APPROVED_EMOJIS.includes(emoji)) {
-                        specialEmojiCounts.set(emoji, (specialEmojiCounts.get(emoji) || 0) + 1);
-                      } else {
-                        specialEmojiCounts.set('🚽', (specialEmojiCounts.get('🚽') || 0) + 1);
-                      }
-                    });
-                    
-                    const specialEmojiStats = Array.from(specialEmojiCounts.entries())
-                      .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-                      .sort((a, b) => b.count - a.count);
-                    
-                    return NextResponse.json({
-                      entries: specialEntries,
-                      count: specialEntries.length,
-                      cursor: specialData.cursor,
-                      profile: userProfile,
-                      emojiStats: specialEmojiStats,
-                      serviceEndpoint: 'https://lab.martianbase.net',
-                      specialHandling: true
-                    });
-                  } else {
-                    console.warn(`Special URL failed: ${specialResponse.status}`);
-                  }
-                } catch (specialErr) {
-                  console.error(`Error with special URL: ${specialErr}`);
-                }
-              }
-
-              // Some PDS services have different URL structures
-              const urls = [
-                `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
-                // Try without /xrpc prefix in case it's already in the hostname
-                `https://${servicePds}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
-                // Try explicit lab subdomain if we're using martianbase.net
-                ...(servicePds.includes('martianbase.net') ? 
-                  [`https://lab.martianbase.net/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`] : 
-                  [])
-              ];
-              
-              // Start with the most common pattern
-              let pdsDirectResponse: Response | null = null;
-              let pdsDirectUrl = '';
-              let directData: any = null;
-              let succeeded = false;
-              
-              for (const url of urls) {
-                try {
-                  console.log(`Attempting URL: ${url}`);
-                  pdsDirectUrl = url;
-                  pdsDirectResponse = await fetch(url, {
-                    headers: { 'Accept': 'application/json' }
-                  });
-                  
-                  if (pdsDirectResponse.ok) {
-                    console.log(`Success with URL: ${url}`);
-                    directData = await pdsDirectResponse.json();
-                    succeeded = true;
-                    break;
-                  } else {
-                    console.warn(`Failed with URL ${url}: ${pdsDirectResponse?.status || 'unknown status'}`);
-                  }
-                } catch (urlErr) {
-                  console.error(`Error trying URL ${url}: ${urlErr}`);
-                }
-              }
-              
-              if (succeeded && directData) {
-                console.log(`Successfully accessed records directly from PDS domain: ${servicePds}`);
-                
-                // Process the direct response
-                const directEntries = directData.records
-                  .map((record: any) => {
-                    const text = record.value.text || '';
-                    if (containsBannedWords(text)) return null;
-                    
-                    return {
-                      id: record.uri,
-                      uri: record.uri,
-                      cid: record.cid,
-                      did: did,
-                      text: sanitizeText(text),
-                      emoji: record.value.emoji || '🚽',
-                      created_at: record.value.createdAt
-                    };
-                  })
-                  .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
-                
-                // Calculate emoji stats
-                const directEmojiCounts = new Map<string, number>();
-                directEntries.forEach((entry: ProfileEntry) => {
-                  const emoji = entry.emoji?.trim() || '🚽';
-                  if (APPROVED_EMOJIS.includes(emoji)) {
-                    directEmojiCounts.set(emoji, (directEmojiCounts.get(emoji) || 0) + 1);
-                  } else {
-                    directEmojiCounts.set('🚽', (directEmojiCounts.get('🚽') || 0) + 1);
-                  }
+        // If we have a servicePds from the PLC directory, try using it directly
+        if (servicePds) {
+          try {
+            console.log(`Trying direct PDS domain: https://${servicePds}`);
+            
+            // Try multiple URL patterns for the PDS domain
+            const urls = [
+              `https://${servicePds}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
+              // Try without /xrpc prefix in case it's already in the hostname
+              `https://${servicePds}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`
+            ];
+            
+            let pdsDirectResponse: Response | null = null;
+            let pdsDirectUrl = '';
+            let directData: any = null;
+            let succeeded = false;
+            
+            for (const url of urls) {
+              try {
+                console.log(`Attempting URL: ${url}`);
+                pdsDirectUrl = url;
+                pdsDirectResponse = await fetch(url, {
+                  headers: { 'Accept': 'application/json' }
                 });
                 
-                const directEmojiStats = Array.from(directEmojiCounts.entries())
-                  .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-                  .sort((a, b) => b.count - a.count);
-                
-                return NextResponse.json({
-                  entries: directEntries,
-                  count: directEntries.length,
-                  cursor: directData.cursor,
-                  profile: userProfile,
-                  emojiStats: directEmojiStats,
-                  serviceEndpoint: `https://${servicePds}`,
-                  directPds: true
-                });
-              } else if (pdsDirectResponse) {
-                try {
-                  const errorText = await pdsDirectResponse.text();
-                  console.warn(`PDS direct access failed: ${errorText}`);
-                } catch (e) {
-                  console.warn(`PDS direct access failed: Could not read response text`);
+                if (pdsDirectResponse.ok) {
+                  console.log(`Success with URL: ${url}`);
+                  directData = await pdsDirectResponse.json();
+                  succeeded = true;
+                  break;
+                } else {
+                  console.warn(`Failed with URL ${url}: ${pdsDirectResponse?.status || 'unknown status'}`);
                 }
-              } else {
-                console.warn(`PDS direct access failed: No valid response`);
+              } catch (urlErr) {
+                console.error(`Error trying URL ${url}: ${urlErr}`);
               }
-            } catch (pdsErr) {
-              console.error(`Error with direct PDS domain access: ${pdsErr}`);
             }
-          }
-          
-          // 2. For third-party domain handles, try using the handle's domain
-          if (handle.includes('.') && !handle.endsWith('public.api.bsky.app') && !handle.endsWith('flushes.app') && !handle.endsWith('flushing.im')) {
-            const domain = handle.split('.').slice(1).join('.');
-            try {
-              console.log(`Trying handle domain access: https://${domain}`);
+            
+            if (succeeded && directData) {
+              console.log(`Successfully accessed records directly from PDS domain: ${servicePds}`);
               
-              // Try multiple URL patterns for handle domain
-              const urls = [
-                `https://${domain}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`,
-                `https://${domain}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`
-              ];
-              
-              let domainResponse: Response | null = null;
-              let domainData: any = null;
-              let succeeded = false;
-              
-              for (const url of urls) {
-                try {
-                  console.log(`Attempting URL: ${url}`);
-                  domainResponse = await fetch(url, {
-                    headers: { 'Accept': 'application/json' }
-                  });
+              // Process the direct response
+              const directEntries = directData.records
+                .map((record: any) => {
+                  const text = record.value.text || '';
+                  if (containsBannedWords(text)) return null;
                   
-                  if (domainResponse.ok) {
-                    console.log(`Success with URL: ${url}`);
-                    domainData = await domainResponse.json();
-                    succeeded = true;
-                    break;
-                  } else {
-                    console.warn(`Failed with URL ${url}: ${domainResponse?.status || 'unknown status'}`);
-                  }
-                } catch (urlErr) {
-                  console.error(`Error trying URL ${url}: ${urlErr}`);
+                  return {
+                    id: record.uri,
+                    uri: record.uri,
+                    cid: record.cid,
+                    did: did,
+                    text: sanitizeText(text),
+                    emoji: record.value.emoji || '🚽',
+                    created_at: record.value.createdAt
+                  };
+                })
+                .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
+              
+              // Calculate emoji stats
+              const directEmojiCounts = new Map<string, number>();
+              directEntries.forEach((entry: ProfileEntry) => {
+                const emoji = entry.emoji?.trim() || '🚽';
+                if (APPROVED_EMOJIS.includes(emoji)) {
+                  directEmojiCounts.set(emoji, (directEmojiCounts.get(emoji) || 0) + 1);
+                } else {
+                  directEmojiCounts.set('🚽', (directEmojiCounts.get('🚽') || 0) + 1);
                 }
-              }
+              });
               
-              if (succeeded && domainData) {
-                console.log(`Successfully accessed records from handle domain: ${domain}`);
-                
-                // Process the domain response
-                const domainEntries = domainData.records
-                  .map((record: any) => {
-                    const text = record.value.text || '';
-                    if (containsBannedWords(text)) return null;
-                    
-                    return {
-                      id: record.uri,
-                      uri: record.uri,
-                      cid: record.cid,
-                      did: did,
-                      text: sanitizeText(text),
-                      emoji: record.value.emoji || '🚽',
-                      created_at: record.value.createdAt
-                    };
-                  })
-                  .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null);
-                
-                // Calculate emoji stats
-                const domainEmojiCounts = new Map<string, number>();
-                domainEntries.forEach((entry: ProfileEntry) => {
-                  const emoji = entry.emoji?.trim() || '🚽';
-                  if (APPROVED_EMOJIS.includes(emoji)) {
-                    domainEmojiCounts.set(emoji, (domainEmojiCounts.get(emoji) || 0) + 1);
-                  } else {
-                    domainEmojiCounts.set('🚽', (domainEmojiCounts.get('🚽') || 0) + 1);
-                  }
-                });
-                
-                const domainEmojiStats = Array.from(domainEmojiCounts.entries())
-                  .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-                  .sort((a, b) => b.count - a.count);
-                
-                return NextResponse.json({
-                  entries: domainEntries,
-                  count: domainEntries.length,
-                  cursor: domainData.cursor,
-                  profile: userProfile,
-                  emojiStats: domainEmojiStats,
-                  serviceEndpoint: `https://${domain}`,
-                  handleDomain: true
-                });
-              } else if (domainResponse) {
-                try {
-                  const errorText = await domainResponse.text();
-                  console.warn(`Handle domain access failed: ${errorText}`);
-                } catch (e) {
-                  console.warn(`Handle domain access failed: Could not read response text`);
-                }
-              } else {
-                console.warn(`Handle domain access failed: No valid response`);
-              }
-            } catch (domainErr) {
-              console.error(`Error with handle domain access: ${domainErr}`);
-            }
-          }
-          
-          // 3. Last resort: try public API
-          console.warn(`All direct approaches failed, trying public API fallback`);
-          const fallbackUrl = `https://public.api.bsky.app/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=${encodeURIComponent(FLUSHING_STATUS_NSID)}&limit=${MAX_ENTRIES}`;
-          
-          const fallbackResponse = await fetch(fallbackUrl, {
-            headers: {
-              'Accept': 'application/json'
-            }
-          });
-          
-          if (!fallbackResponse.ok) {
-            return NextResponse.json(
-              { error: `Failed to fetch records: ${fallbackResponse.statusText}` },
-              { status: fallbackResponse.status }
-            );
-          }
-          
-          const fallbackData = await fallbackResponse.json();
-          
-          // Transform the records into our format and filter out banned content
-          const transformedEntries = fallbackData.records
-            .map((record: any) => {
-              const text = record.value.text || '';
+              const directEmojiStats = Array.from(directEmojiCounts.entries())
+                .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+                .sort((a, b) => b.count - a.count);
               
-              // Skip entries with banned content
-              if (containsBannedWords(text)) {
-                return null;
-              }
-              
-              return {
-                id: record.uri,
-                uri: record.uri,
-                cid: record.cid,
-                did: did,
-                text: sanitizeText(text), // Sanitize text
-                emoji: record.value.emoji || '🚽',
-                created_at: record.value.createdAt
-              };
-            })
-            .filter((entry: ProfileEntry | null): entry is ProfileEntry => entry !== null); // Remove filtered entries
-          
-          // Calculate emoji statistics
-          const emojiCounts = new Map<string, number>();
-          
-          // Process entries to count emojis
-          transformedEntries.forEach((entry: ProfileEntry) => {
-            if (entry.emoji) {
-              // Default to toilet emoji if empty
-              const emoji = entry.emoji.trim() || '🚽';
-              // Only count approved emojis
-              if (APPROVED_EMOJIS.includes(emoji)) {
-                emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
-              } else {
-                // Count as default toilet emoji if not approved
-                emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+              return NextResponse.json({
+                entries: directEntries,
+                count: directEntries.length,
+                cursor: directData.cursor,
+                profile: userProfile,
+                emojiStats: directEmojiStats,
+                serviceEndpoint: `https://${servicePds}`,
+                directPds: true
+              });
+            } else if (pdsDirectResponse) {
+              try {
+                const errorText = await pdsDirectResponse.text();
+                console.warn(`PDS direct access failed: ${errorText}`);
+              } catch (e) {
+                console.warn(`PDS direct access failed: Could not read response text`);
               }
             } else {
-              // Count default toilet emoji if no emoji specified
-              emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+              console.warn(`PDS direct access failed: No valid response`);
             }
-          });
-          
-          // Convert to array and sort by count (most popular first)
-          const emojiStats = Array.from(emojiCounts.entries())
-            .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-            .sort((a, b) => b.count - a.count);
-          
-          return NextResponse.json({
-            entries: transformedEntries,
-            count: transformedEntries.length,
-            cursor: fallbackData.cursor,
-            profile: userProfile,
-            emojiStats,
-            serviceEndpoint: 'https://public.api.bsky.app', // Record which endpoint was used
-            fallback: true
-          });
+          } catch (pdsErr) {
+            console.error(`Error with direct PDS domain access: ${pdsErr}`);
+          }
         }
         
+        // If all attempts fail, return error
         return NextResponse.json(
           { error: `Failed to fetch records: ${recordsResponse.statusText}` },
           { status: recordsResponse.status }
@@ -696,7 +446,6 @@ export async function GET(request: NextRequest) {
       const emojiStats = Array.from(emojiCounts.entries())
         .map(([emoji, count]): EmojiStat => ({ emoji, count }))
         .sort((a, b) => b.count - a.count);
-      
       
       return NextResponse.json({
         entries: transformedEntries,
