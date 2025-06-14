@@ -4,8 +4,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import styles from './profile.module.css';
-import { sanitizeText } from '@/lib/content-filter';
+import { sanitizeText, containsBannedWords } from '@/lib/content-filter';
 import { formatRelativeTime } from '@/lib/time-utils';
+
+// Define approved emojis list - keep in sync with API route
+const APPROVED_EMOJIS = [
+  '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
+  '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
+  '1️⃣', '2️⃣', '🟡', '🟤'
+];
 
 // Types for feed entries
 interface FlushingEntry {
@@ -144,94 +151,48 @@ export default function ProfilePage() {
       });
       
       if (!recordsResponse.ok) {
-        // If first attempt fails, try alternative URL pattern
-        const altUrl = `${serviceEndpoint}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100`;
-        console.log(`First attempt failed, trying alternative URL: ${altUrl}`);
-        
-        const altResponse = await fetch(altUrl, {
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        
-        if (!altResponse.ok) {
-          throw new Error(`Failed to fetch records: ${altResponse.statusText}`);
-        }
-        
-        const recordsData = await altResponse.json();
-        console.log('Successfully fetched records with alternative URL');
-        
-        // Process the records
-        const userEntries = recordsData.records
-          .map((record: any) => {
-            const text = record.value.text || '';
-            if (containsBannedWords(text)) return null;
-            
-            return {
-              id: record.uri,
-              uri: record.uri,
-              cid: record.cid,
-              did: did,
-              text: sanitizeText(text),
-              emoji: record.value.emoji || '🚽',
-              created_at: record.value.createdAt
-            };
-          })
-          .filter((entry: any): entry is FlushingEntry => entry !== null);
-        
-        setEntries(userEntries);
-        setTotalCount(userEntries.length);
-        
-        // Calculate emoji stats
-        const emojiCounts = new Map<string, number>();
-        userEntries.forEach((entry: FlushingEntry) => {
-          const emoji = entry.emoji?.trim() || '🚽';
-          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
-        });
-        
-        const emojiStats = Array.from(emojiCounts.entries())
-          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-          .sort((a, b) => b.count - a.count);
-        
-        setEmojiStats(emojiStats);
-      } else {
-        const recordsData = await recordsResponse.json();
-        console.log('Successfully fetched records');
-        
-        // Process the records
-        const userEntries = recordsData.records
-          .map((record: any) => {
-            const text = record.value.text || '';
-            if (containsBannedWords(text)) return null;
-            
-            return {
-              id: record.uri,
-              uri: record.uri,
-              cid: record.cid,
-              did: did,
-              text: sanitizeText(text),
-              emoji: record.value.emoji || '🚽',
-              created_at: record.value.createdAt
-            };
-          })
-          .filter((entry: any): entry is FlushingEntry => entry !== null);
-        
-        setEntries(userEntries);
-        setTotalCount(userEntries.length);
-        
-        // Calculate emoji stats
-        const emojiCounts = new Map<string, number>();
-        userEntries.forEach((entry: FlushingEntry) => {
-          const emoji = entry.emoji?.trim() || '🚽';
-          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
-        });
-        
-        const emojiStats = Array.from(emojiCounts.entries())
-          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
-          .sort((a, b) => b.count - a.count);
-        
-        setEmojiStats(emojiStats);
+        throw new Error(`Failed to fetch records: ${recordsResponse.statusText}`);
       }
+      
+      const recordsData = await recordsResponse.json();
+      console.log('Records data:', recordsData);
+      
+      // Transform the records into our format
+      const userEntries = recordsData.records
+        .map((record: any) => {
+          const text = record.value.text || '';
+          if (containsBannedWords(text)) return null;
+          
+          return {
+            id: record.uri,
+            uri: record.uri,
+            cid: record.cid,
+            did: did,
+            text: sanitizeText(text),
+            emoji: record.value.emoji || '🚽',
+            created_at: record.value.createdAt
+          };
+        })
+        .filter((entry: FlushingEntry | null): entry is FlushingEntry => entry !== null);
+      
+      // Calculate emoji statistics
+      const emojiCounts = new Map<string, number>();
+      userEntries.forEach((entry: FlushingEntry) => {
+        const emoji = entry.emoji?.trim() || '🚽';
+        if (APPROVED_EMOJIS.includes(emoji)) {
+          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+        } else {
+          emojiCounts.set('🚽', (emojiCounts.get('🚽') || 0) + 1);
+        }
+      });
+      
+      const emojiStats = Array.from(emojiCounts.entries())
+        .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+        .sort((a, b) => b.count - a.count);
+      
+      setEntries(userEntries);
+      setTotalCount(userEntries.length);
+      setEmojiStats(emojiStats);
       
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
