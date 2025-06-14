@@ -240,14 +240,14 @@ export async function GET(request: NextRequest) {
           );
           
           if (pdsService && pdsService.endpoint) {
-            serviceEndpoint = pdsService.endpoint;
-            
             // Extract the full URL including subdomain for reference
             try {
               const serviceUrl = new URL(pdsService.endpoint);
               // Store the full hostname including subdomains
               servicePds = serviceUrl.hostname;
-              console.log(`Found PDS service for ${handle} at ${serviceEndpoint} (${servicePds})`);
+              // Use the full hostname for the service endpoint
+              serviceEndpoint = `https://${servicePds}`;
+              console.log(`Found PDS service for ${handle} at ${serviceEndpoint}`);
             } catch (e) {
               console.warn(`Could not parse service URL: ${pdsService.endpoint}`);
             }
