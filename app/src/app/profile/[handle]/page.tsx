@@ -95,27 +95,143 @@ export default function ProfilePage() {
       setLoading(true);
       setError(null);
       
-      // Call our API endpoint to get the user's statuses
-      // The endpoint parameter is named "handle" but it accepts both handles and DIDs
-      const response = await fetch(`/api/bluesky/profile?handle=${encodeURIComponent(handle)}`, {
-        cache: 'no-store',
+      // Step 1: Resolve handle to DID
+      console.log(`Resolving handle ${handle} to DID...`);
+      const resolveResponse = await fetch(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`);
+      
+      if (!resolveResponse.ok) {
+        throw new Error(`Failed to resolve handle: ${resolveResponse.statusText}`);
+      }
+      
+      const resolveData = await resolveResponse.json();
+      const did = resolveData.did;
+      console.log(`Resolved handle ${handle} to DID: ${did}`);
+      
+      // Step 2: Get PDS endpoint from PLC directory
+      console.log(`Getting PDS endpoint for DID ${did}...`);
+      const plcResponse = await fetch(`https://plc.directory/${did}/data`);
+      
+      if (!plcResponse.ok) {
+        throw new Error(`Failed to get PDS endpoint: ${plcResponse.statusText}`);
+      }
+      
+      const plcData = await plcResponse.json();
+      console.log('PLC directory data:', plcData);
+      
+      // Find the PDS service
+      const pdsService = plcData.service?.find((s: any) => 
+        s.type === 'AtprotoPersonalDataServer' || s.type === 'AtprotoDataServer'
+      );
+      
+      if (!pdsService?.endpoint) {
+        throw new Error('No PDS service endpoint found');
+      }
+      
+      // Extract the hostname from the PDS endpoint
+      const serviceUrl = new URL(pdsService.endpoint);
+      const servicePds = serviceUrl.hostname;
+      const serviceEndpoint = `https://${servicePds}`;
+      console.log(`Using PDS endpoint: ${serviceEndpoint}`);
+      
+      // Step 3: Fetch records from PDS
+      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100`;
+      console.log(`Fetching records from: ${listRecordsUrl}`);
+      
+      const recordsResponse = await fetch(listRecordsUrl, {
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Accept': 'application/json'
         }
       });
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch profile: ${response.status}`);
+      if (!recordsResponse.ok) {
+        // If first attempt fails, try alternative URL pattern
+        const altUrl = `${serviceEndpoint}/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100`;
+        console.log(`First attempt failed, trying alternative URL: ${altUrl}`);
+        
+        const altResponse = await fetch(altUrl, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!altResponse.ok) {
+          throw new Error(`Failed to fetch records: ${altResponse.statusText}`);
+        }
+        
+        const recordsData = await altResponse.json();
+        console.log('Successfully fetched records with alternative URL');
+        
+        // Process the records
+        const userEntries = recordsData.records
+          .map((record: any) => {
+            const text = record.value.text || '';
+            if (containsBannedWords(text)) return null;
+            
+            return {
+              id: record.uri,
+              uri: record.uri,
+              cid: record.cid,
+              did: did,
+              text: sanitizeText(text),
+              emoji: record.value.emoji || '🚽',
+              created_at: record.value.createdAt
+            };
+          })
+          .filter((entry: any): entry is FlushingEntry => entry !== null);
+        
+        setEntries(userEntries);
+        setTotalCount(userEntries.length);
+        
+        // Calculate emoji stats
+        const emojiCounts = new Map<string, number>();
+        userEntries.forEach((entry: FlushingEntry) => {
+          const emoji = entry.emoji?.trim() || '🚽';
+          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+        });
+        
+        const emojiStats = Array.from(emojiCounts.entries())
+          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+          .sort((a, b) => b.count - a.count);
+        
+        setEmojiStats(emojiStats);
+      } else {
+        const recordsData = await recordsResponse.json();
+        console.log('Successfully fetched records');
+        
+        // Process the records
+        const userEntries = recordsData.records
+          .map((record: any) => {
+            const text = record.value.text || '';
+            if (containsBannedWords(text)) return null;
+            
+            return {
+              id: record.uri,
+              uri: record.uri,
+              cid: record.cid,
+              did: did,
+              text: sanitizeText(text),
+              emoji: record.value.emoji || '🚽',
+              created_at: record.value.createdAt
+            };
+          })
+          .filter((entry: any): entry is FlushingEntry => entry !== null);
+        
+        setEntries(userEntries);
+        setTotalCount(userEntries.length);
+        
+        // Calculate emoji stats
+        const emojiCounts = new Map<string, number>();
+        userEntries.forEach((entry: FlushingEntry) => {
+          const emoji = entry.emoji?.trim() || '🚽';
+          emojiCounts.set(emoji, (emojiCounts.get(emoji) || 0) + 1);
+        });
+        
+        const emojiStats = Array.from(emojiCounts.entries())
+          .map(([emoji, count]): EmojiStat => ({ emoji, count }))
+          .sort((a, b) => b.count - a.count);
+        
+        setEmojiStats(emojiStats);
       }
-      
-      const data = await response.json();
-      const userEntries = data.entries || [];
-      setEntries(userEntries);
-      setTotalCount(data.count || 0);
-      setEmojiStats(data.emojiStats || []);
-      
-      // We now fetch profile data separately
       
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
