@@ -139,24 +139,45 @@ export default function ProfilePage() {
       console.log(`Using PDS endpoint: ${serviceEndpoint}`);
       
       // Step 3: Fetch records from PDS
-      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100`;
-      console.log(`Fetching records from: ${listRecordsUrl}`);
+      let allRecords: any[] = [];
+      let cursor: string | undefined;
+      let hasMore = true;
       
-      const recordsResponse = await fetch(listRecordsUrl, {
-        headers: {
-          'Accept': 'application/json'
+      while (hasMore) {
+        const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+        console.log(`Fetching records from: ${listRecordsUrl}`);
+        
+        const recordsResponse = await fetch(listRecordsUrl, {
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!recordsResponse.ok) {
+          throw new Error(`Failed to fetch records: ${recordsResponse.statusText}`);
         }
-      });
-      
-      if (!recordsResponse.ok) {
-        throw new Error(`Failed to fetch records: ${recordsResponse.statusText}`);
+        
+        const recordsData = await recordsResponse.json();
+        console.log(`Fetched ${recordsData.records.length} records${cursor ? ' (next page)' : ''}`);
+        
+        // Add records to our collection
+        allRecords = [...allRecords, ...recordsData.records];
+        
+        // Check if we have more pages
+        cursor = recordsData.cursor;
+        hasMore = !!cursor && recordsData.records.length === 100;
+        
+        if (hasMore) {
+          console.log(`More records available, cursor: ${cursor}`);
+        } else {
+          console.log('No more records to fetch');
+        }
       }
       
-      const recordsData = await recordsResponse.json();
-      console.log('Records data:', recordsData);
+      console.log(`Total records fetched: ${allRecords.length}`);
       
       // Transform the records into our format
-      const userEntries = recordsData.records
+      const userEntries = allRecords
         .map((record: any) => {
           const text = record.value.text || '';
           if (containsBannedWords(text)) return null;
