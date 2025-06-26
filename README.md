@@ -1,4 +1,4 @@
-# I'm Flushing
+# Flushes
 
 A React/Next.js application that allows users to login with their Bluesky account and set a status update with a custom lexicon schema called `im.flushing.right.now`.
 
