@@ -1,1 +1,0 @@
-"use strict";exports.id=2,exports.ids=[2],exports.modules={73002:(e,t,s)=>{async function o(e,t){throw Error("API client can only be used on the client side")}s.d(t,{createPost:()=>o}),s(14569)}};

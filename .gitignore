@@ -1,6 +1,9 @@
 claude_context_info
+contextual info for claude
 node_modules
 frontend-cred-blue
+.next
+.DS_Store
 
 OAUTH_MIGRATION_GUIDE.md
 README_OAUTH_MIGRATION.md
