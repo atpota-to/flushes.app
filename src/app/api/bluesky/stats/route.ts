@@ -318,14 +318,37 @@ export async function GET(request: NextRequest) {
       }
       
       // 3. Get top flushers (leaderboard) - excluding test accounts
-      const { data: leaderboardData, error: leaderboardError } = await supabase
-        .from('flushing_records')
-        .select('did, handle')
-        .order('created_at', { ascending: false });
+      // Note: We need ALL records to get accurate counts, not just recent ones
+      console.log('Fetching ALL flushing records for accurate leaderboard counts...');
       
-      if (leaderboardError) {
-        throw new Error(`Failed to get leaderboard data: ${leaderboardError.message}`);
+      let allLeaderboardData: any[] = [];
+      let from = 0;
+      const pageSize = 1000; // Supabase's default limit
+      let hasMore = true;
+      
+      while (hasMore) {
+        console.log(`Fetching leaderboard page: ${from} to ${from + pageSize - 1}`);
+        
+        const { data: pageData, error: pageError } = await supabase
+          .from('flushing_records')
+          .select('did, handle')
+          .range(from, from + pageSize - 1);
+        
+        if (pageError) {
+          throw new Error(`Failed to get leaderboard data: ${pageError.message}`);
+        }
+        
+        if (!pageData || pageData.length === 0) {
+          hasMore = false;
+        } else {
+          allLeaderboardData = [...allLeaderboardData, ...pageData];
+          hasMore = pageData.length === pageSize; // If we got a full page, there might be more
+          from += pageSize;
+        }
       }
+      
+      console.log(`Total leaderboard records fetched: ${allLeaderboardData.length}`);
+      const leaderboardData = allLeaderboardData;
       
       // Count flushes by DID from Supabase (for ranking only)
       const didCounts = new Map<string, number>();
