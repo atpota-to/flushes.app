@@ -10,7 +10,7 @@ interface StatsData {
   totalCount: number;
   flushesPerDay: number;
   chartData: { date: string; count: number }[];
-  leaderboard: { did: string; count: number; handle?: string }[];
+  leaderboard: { did: string; count: number; handle?: string; supabaseCount?: number }[];
   plumberFlushCount: number;
   totalFlushers: number;
   monthlyActiveFlushers: number;
@@ -211,6 +211,9 @@ export default function StatsPage() {
           {/* Leaderboard */}
           <section className={styles.leaderboardSection}>
             <h2>Top Flushers</h2>
+            <p className={styles.leaderboardNote}>
+              📊 Counts are fetched directly from Bluesky API for accuracy
+            </p>
             {statsData.leaderboard.length > 0 ? (
               <div className={styles.leaderboard}>
                 <div className={styles.leaderboardHeader}>

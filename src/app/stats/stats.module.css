@@ -233,6 +233,15 @@
   text-align: left;
 }
 
+.leaderboardNote {
+  color: var(--timestamp-color);
+  font-size: 0.9rem;
+  margin-top: -1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-style: italic;
+}
+
 .plumberProfileLink {
   display: inline-block;
   color: var(--primary-color);

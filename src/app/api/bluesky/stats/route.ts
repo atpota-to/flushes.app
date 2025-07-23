@@ -16,15 +16,101 @@ const APPROVED_EMOJIS = [
   '1️⃣', '2️⃣', '🟡', '🟤'
 ];
 
+// Function to fetch true count from Bluesky API for a specific DID
+async function fetchTrueCountFromBluesky(did: string): Promise<number> {
+  try {
+    console.log(`Fetching true count for DID: ${did}`);
+    
+    // Step 1: Get PDS endpoint from PLC directory
+    const plcResponse = await fetch(`https://plc.directory/${did}/data`);
+    
+    if (!plcResponse.ok) {
+      console.warn(`Failed to get PLC data for ${did}: ${plcResponse.statusText}`);
+      return 0;
+    }
+    
+    const plcData = await plcResponse.json();
+    const pdsService = plcData.services?.atproto_pds;
+    
+    if (!pdsService?.endpoint) {
+      console.warn(`No PDS service endpoint found for ${did}`);
+      return 0;
+    }
+    
+    // Extract the hostname from the PDS endpoint
+    const serviceUrl = new URL(pdsService.endpoint);
+    const servicePds = serviceUrl.hostname;
+    const serviceEndpoint = `https://${servicePds}`;
+    
+    console.log(`Using PDS endpoint for ${did}: ${serviceEndpoint}`);
+    
+    // Step 2: Fetch all records from PDS
+    let allRecords: any[] = [];
+    let cursor: string | undefined;
+    let hasMore = true;
+    let pageCount = 0;
+    const maxPages = 100; // Safety limit to prevent infinite loops
+    
+    while (hasMore && pageCount < maxPages) {
+      const listRecordsUrl = `${serviceEndpoint}/xrpc/com.atproto.repo.listRecords?repo=${encodeURIComponent(did)}&collection=im.flushing.right.now&limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+      
+      try {
+        const recordsResponse = await fetch(listRecordsUrl, {
+          headers: {
+            'Accept': 'application/json'
+          },
+          // Add timeout to prevent hanging
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!recordsResponse.ok) {
+          // If we get a 404, the collection might be empty
+          if (recordsResponse.status === 404) {
+            console.log(`Empty collection for ${did}`);
+            break;
+          }
+          
+          console.warn(`Failed to fetch records for ${did}: ${recordsResponse.statusText}`);
+          break;
+        }
+        
+        const recordsData = await recordsResponse.json();
+        allRecords = [...allRecords, ...recordsData.records];
+        
+        cursor = recordsData.cursor;
+        hasMore = !!cursor && recordsData.records.length === 100;
+        pageCount++;
+        
+        console.log(`Fetched page ${pageCount} for ${did}: ${recordsData.records.length} records, total: ${allRecords.length}`);
+        
+      } catch (fetchError) {
+        console.error(`Error fetching records for ${did}:`, fetchError);
+        break;
+      }
+    }
+    
+    if (pageCount >= maxPages) {
+      console.warn(`Reached maximum page limit for ${did}, may have incomplete data`);
+    }
+    
+    console.log(`Total records fetched for ${did}: ${allRecords.length}`);
+    return allRecords.length;
+    
+  } catch (error) {
+    console.error(`Error fetching true count for ${did}:`, error);
+    return 0;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Define the plumber's DID - this is the official plumber account DID
-    const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw3lgwz22';
+    const PLUMBER_DID = 'did:plc:fouf3svmcxzn6bpiw6iyxxg2o3rljw';
     
     // List of DIDs to exclude from leaderboard
     const excludedDids = [
       PLUMBER_DID, // plumber.flushes.app (formerly plumber.flushing.im)
-      'did:plc:fnhrjbkwjiw6iyxxg2o3rljw'  // testing.dame.is
+      'did:plc:fouf3svmcxzn6bpiw3lgwz22'  // testing.dame.is
     ];
     
     // List of handles to exclude from leaderboard (as fallback)
@@ -241,7 +327,7 @@ export async function GET(request: NextRequest) {
         throw new Error(`Failed to get leaderboard data: ${leaderboardError.message}`);
       }
       
-      // Count flushes by DID
+      // Count flushes by DID from Supabase (for ranking only)
       const didCounts = new Map<string, number>();
       
       // Special count for the plumber account
@@ -261,11 +347,34 @@ export async function GET(request: NextRequest) {
         }
       });
       
-      // Convert to array and sort by count
-      const leaderboard = Array.from(didCounts.entries())
-        .map(([did, count]): {did: string, count: number} => ({ did, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10); // Get top 10
+      // Convert to array and sort by count to get top 10 DIDs
+      const top10Dids = Array.from(didCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([did]) => did);
+      
+      console.log(`Top 10 DIDs from Supabase ranking: ${top10Dids.join(', ')}`);
+      
+      // Now fetch true counts from Bluesky API for these top 10 DIDs
+      console.log('Fetching true counts from Bluesky API for top 10 users...');
+      const leaderboardWithTrueCounts = await Promise.all(
+        top10Dids.map(async (did) => {
+          const trueCount = await fetchTrueCountFromBluesky(did);
+          const supabaseCount = didCounts.get(did) || 0;
+          
+          console.log(`DID ${did}: Supabase count = ${supabaseCount}, True count = ${trueCount}`);
+          
+          return {
+            did,
+            count: trueCount, // Use the true count from Bluesky API
+            supabaseCount // Include for comparison/debugging
+          };
+        })
+      );
+      
+      // Sort by true count (descending) in case the order changed
+      const leaderboard = leaderboardWithTrueCounts
+        .sort((a, b) => b.count - a.count);
       
       // Calculate total unique flushers (count of unique DIDs)
       const totalFlushers = didCounts.size;
