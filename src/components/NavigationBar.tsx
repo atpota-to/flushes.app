@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -12,10 +12,65 @@ import { useAuth } from '@/lib/auth-context';
 export default function NavigationBar() {
   const pathname = usePathname();
   const { isAuthenticated, signOut, session } = useAuth();
-  const handle = null; // Will be fetched when needed
+  const [handle, setHandle] = useState<string | null>(null);
+
+  // Fetch user's handle when authenticated
+  useEffect(() => {
+    if (isAuthenticated && session?.sub && !handle) {
+      fetchUserHandle(session.sub);
+    }
+  }, [isAuthenticated, session?.sub, handle]);
+
+  const fetchUserHandle = async (did: string) => {
+    try {
+      // Try to resolve DID to handle using PLC directory
+      const plcResponse = await fetch(`https://plc.directory/${did}/data`);
+      
+      if (plcResponse.ok) {
+        const plcData = await plcResponse.json();
+        if (plcData.alsoKnownAs && plcData.alsoKnownAs.length > 0) {
+          const handleUrl = plcData.alsoKnownAs[0];
+          if (handleUrl.startsWith('at://')) {
+            const userHandle = handleUrl.substring(5); // Remove 'at://'
+            console.log(`Resolved DID ${did} to handle ${userHandle}`);
+            setHandle(userHandle);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to resolve handle from PLC directory:', error);
+    }
+
+    // Fallback: try using the profile API
+    try {
+      const response = await fetch('/api/bluesky/profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          accessToken: 'placeholder', // OAuth session handles auth internally
+          dpopToken: 'placeholder',   // OAuth session handles auth internally
+          handle: did,
+          pdsEndpoint: null
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.handle && data.handle !== 'unknown') {
+          setHandle(data.handle);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to fetch handle from profile API:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
+    setHandle(null); // Clear handle on logout
   };
 
   // Check if a link is active
