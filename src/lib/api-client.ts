@@ -35,8 +35,11 @@ export async function createPost(session: OAuthSession, options: {
       '😣', '🤢', '🤮', '🥴', '😮‍💨', '😳', '😵', '🌾', '🍦', '📱', '📖', '💭',
       '1️⃣', '2️⃣', '🟡', '🟤'];
     
+    // Sort emojis by length (longest first) to handle compound emojis correctly
+    const sortedEmojis = [...toiletEmojis].sort((a, b) => b.length - a.length);
+    
     // Look for any of these emojis in the text
-    for (const testEmoji of toiletEmojis) {
+    for (const testEmoji of sortedEmojis) {
       if (options.text.includes(testEmoji)) {
         emoji = testEmoji;
         cleanText = options.text.replace(testEmoji, '').trim();
