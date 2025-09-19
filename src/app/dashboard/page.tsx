@@ -133,6 +133,13 @@ export default function DashboardPage() {
       return;
     }
 
+    // Check character limit - 59 characters maximum (including "is " prefix)
+    const fullText = `is ${text || 'flushing'}`;
+    if (fullText.length > 59) {
+      setError("Your flush status is too long! Please keep it under 59 characters.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -260,7 +267,7 @@ export default function DashboardPage() {
             <button
               type="submit"
               className={styles.submitButton}
-              disabled={isSubmitting}
+              disabled={isSubmitting || `is ${text || 'flushing'}`.length > 59}
             >
               {isSubmitting ? 'Updating...' : 'Update Status'}
             </button>

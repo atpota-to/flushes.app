@@ -98,6 +98,12 @@ export default function Home() {
       return;
     }
     
+    // Check character limit - 59 characters maximum
+    if (text.length > 59) {
+      setStatusError("Your flush status is too long! Please keep it under 59 characters.");
+      return;
+    }
+    
     // Check rate limit - 2 posts per 30 minutes (except for the plumber account)
     if (!checkRateLimit()) {
       setStatusError("Trying to make more than 2 flushes in 30 minutes?? Might be time to get the plunger. 🪠 Regular users are limited to 2 flushes per 30 minutes.");
@@ -391,7 +397,7 @@ export default function Home() {
                 <button
                   type="submit"
                   className={styles.submitButton}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || text.length > 59}
                 >
                   {isSubmitting ? 'Flushing...' : 'Post Flush'}
                 </button>
