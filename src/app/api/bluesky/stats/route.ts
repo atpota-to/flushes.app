@@ -209,15 +209,36 @@ export async function GET(request: NextRequest) {
       console.log(`Final total count: ${totalCount}`);
       
 
-      // 2. Get daily flush counts for the chart and emoji data
-      const { data: dailyData, error: dailyError } = await supabase
-        .from('flushing_records')
-        .select('created_at, did, handle, emoji')
-        .order('created_at', { ascending: true });
+      // 2. Get daily flush counts for the chart and emoji data - PAGINATE to get all records
+      console.log('Fetching ALL flushing records for chart data...');
+      let allDailyData: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      let hasMore = true;
       
-      if (dailyError) {
-        throw new Error(`Failed to get daily data: ${dailyError.message}`);
+      while (hasMore) {
+        console.log(`Fetching daily data page: ${from} to ${from + pageSize - 1}`);
+        
+        const { data: pageData, error: pageError } = await supabase
+          .from('flushing_records')
+          .select('created_at, did, handle, emoji')
+          .order('created_at', { ascending: true })
+          .range(from, from + pageSize - 1);
+        
+        if (pageError) {
+          throw new Error(`Failed to get daily data: ${pageError.message}`);
+        }
+        
+        if (!pageData || pageData.length === 0) {
+          hasMore = false;
+        } else {
+          allDailyData = [...allDailyData, ...pageData];
+          hasMore = pageData.length === pageSize;
+          from += pageSize;
+        }
       }
+      
+      const dailyData = allDailyData;
       
       console.log(`Total records fetched: ${dailyData?.length || 0}`);
       if (dailyData && dailyData.length > 0) {
