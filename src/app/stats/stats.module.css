@@ -223,7 +223,6 @@
   background: var(--card-background);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px var(--shadow-color);
   border: 1px solid var(--tile-border);
 }
 

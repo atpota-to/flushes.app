@@ -62,7 +62,6 @@
 .card {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 2rem;
 }
 
@@ -165,7 +164,6 @@
 .input:focus {
   border-color: var(--primary-color);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(91, 173, 240, 0.2);
 }
 
 .charCount {
@@ -249,7 +247,6 @@
 .submitButton:hover:not(:disabled) {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .submitButton:disabled {
@@ -294,13 +291,11 @@
   border: 1px solid #e1e1e1;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s;
 }
 
 .feedItem:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .feedHeader {

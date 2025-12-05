@@ -30,7 +30,6 @@
   background-color: var(--card-background);
   border-radius: 1rem;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
   margin-bottom: 3rem;
   border: 1px solid var(--tile-border);
 }

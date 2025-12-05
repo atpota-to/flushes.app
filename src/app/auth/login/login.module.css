@@ -16,7 +16,6 @@
   border-radius: 1rem;
   padding: 2rem;
   border: 1px solid var(--tile-border);
-  box-shadow: 0 4px 12px var(--shadow-color);
 }
 
 .title {
@@ -66,7 +65,6 @@
 .input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.1);
 }
 
 .hint {

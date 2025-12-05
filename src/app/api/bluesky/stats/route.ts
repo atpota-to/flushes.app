@@ -219,32 +219,71 @@ export async function GET(request: NextRequest) {
         throw new Error(`Failed to get daily data: ${dailyError.message}`);
       }
       
-      // Create a map of date -> count
-      const dailyCounts = new Map<string, number>();
-      
-      // Process each entry to get daily counts
-      dailyData?.forEach(entry => {
-        const date = new Date(entry.created_at);
-        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      console.log(`Total records fetched: ${dailyData?.length || 0}`);
+      if (dailyData && dailyData.length > 0) {
+        console.log(`First record: ${JSON.stringify(dailyData[0])}`);
+        console.log(`Last record: ${JSON.stringify(dailyData[dailyData.length - 1])}`);
         
-        if (dailyCounts.has(dateKey)) {
-          dailyCounts.set(dateKey, (dailyCounts.get(dateKey) || 0) + 1);
-        } else {
-          dailyCounts.set(dateKey, 1);
+        // Check how many records have DIDs
+        const recordsWithDid = dailyData.filter(r => r.did);
+        console.log(`Records with DID: ${recordsWithDid.length}`);
+      }
+      
+      // Create a map of month -> count
+      const monthlyCounts = new Map<string, number>();
+      
+      // Get the earliest and latest dates to ensure all months are included
+      if (dailyData && dailyData.length > 0) {
+        const dates = dailyData.map(e => new Date(e.created_at));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        
+        // Initialize all months with 0
+        const currentMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+        
+        while (currentMonth <= endMonth) {
+          const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+          monthlyCounts.set(monthKey, 0);
+          currentMonth.setMonth(currentMonth.getMonth() + 1);
         }
-      });
+        
+        // Process each entry to get monthly counts
+        dailyData.forEach(entry => {
+          const date = new Date(entry.created_at);
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (monthlyCounts.has(monthKey)) {
+            monthlyCounts.set(monthKey, (monthlyCounts.get(monthKey) || 0) + 1);
+          } else {
+            monthlyCounts.set(monthKey, 1);
+          }
+        });
+      }
       
       // Convert to array sorted by date
-      const chartData = Array.from(dailyCounts.entries())
+      const chartData = Array.from(monthlyCounts.entries())
         .map(([date, count]): {date: string, count: number} => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
       
       // Calculate flushes per day based on actual active days
+      // Count actual days with flushes for the flushes per day calculation
+      const dailyCountsForAvg = new Map<string, number>();
+      dailyData?.forEach(entry => {
+        const date = new Date(entry.created_at);
+        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        
+        if (dailyCountsForAvg.has(dateKey)) {
+          dailyCountsForAvg.set(dateKey, (dailyCountsForAvg.get(dateKey) || 0) + 1);
+        } else {
+          dailyCountsForAvg.set(dateKey, 1);
+        }
+      });
+      
       let flushesPerDay = 0;
-      if (chartData.length > 0 && totalCount !== null) {
-        // Use the number of days with at least one flush (which is the length of chartData)
-        // This gives us the actual active days count
-        const activeDaysCount = chartData.length;
+      if (dailyCountsForAvg.size > 0 && totalCount !== null) {
+        // Use the number of days with at least one flush
+        const activeDaysCount = dailyCountsForAvg.size;
         flushesPerDay = parseFloat(((totalCount || 0) / activeDaysCount).toFixed(1));
       }
       
@@ -253,10 +292,15 @@ export async function GET(request: NextRequest) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
+      console.log(`Calculating MAF/DAF for records after: ${thirtyDaysAgo.toISOString()}`);
+      console.log(`Total records available: ${dailyData?.length || 0}`);
+      
       // Filter records to get only those from the last 30 days
       const recentRecords = dailyData?.filter(entry => 
         new Date(entry.created_at) >= thirtyDaysAgo
       );
+      
+      console.log(`Recent records (last 30 days): ${recentRecords?.length || 0}`);
       
       // Get unique DIDs from recent records - excluding test accounts and plumber
       const recentUniqueDids = new Set<string>();
@@ -272,6 +316,7 @@ export async function GET(request: NextRequest) {
       
       let monthlyActiveFlushers = recentUniqueDids.size;
       console.log(`Monthly Active Flushers (last 30 days): ${monthlyActiveFlushers}`);
+      console.log(`Unique DIDs in recent records: ${Array.from(recentUniqueDids).join(', ')}`);
       
       // Calculate Daily Active Flushers (DAFs)
       // This is the average number of unique users who post per day over the last 30 days
@@ -395,9 +440,12 @@ export async function GET(request: NextRequest) {
         })
       );
       
-      // Sort by true count (descending) in case the order changed
+      // Sort by true count (descending) in case the order changed, and filter out 0s
       const leaderboard = leaderboardWithTrueCounts
+        .filter(item => item.count > 0) // Only include users with at least 1 flush
         .sort((a, b) => b.count - a.count);
+      
+      console.log(`Leaderboard after filtering (${leaderboard.length} users with flushes > 0)`);
       
       // Calculate total unique flushers (count of unique DIDs)
       const totalFlushers = didCounts.size;
@@ -445,7 +493,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         totalCount,
         flushesPerDay,
-        chartData: chartData.slice(-30), // Last 30 days
+        chartData, // Return all months
         leaderboard,
         plumberFlushCount,
         totalFlushers,
@@ -476,20 +524,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Generate mock chart data
+// Generate mock chart data (by month)
 function generateMockChartData() {
   const chartData = [];
   const today = new Date();
   
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  // Generate data for the last 12 months
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     
-    // Random count between 1 and 5
-    const count = Math.floor(Math.random() * 5) + 1;
+    // Random count between 5 and 50
+    const count = Math.floor(Math.random() * 46) + 5;
     
-    chartData.push({ date: dateString, count });
+    chartData.push({ date: monthKey, count });
   }
   
   return chartData;

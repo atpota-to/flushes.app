@@ -44,6 +44,17 @@ export default function ProfilePage() {
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
   const [emojiStats, setEmojiStats] = useState<EmojiStat[]>([]);
+  const [wrapped2025Data, setWrapped2025Data] = useState<{
+    totalFlushes: number;
+    daysActive: number;
+    topEmoji: string;
+    topEmojiCount: number;
+    mostFlushesInDay: number;
+    activeStreak: number;
+    mostActiveMonth: string;
+    avgStatusLength: number;
+    mostFrequentTime: string;
+  } | null>(null);
   // Match Bluesky's API response format
   interface ProfileData {
     did: string;
@@ -194,6 +205,137 @@ export default function ProfilePage() {
         })
         .filter((entry: FlushingEntry | null): entry is FlushingEntry => entry !== null);
       
+      // Filter entries for 2025 for Wrapped stats
+      const entries2025 = userEntries.filter((entry: FlushingEntry) => {
+        const year = new Date(entry.created_at).getFullYear();
+        return year === 2025;
+      });
+      
+      // Calculate Wrapped 2025 statistics
+      if (entries2025.length > 0) {
+        // Days active in 2025
+        const datesSet2025 = new Set<string>();
+        const hourCounts = new Map<number, number>();
+        const monthCounts = new Map<string, number>();
+        const dayCounts = new Map<string, number>();
+        const emojiCounts2025 = new Map<string, number>();
+        let totalStatusLength = 0;
+        
+        entries2025.forEach((entry: FlushingEntry) => {
+          const date = new Date(entry.created_at);
+          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          const hour = date.getHours();
+          
+          datesSet2025.add(dateKey);
+          
+          // Track hour frequency
+          hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+          
+          // Track month frequency
+          monthCounts.set(monthKey, (monthCounts.get(monthKey) || 0) + 1);
+          
+          // Track daily counts for max in a day
+          dayCounts.set(dateKey, (dayCounts.get(dateKey) || 0) + 1);
+          
+          // Track emoji usage
+          const emoji = entry.emoji?.trim() || '🚽';
+          if (APPROVED_EMOJIS.includes(emoji)) {
+            emojiCounts2025.set(emoji, (emojiCounts2025.get(emoji) || 0) + 1);
+          } else {
+            emojiCounts2025.set('🚽', (emojiCounts2025.get('🚽') || 0) + 1);
+          }
+          
+          // Track status length
+          if (entry.text) {
+            totalStatusLength += entry.text.length;
+          }
+        });
+        
+        // Most frequent time of day
+        let mostFrequentHour = 0;
+        let maxHourCount = 0;
+        hourCounts.forEach((count, hour) => {
+          if (count > maxHourCount) {
+            maxHourCount = count;
+            mostFrequentHour = hour;
+          }
+        });
+        
+        const formatHour = (hour: number) => {
+          const period = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+          return `${displayHour}:00 ${period}`;
+        };
+        
+        // Most active month
+        let mostActiveMonth = '';
+        let maxMonthCount = 0;
+        monthCounts.forEach((count, month) => {
+          if (count > maxMonthCount) {
+            maxMonthCount = count;
+            mostActiveMonth = month;
+          }
+        });
+        
+        const formatMonth = (monthKey: string) => {
+          const [year, month] = monthKey.split('-');
+          const date = new Date(parseInt(year), parseInt(month) - 1);
+          return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        };
+        
+        // Most flushes in a single day
+        const mostFlushesInDay = Math.max(...Array.from(dayCounts.values()));
+        
+        // Calculate active streak (consecutive days)
+        const sortedDates = Array.from(datesSet2025).sort();
+        let currentStreak = 1;
+        let maxStreak = 1;
+        
+        for (let i = 1; i < sortedDates.length; i++) {
+          const prevDate = new Date(sortedDates[i - 1]);
+          const currDate = new Date(sortedDates[i]);
+          const diffTime = Math.abs(currDate.getTime() - prevDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays === 1) {
+            currentStreak++;
+            maxStreak = Math.max(maxStreak, currentStreak);
+          } else {
+            currentStreak = 1;
+          }
+        }
+        
+        // Top emoji
+        let topEmoji = '🚽';
+        let topEmojiCount = 0;
+        emojiCounts2025.forEach((count, emoji) => {
+          if (count > topEmojiCount) {
+            topEmojiCount = count;
+            topEmoji = emoji;
+          }
+        });
+        
+        // Average status length
+        const avgStatusLength = entries2025.filter(e => e.text).length > 0 
+          ? Math.round(totalStatusLength / entries2025.filter(e => e.text).length)
+          : 0;
+        
+        setWrapped2025Data({
+          totalFlushes: entries2025.length,
+          daysActive: datesSet2025.size,
+          topEmoji,
+          topEmojiCount,
+          mostFlushesInDay,
+          activeStreak: maxStreak,
+          mostActiveMonth: mostActiveMonth ? formatMonth(mostActiveMonth) : 'N/A',
+          avgStatusLength,
+          mostFrequentTime: formatHour(mostFrequentHour)
+        });
+      } else {
+        setWrapped2025Data(null);
+      }
+      
       // Calculate emoji statistics
       const emojiCounts = new Map<string, number>();
       userEntries.forEach((entry: FlushingEntry) => {
@@ -228,29 +370,42 @@ export default function ProfilePage() {
         const perDay = parseFloat((userEntries.length / activeDaysCount).toFixed(1));
         setFlushesPerDay(perDay);
         
-        // Generate chart data (group by day)
+        // Generate chart data (group by month)
         const chartDataMap = new Map<string, number>();
         
-        // Group entries by day
+        // Get the earliest and latest dates
+        const dates = userEntries.map(e => new Date(e.created_at));
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        
+        // Initialize all months with 0
+        const currentMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+        
+        while (currentMonth <= endMonth) {
+          const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+          chartDataMap.set(monthKey, 0);
+          currentMonth.setMonth(currentMonth.getMonth() + 1);
+        }
+        
+        // Group entries by month
         userEntries.forEach((entry: FlushingEntry) => {
           const date = new Date(entry.created_at);
-          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           
-          if (chartDataMap.has(dateKey)) {
-            chartDataMap.set(dateKey, chartDataMap.get(dateKey)! + 1);
+          if (chartDataMap.has(monthKey)) {
+            chartDataMap.set(monthKey, chartDataMap.get(monthKey)! + 1);
           } else {
-            chartDataMap.set(dateKey, 1);
+            chartDataMap.set(monthKey, 1);
           }
         });
         
         // Convert map to array and sort by date
         const chartDataArray = Array.from(chartDataMap.entries())
-          .map(([date, count]): {date: string, count: number} => ({ date, count }))
+          .map(([month, count]): {date: string, count: number} => ({ date: month, count }))
           .sort((a, b) => a.date.localeCompare(b.date));
         
-        // Limit to last 30 days for chart readability
-        const limitedData = chartDataArray.slice(-30);
-        setChartData(limitedData);
+        setChartData(chartDataArray);
       } else {
         setFlushesPerDay(0);
         setChartData([]);
@@ -337,10 +492,18 @@ export default function ProfilePage() {
               
               <div className={styles.chartLegend}>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                  {chartData.length > 0 ? (() => {
+                    const [year, month] = chartData[0].date.split('-');
+                    const date = new Date(parseInt(year), parseInt(month) - 1);
+                    return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                  })() : ''}
                 </span>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                  {chartData.length > 0 ? (() => {
+                    const [year, month] = chartData[chartData.length - 1].date.split('-');
+                    const date = new Date(parseInt(year), parseInt(month) - 1);
+                    return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                  })() : ''}
                 </span>
               </div>
               
@@ -375,6 +538,68 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {/* Flushes Roll Up 2025 Section */}
+      {!loading && !error && wrapped2025Data && (
+        <section className={styles.wrappedSection}>
+          <h3 className={styles.wrappedHeader}>🧻 Flushes Roll Up 2025</h3>
+          <p className={styles.wrappedSubtitle}>The year in flushes</p>
+          
+          <div className={styles.wrappedGrid}>
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.totalFlushes}</div>
+              <div className={styles.wrappedLabel}>Total Flushes</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.daysActive}</div>
+              <div className={styles.wrappedLabel}>Days Active</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedEmoji}>{wrapped2025Data.topEmoji}</div>
+              <div className={styles.wrappedValue}>{wrapped2025Data.topEmojiCount}×</div>
+              <div className={styles.wrappedLabel}>Top Emoji</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.mostFlushesInDay}</div>
+              <div className={styles.wrappedLabel}>Most in One Day</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.activeStreak}</div>
+              <div className={styles.wrappedLabel}>Longest Streak</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.mostActiveMonth}</div>
+              <div className={styles.wrappedLabel}>Most Active Month</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.avgStatusLength}</div>
+              <div className={styles.wrappedLabel}>Avg. Characters</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedValue}>{wrapped2025Data.mostFrequentTime}</div>
+              <div className={styles.wrappedLabel}>Peak Flush Time</div>
+            </div>
+          </div>
+          
+          <button 
+            className={styles.shareWrappedButton}
+            onClick={() => {
+              const shareHandle = profileData?.handle || handle;
+              const wrappedText = `🧻 My #FlushesRollUp2025:\n\n${wrapped2025Data.totalFlushes} flushes across ${wrapped2025Data.daysActive} days\nTop emoji: ${wrapped2025Data.topEmoji}\nLongest streak: ${wrapped2025Data.activeStreak} days\nMost active: ${wrapped2025Data.mostActiveMonth}\n\nSee your stats at flushes.app! 🚽`;
+              window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(wrappedText)}`, '_blank');
+            }}
+          >
+            Share My Roll Up
+          </button>
         </section>
       )}
 

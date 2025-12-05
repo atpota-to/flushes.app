@@ -136,14 +136,6 @@ export default function StatsPage() {
           {/* Overall Stats */}
           <section className={styles.overallStats}>
             <h2>Overall Flush Activity</h2>
-            <a 
-              href="https://bsky.app/profile/plumber.flushes.app" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={styles.plumberProfileLink}
-            >
-              Follow our resident plumber on Bluesky
-            </a>
             <div className={styles.statsGrid}>
               <div className={styles.statCard}>
                 <div className={styles.statValue}>{statsData.totalCount}</div>
@@ -174,7 +166,7 @@ export default function StatsPage() {
 
           {/* Activity Chart */}
           <section className={styles.chartSection}>
-            <h2>Daily Activity</h2>
+            <h2>Monthly Activity</h2>
             {statsData.chartData.length > 0 ? (
               <>
                 <div className={styles.chartContainer}>
@@ -196,10 +188,18 @@ export default function StatsPage() {
                 
                 <div className={styles.chartLegend}>
                   <span className={styles.chartLegendItem}>
-                    {statsData.chartData.length > 0 ? new Date(statsData.chartData[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                    {statsData.chartData.length > 0 ? (() => {
+                      const [year, month] = statsData.chartData[0].date.split('-');
+                      const date = new Date(parseInt(year), parseInt(month) - 1);
+                      return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                    })() : ''}
                   </span>
                   <span className={styles.chartLegendItem}>
-                    {statsData.chartData.length > 0 ? new Date(statsData.chartData[statsData.chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                    {statsData.chartData.length > 0 ? (() => {
+                      const [year, month] = statsData.chartData[statsData.chartData.length - 1].date.split('-');
+                      const date = new Date(parseInt(year), parseInt(month) - 1);
+                      return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                    })() : ''}
                   </span>
                 </div>
               </>

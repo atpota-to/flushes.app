@@ -17,7 +17,6 @@
 
 .searchForm:focus-within {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(91, 173, 240, 0.25);
 }
 
 .searchInput {
@@ -61,7 +60,6 @@
   background-color: var(--card-background);
   border: 1px solid var(--tile-border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px var(--shadow-color);
   max-height: 300px;
   overflow-y: auto;
   z-index: 10;

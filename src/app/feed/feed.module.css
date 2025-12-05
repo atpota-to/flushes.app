@@ -77,7 +77,6 @@
   font-size: 1.1rem;
   line-height: 1.4;
   text-align: center;
-  box-shadow: 0 2px 4px var(--shadow-color);
   font-weight: 500;
 }
 
@@ -134,7 +133,6 @@
   border: 1px solid var(--tile-border);
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 5px var(--shadow-color);
   /* Removed transition */
   background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
