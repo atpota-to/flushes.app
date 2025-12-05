@@ -574,7 +574,7 @@ export default function ProfilePage() {
             
             <div className={styles.wrappedCard}>
               <div className={styles.wrappedValue}>{wrapped2025Data.mostFlushesInDay}</div>
-              <div className={styles.wrappedLabel}>Most in One Day</div>
+              <div className={styles.wrappedLabel}>Most in a Day</div>
             </div>
             
             <div className={styles.wrappedCard}>
@@ -584,7 +584,7 @@ export default function ProfilePage() {
             
             <div className={styles.wrappedCard}>
               <div className={styles.wrappedValue}>{wrapped2025Data.mostActiveMonth}</div>
-              <div className={styles.wrappedLabel}>Most Active Month</div>
+              <div className={styles.wrappedLabel}>Top Month</div>
             </div>
             
             <div className={styles.wrappedCard}>
@@ -594,7 +594,7 @@ export default function ProfilePage() {
             
             <div className={styles.wrappedCard}>
               <div className={styles.wrappedValue}>{wrapped2025Data.mostFrequentTime}</div>
-              <div className={styles.wrappedLabel}>Peak Flush Time</div>
+              <div className={styles.wrappedLabel}>Peak Flush Hour</div>
             </div>
           </div>
           
