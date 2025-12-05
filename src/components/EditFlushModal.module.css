@@ -99,6 +99,46 @@
   border-color: var(--primary-color);
 }
 
+.inputWrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background-color: var(--input-background);
+}
+
+.inputWrapper:focus-within {
+  border-color: var(--primary-color);
+}
+
+.inputPrefix {
+  padding: 0.8rem 0.8rem 0.8rem 0.8rem;
+  font-size: 1rem;
+  color: var(--text-color);
+  font-weight: 500;
+  background-color: var(--input-prefix-background);
+  border-right: 1px solid var(--input-border);
+  border-radius: 4px 0 0 4px;
+}
+
+.inputWithPrefix {
+  flex: 1;
+  border: none;
+  padding: 0.8rem;
+  font-size: 1rem;
+  background: transparent;
+  border-radius: 0 4px 4px 0;
+  color: var(--text-color);
+  font-family: inherit;
+}
+
+.inputWithPrefix:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 .textInput:focus {
   outline: none;
   border-color: var(--primary);

@@ -34,7 +34,12 @@ export default function EditFlushModal({ isOpen, flushData, onSave, onDelete, on
   // Update form when flushData changes
   useEffect(() => {
     if (flushData) {
-      setText(flushData.text || '');
+      // Remove "is " prefix if it exists in the stored text
+      let displayText = flushData.text || '';
+      if (displayText.toLowerCase().startsWith('is ')) {
+        displayText = displayText.substring(3);
+      }
+      setText(displayText);
       setSelectedEmoji(flushData.emoji || '🚽');
       setError(null);
       setShowDeleteConfirm(false);
@@ -52,9 +57,9 @@ export default function EditFlushModal({ isOpen, flushData, onSave, onDelete, on
       return;
     }
 
-    // Check character limit
-    if (text.length > 59) {
-      setError('Your flush status is too long! Please keep it under 59 characters.');
+    // Check character limit (text + "is " = 56 + 3 = 59)
+    if (text.length > 56) {
+      setError('Your flush status is too long! Please keep it under 56 characters (59 total with "is").');
       return;
     }
 
@@ -66,7 +71,9 @@ export default function EditFlushModal({ isOpen, flushData, onSave, onDelete, on
 
     setIsSubmitting(true);
     try {
-      await onSave(sanitizeText(text), selectedEmoji);
+      // Add "is " prefix when saving
+      const fullText = text.trim() ? `is ${text.trim()}` : 'is flushing';
+      await onSave(sanitizeText(fullText), selectedEmoji);
       onClose();
     } catch (err: any) {
       console.error('Error updating flush:', err);
@@ -119,19 +126,22 @@ export default function EditFlushModal({ isOpen, flushData, onSave, onDelete, on
         )}
 
         <div className={styles.formGroup}>
-          <label htmlFor="flush-text">Status Text</label>
-          <input
-            id="flush-text"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="is flushing"
-            maxLength={59}
-            disabled={isSubmitting}
-            className={styles.textInput}
-          />
+          <label htmlFor="flush-text">What's your status? (optional)</label>
+          <div className={styles.inputWrapper}>
+            <span className={styles.inputPrefix}>is </span>
+            <input
+              id="flush-text"
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="flushing"
+              maxLength={56}
+              disabled={isSubmitting}
+              className={styles.inputWithPrefix}
+            />
+          </div>
           <div className={styles.charCount}>
-            {text.length}/59
+            {text.length + 3}/59
           </div>
         </div>
 
