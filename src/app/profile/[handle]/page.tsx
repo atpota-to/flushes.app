@@ -263,9 +263,9 @@ export default function ProfilePage() {
         });
         
         const formatHour = (hour: number) => {
-          const period = hour >= 12 ? 'PM' : 'AM';
+          const period = hour >= 12 ? 'pm' : 'am';
           const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-          return `${displayHour}:00 ${period}`;
+          return `${displayHour}${period}`;
         };
         
         // Most active month
@@ -281,7 +281,7 @@ export default function ProfilePage() {
         const formatMonth = (monthKey: string) => {
           const [year, month] = monthKey.split('-');
           const date = new Date(parseInt(year), parseInt(month) - 1);
-          return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+          return date.toLocaleDateString(undefined, { month: 'short' });
         };
         
         // Most flushes in a single day
@@ -560,7 +560,6 @@ export default function ProfilePage() {
             
             <div className={styles.wrappedCard}>
               <div className={styles.wrappedEmoji}>{wrapped2025Data.topEmoji}</div>
-              <div className={styles.wrappedValue}>{wrapped2025Data.topEmojiCount}×</div>
               <div className={styles.wrappedLabel}>Top Emoji</div>
             </div>
             
