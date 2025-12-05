@@ -229,17 +229,24 @@ export async function GET(request: NextRequest) {
         console.log(`Records with DID: ${recordsWithDid.length}`);
       }
       
-      // Create a map of month -> count
+      // Create a map of month -> count (filter for 2025+)
       const monthlyCounts = new Map<string, number>();
       
+      // Filter data to only include 2025 and later
+      const data2025Plus = dailyData?.filter(entry => {
+        const year = new Date(entry.created_at).getFullYear();
+        return year >= 2025;
+      });
+      
       // Get the earliest and latest dates to ensure all months are included
-      if (dailyData && dailyData.length > 0) {
-        const dates = dailyData.map(e => new Date(e.created_at));
+      if (data2025Plus && data2025Plus.length > 0) {
+        const dates = data2025Plus.map(e => new Date(e.created_at));
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
         const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
         
-        // Initialize all months with 0
-        const currentMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        // Initialize all months with 0 (starting from Jan 2025 or the earliest date)
+        const startMonth = new Date(Math.max(minDate.getTime(), new Date(2025, 0, 1).getTime()));
+        const currentMonth = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
         const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
         
         while (currentMonth <= endMonth) {
@@ -249,7 +256,7 @@ export async function GET(request: NextRequest) {
         }
         
         // Process each entry to get monthly counts
-        dailyData.forEach(entry => {
+        data2025Plus.forEach(entry => {
           const date = new Date(entry.created_at);
           const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           
@@ -415,18 +422,18 @@ export async function GET(request: NextRequest) {
         }
       });
       
-      // Convert to array and sort by count to get top 10 DIDs
-      const top10Dids = Array.from(didCounts.entries())
+      // Convert to array and sort by count to get top 15 DIDs (fetch extra in case some have 0)
+      const top15Dids = Array.from(didCounts.entries())
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
+        .slice(0, 15)
         .map(([did]) => did);
       
-      console.log(`Top 10 DIDs from Supabase ranking: ${top10Dids.join(', ')}`);
+      console.log(`Top 15 DIDs from Supabase ranking: ${top15Dids.join(', ')}`);
       
-      // Now fetch true counts from Bluesky API for these top 10 DIDs
-      console.log('Fetching true counts from Bluesky API for top 10 users...');
+      // Now fetch true counts from Bluesky API for these top 15 DIDs
+      console.log('Fetching true counts from Bluesky API for top 15 users...');
       const leaderboardWithTrueCounts = await Promise.all(
-        top10Dids.map(async (did) => {
+        top15Dids.map(async (did) => {
           const trueCount = await fetchTrueCountFromBluesky(did);
           const supabaseCount = didCounts.get(did) || 0;
           
@@ -440,10 +447,11 @@ export async function GET(request: NextRequest) {
         })
       );
       
-      // Sort by true count (descending) in case the order changed, and filter out 0s
+      // Sort by true count (descending) in case the order changed, filter out 0s, and take top 10
       const leaderboard = leaderboardWithTrueCounts
         .filter(item => item.count > 0) // Only include users with at least 1 flush
-        .sort((a, b) => b.count - a.count);
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Take top 10 after filtering
       
       console.log(`Leaderboard after filtering (${leaderboard.length} users with flushes > 0)`);
       

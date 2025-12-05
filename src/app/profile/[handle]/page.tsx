@@ -370,35 +370,44 @@ export default function ProfilePage() {
         const perDay = parseFloat((userEntries.length / activeDaysCount).toFixed(1));
         setFlushesPerDay(perDay);
         
-        // Generate chart data (group by month)
+        // Generate chart data (group by month) - filter for 2025 and later
         const chartDataMap = new Map<string, number>();
         
-        // Get the earliest and latest dates
-        const dates = userEntries.map(e => new Date(e.created_at));
-        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-        
-        // Initialize all months with 0
-        const currentMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-        const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-        
-        while (currentMonth <= endMonth) {
-          const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-          chartDataMap.set(monthKey, 0);
-          currentMonth.setMonth(currentMonth.getMonth() + 1);
-        }
-        
-        // Group entries by month
-        userEntries.forEach((entry: FlushingEntry) => {
-          const date = new Date(entry.created_at);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-          
-          if (chartDataMap.has(monthKey)) {
-            chartDataMap.set(monthKey, chartDataMap.get(monthKey)! + 1);
-          } else {
-            chartDataMap.set(monthKey, 1);
-          }
+        // Filter entries to only include 2025 and later
+        const entries2025Plus = userEntries.filter((entry: FlushingEntry) => {
+          const year = new Date(entry.created_at).getFullYear();
+          return year >= 2025;
         });
+        
+        if (entries2025Plus.length > 0) {
+          // Get the earliest and latest dates from 2025+ entries
+          const dates = entries2025Plus.map(e => new Date(e.created_at));
+          const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+          const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+          
+          // Initialize all months with 0 (starting from Jan 2025 or the earliest date)
+          const startMonth = new Date(Math.max(minDate.getTime(), new Date(2025, 0, 1).getTime()));
+          const currentMonth = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
+          const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+          
+          while (currentMonth <= endMonth) {
+            const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+            chartDataMap.set(monthKey, 0);
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+          }
+          
+          // Group entries by month
+          entries2025Plus.forEach((entry: FlushingEntry) => {
+            const date = new Date(entry.created_at);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            
+            if (chartDataMap.has(monthKey)) {
+              chartDataMap.set(monthKey, chartDataMap.get(monthKey)! + 1);
+            } else {
+              chartDataMap.set(monthKey, 1);
+            }
+          });
+        }
         
         // Convert map to array and sort by date
         const chartDataArray = Array.from(chartDataMap.entries())
