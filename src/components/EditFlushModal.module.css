@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(135, 206, 250, 0.15);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,15 +14,16 @@
 }
 
 .modalContent {
-  background: var(--card-background, #ffffff);
-  background-color: var(--card-background, #ffffff);
-  border: 2px solid var(--border);
-  padding: 30px;
+  background: var(--card-background);
+  background-color: var(--card-background);
+  border: 1px solid var(--tile-border);
+  border-radius: 8px;
+  padding: 2rem;
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 40px rgba(135, 206, 250, 0.2);
 }
 
 .modalHeader {
@@ -34,7 +36,7 @@
 .modalHeader h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: var(--foreground);
+  color: var(--title-color);
 }
 
 .closeButton {
@@ -42,14 +44,14 @@
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
-  color: var(--foreground);
+  color: var(--text-color);
   padding: 5px 10px;
   line-height: 1;
   transition: color 0.2s;
 }
 
 .closeButton:hover {
-  color: var(--primary);
+  color: var(--primary-color);
 }
 
 .closeButton:disabled {
@@ -58,10 +60,11 @@
 }
 
 .error {
-  background: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-  padding: 12px;
+  background: var(--error-background);
+  border: 1px solid var(--error-color);
+  border-radius: 4px;
+  color: var(--error-color);
+  padding: 1rem;
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
@@ -73,21 +76,27 @@
 .formGroup label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 600;
-  color: var(--foreground);
+  font-weight: 500;
+  color: var(--text-color);
   font-size: 0.95rem;
 }
 
 .textInput {
   width: 100%;
-  padding: 12px;
+  padding: 0.8rem;
   font-size: 1rem;
-  border: 2px solid var(--border);
-  background: var(--input-background, #f5f5f5);
-  background-color: var(--input-background, #f5f5f5);
-  color: var(--foreground, #000000);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-background);
+  background-color: var(--input-background);
+  color: var(--text-color);
   font-family: inherit;
   transition: border-color 0.2s;
+}
+
+.textInput:focus {
+  outline: none;
+  border-color: var(--primary-color);
 }
 
 .textInput:focus {
@@ -102,39 +111,47 @@
 
 .charCount {
   text-align: right;
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--timestamp-color);
+  margin-top: 0.3rem;
 }
 
 .emojiGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-  gap: 8px;
+  gap: 0.5rem;
   margin-top: 8px;
+  padding: 0.8rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background-color: var(--emoji-grid-bg);
 }
 
 .emojiButton {
-  background: var(--input-background, #f5f5f5);
-  background-color: var(--input-background, #f5f5f5);
-  border: 2px solid var(--border);
-  padding: 12px;
-  font-size: 1.5rem;
+  background: var(--emoji-button-bg);
+  background-color: var(--emoji-button-bg);
+  border: 1px solid var(--emoji-button-border);
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 1.3rem;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 1/1;
+  min-width: 2rem;
+  min-height: 2rem;
 }
 
 .emojiButton:hover {
-  border-color: var(--primary);
+  background: var(--button-hover);
   transform: scale(1.05);
 }
 
 .emojiButton.selected {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: rgba(91, 173, 240, 0.2);
+  border-color: var(--primary-color);
   transform: scale(1.1);
 }
 
@@ -160,17 +177,18 @@
 
 .deleteButton {
   background: transparent;
-  color: #c33;
-  border: 2px solid #c33;
-  padding: 10px 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  color: #c62828;
+  border: 1px solid #c62828;
+  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .deleteButton:hover {
-  background: #c33;
+  background: #c62828;
   color: white;
 }
 
@@ -180,18 +198,19 @@
 }
 
 .cancelButton {
-  background: transparent;
-  color: var(--foreground);
-  border: 2px solid var(--border);
-  padding: 10px 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  background-color: var(--button-background);
+  color: var(--button-text);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .cancelButton:hover {
-  background: var(--border);
+  background: var(--button-hover);
 }
 
 .cancelButton:disabled {
@@ -200,23 +219,25 @@
 }
 
 .saveButton {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: 2px solid var(--primary);
-  padding: 10px 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.saveButton:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+.saveButton:hover:not(:disabled) {
+  background-color: var(--secondary-color);
+  transform: translateY(-2px);
 }
 
 .saveButton:disabled {
-  opacity: 0.5;
+  background-color: var(--button-disabled);
+  color: var(--button-disabled-text);
   cursor: not-allowed;
   transform: none;
 }
@@ -227,7 +248,7 @@
 
 .deleteConfirmation p {
   margin: 0 0 16px 0;
-  color: var(--foreground);
+  color: var(--text-color);
   font-size: 0.95rem;
 }
 
@@ -238,19 +259,19 @@
 }
 
 .confirmDeleteButton {
-  background: #c33;
+  background: #c62828;
   color: white;
-  border: 2px solid #c33;
-  padding: 10px 20px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .confirmDeleteButton:hover {
-  background: #a22;
-  border-color: #a22;
+  background: #a02020;
 }
 
 .confirmDeleteButton:disabled {
