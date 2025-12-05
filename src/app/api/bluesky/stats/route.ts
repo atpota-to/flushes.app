@@ -238,6 +238,12 @@ export async function GET(request: NextRequest) {
         return year >= 2025;
       });
       
+      console.log(`Filtered records for 2025+: ${data2025Plus?.length || 0}`);
+      if (data2025Plus && data2025Plus.length > 0) {
+        console.log(`First 2025+ record: ${JSON.stringify(data2025Plus[0])}`);
+        console.log(`Last 2025+ record: ${JSON.stringify(data2025Plus[data2025Plus.length - 1])}`);
+      }
+      
       // Initialize all months from Jan 2025 to current month (or Dec 2025 if in future years)
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -264,6 +270,11 @@ export async function GET(request: NextRequest) {
           const date = new Date(entry.created_at);
           const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           
+          // Debug logging for first few entries
+          if (monthlyCounts.get(monthKey) === 0) {
+            console.log(`First entry for ${monthKey}: ${entry.created_at}`);
+          }
+          
           if (monthlyCounts.has(monthKey)) {
             monthlyCounts.set(monthKey, (monthlyCounts.get(monthKey) || 0) + 1);
           } else {
@@ -272,6 +283,7 @@ export async function GET(request: NextRequest) {
         });
       }
       
+      console.log(`Monthly counts map:`, Object.fromEntries(monthlyCounts));
       // Convert to array sorted by date
       const chartData = Array.from(monthlyCounts.entries())
         .map(([date, count]): {date: string, count: number} => ({ date, count }))

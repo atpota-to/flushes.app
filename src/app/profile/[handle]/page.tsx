@@ -478,7 +478,7 @@ export default function ProfilePage() {
       
       {!loading && !error && (
         <section className={styles.statsSection}>
-          <h3 className={styles.statsHeader}>Flushing Statistics</h3>
+          <h2 className={styles.statsHeader}>Flushing Statistics</h2>
           <p className={styles.statDetails}>
             {totalCount} total {totalCount === 1 ? 'flush' : 'flushes'}
             {flushesPerDay > 0 && `, averaging ${flushesPerDay} ${flushesPerDay === 1 ? 'flush' : 'flushes'} per active day`}
@@ -557,7 +557,7 @@ export default function ProfilePage() {
       {/* Flushes Roll Up 2025 Section */}
       {!loading && !error && wrapped2025Data && (
         <section className={styles.wrappedSection}>
-          <h3 className={styles.wrappedHeader}>Flushes Roll Up 2025</h3>
+          <h2 className={styles.wrappedHeader}>Flushes Roll Up 2025</h2>
           <p className={styles.wrappedSubtitle}>The past year on the decentralized toilet</p>
           
           <div className={styles.wrappedGrid}>
