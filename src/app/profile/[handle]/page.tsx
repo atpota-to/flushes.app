@@ -44,15 +44,6 @@ export default function ProfilePage() {
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
   const [emojiStats, setEmojiStats] = useState<EmojiStat[]>([]);
-  const [wrappedStats, setWrappedStats] = useState<{
-    mostFrequentHour: number | null;
-    daysActive: number;
-    totalFlushes: number;
-    topEmoji: string;
-    year: number;
-    mostFlushesInDay: number;
-    longestStreak: number;
-  } | null>(null);
   // Match Bluesky's API response format
   interface ProfileData {
     did: string;
@@ -222,110 +213,6 @@ export default function ProfilePage() {
       setTotalCount(userEntries.length);
       setEmojiStats(emojiStats);
       
-      // Calculate Wrapped stats (for current year)
-      const currentYear = new Date().getFullYear();
-      const yearEntries = userEntries.filter((entry: FlushingEntry) => {
-        const entryDate = new Date(entry.created_at);
-        return entryDate.getFullYear() === currentYear;
-      });
-      
-      if (yearEntries.length > 0) {
-        // Calculate most frequent hour
-        const hourCounts = new Map<number, number>();
-        yearEntries.forEach((entry: FlushingEntry) => {
-          const date = new Date(entry.created_at);
-          const hour = date.getHours();
-          hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
-        });
-        
-        let mostFrequentHour: number | null = null;
-        let maxCount = 0;
-        hourCounts.forEach((count, hour) => {
-          if (count > maxCount) {
-            maxCount = count;
-            mostFrequentHour = hour;
-          }
-        });
-        
-        // Calculate days active for the year and most flushes in a single day
-        const yearDateSet = new Set<string>();
-        const dayFlushCounts = new Map<string, number>();
-        yearEntries.forEach((entry: FlushingEntry) => {
-          const date = new Date(entry.created_at);
-          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-          yearDateSet.add(dateKey);
-          dayFlushCounts.set(dateKey, (dayFlushCounts.get(dateKey) || 0) + 1);
-        });
-        
-        // Find most flushes in a single day
-        let mostFlushesInDay = 0;
-        dayFlushCounts.forEach((count) => {
-          if (count > mostFlushesInDay) {
-            mostFlushesInDay = count;
-          }
-        });
-        
-        // Calculate longest streak (consecutive days with at least one flush)
-        const sortedDates = Array.from(yearDateSet).sort();
-        let longestStreak = 0;
-        let currentStreak = 0;
-        let previousDate: Date | null = null;
-        
-        sortedDates.forEach((dateKey) => {
-          const currentDate = new Date(dateKey);
-          currentDate.setHours(0, 0, 0, 0);
-          
-          if (previousDate === null) {
-            currentStreak = 1;
-          } else {
-            const daysDiff = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
-            if (daysDiff === 1) {
-              currentStreak++;
-            } else {
-              if (currentStreak > longestStreak) {
-                longestStreak = currentStreak;
-              }
-              currentStreak = 1;
-            }
-          }
-          previousDate = currentDate;
-        });
-        
-        // Check if the last streak is the longest
-        if (currentStreak > longestStreak) {
-          longestStreak = currentStreak;
-        }
-        
-        // Get top emoji for the year
-        const yearEmojiCounts = new Map<string, number>();
-        yearEntries.forEach((entry: FlushingEntry) => {
-          const emoji = entry.emoji?.trim() || '🚽';
-          const validEmoji = APPROVED_EMOJIS.includes(emoji) ? emoji : '🚽';
-          yearEmojiCounts.set(validEmoji, (yearEmojiCounts.get(validEmoji) || 0) + 1);
-        });
-        
-        let topEmoji = '🚽';
-        let topEmojiCount = 0;
-        yearEmojiCounts.forEach((count, emoji) => {
-          if (count > topEmojiCount) {
-            topEmojiCount = count;
-            topEmoji = emoji;
-          }
-        });
-        
-        setWrappedStats({
-          mostFrequentHour,
-          daysActive: yearDateSet.size,
-          totalFlushes: yearEntries.length,
-          topEmoji,
-          year: currentYear,
-          mostFlushesInDay,
-          longestStreak
-        });
-      } else {
-        setWrappedStats(null);
-      }
-      
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
         // Calculate actual active days count (days with at least one flush)
@@ -341,47 +228,29 @@ export default function ProfilePage() {
         const perDay = parseFloat((userEntries.length / activeDaysCount).toFixed(1));
         setFlushesPerDay(perDay);
         
-        // Generate chart data (group by month)
-        const monthDataMap = new Map<string, number>();
+        // Generate chart data (group by day)
+        const chartDataMap = new Map<string, number>();
         
-        // Group entries by month
+        // Group entries by day
         userEntries.forEach((entry: FlushingEntry) => {
           const date = new Date(entry.created_at);
-          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
           
-          monthDataMap.set(monthKey, (monthDataMap.get(monthKey) || 0) + 1);
+          if (chartDataMap.has(dateKey)) {
+            chartDataMap.set(dateKey, chartDataMap.get(dateKey)! + 1);
+          } else {
+            chartDataMap.set(dateKey, 1);
+          }
         });
         
-        // Find the range of months from first flush to current month
-        if (userEntries.length > 0) {
-          // Find the oldest and newest entries
-          const sortedByDate = [...userEntries].sort((a, b) => 
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-          const firstEntry = sortedByDate[0];
-          const firstDate = new Date(firstEntry.created_at);
-          const lastDate = new Date(); // Current date
-          
-          // Generate all months in the range
-          const allMonths: {date: string, count: number}[] = [];
-          const currentMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-          const endMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
-          
-          while (currentMonth <= endMonth) {
-            const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-            allMonths.push({
-              date: monthKey,
-              count: monthDataMap.get(monthKey) || 0
-            });
-            
-            // Move to next month
-            currentMonth.setMonth(currentMonth.getMonth() + 1);
-          }
-          
-          setChartData(allMonths);
-        } else {
-          setChartData([]);
-        }
+        // Convert map to array and sort by date
+        const chartDataArray = Array.from(chartDataMap.entries())
+          .map(([date, count]): {date: string, count: number} => ({ date, count }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        
+        // Limit to last 30 days for chart readability
+        const limitedData = chartDataArray.slice(-30);
+        setChartData(limitedData);
       } else {
         setFlushesPerDay(0);
         setChartData([]);
@@ -439,57 +308,6 @@ export default function ProfilePage() {
 
       {error && <div className={styles.error}>{error}</div>}
       
-      {/* Flushes Wrapped Section */}
-      {!loading && !error && wrappedStats && (
-        <section className={styles.wrappedSection}>
-          <div className={styles.wrappedHeader}>
-            <h2 className={styles.wrappedTitle}>{handle}'s {wrappedStats.year} Flushes Roll Up</h2>
-            <p className={styles.wrappedSubtitle}>A year in review</p>
-          </div>
-          
-          <div className={styles.wrappedCards}>
-            <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardValue}>{wrappedStats.totalFlushes.toLocaleString()}</div>
-              <div className={styles.wrappedCardLabel}>Total Flushes</div>
-            </div>
-            
-            <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardValue}>{wrappedStats.daysActive}</div>
-              <div className={styles.wrappedCardLabel}>Days Active</div>
-            </div>
-            
-            {wrappedStats.mostFrequentHour !== null && (
-              <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardValue}>
-                  {wrappedStats.mostFrequentHour === 0 ? '12' : wrappedStats.mostFrequentHour > 12 ? wrappedStats.mostFrequentHour - 12 : wrappedStats.mostFrequentHour}
-                  {wrappedStats.mostFrequentHour >= 12 ? 'PM' : 'AM'}
-                </div>
-                <div className={styles.wrappedCardLabel}>Most Active Time</div>
-              </div>
-            )}
-            
-            <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardValue}>{wrappedStats.topEmoji}</div>
-              <div className={styles.wrappedCardLabel}>Top Emoji</div>
-            </div>
-            
-            {wrappedStats.mostFlushesInDay > 0 && (
-              <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardValue}>{wrappedStats.mostFlushesInDay}</div>
-                <div className={styles.wrappedCardLabel}>Most in One Day</div>
-              </div>
-            )}
-            
-            {wrappedStats.longestStreak > 0 && (
-              <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardValue}>{wrappedStats.longestStreak}</div>
-                <div className={styles.wrappedCardLabel}>Day Streak</div>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-      
       {!loading && !error && (
         <section className={styles.statsSection}>
           <h3 className={styles.statsHeader}>Flushing Statistics</h3>
@@ -504,16 +322,14 @@ export default function ProfilePage() {
                 {chartData.map((dataPoint, index) => {
                   // Calculate height percentage (max of 100%)
                   const maxCount = Math.max(...chartData.map(d => d.count));
-                  const heightPercent = maxCount > 0 
-                    ? Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100))
-                    : 0;
+                  const heightPercent = Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100));
                   
                   return (
                     <div
                       key={index}
                       className={styles.chartBar}
                       style={{ height: `${heightPercent}%` }}
-                      title={`${new Date(dataPoint.date + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${dataPoint.count} flushes`}
+                      title={`${dataPoint.date}: ${dataPoint.count} flushes`}
                     />
                   );
                 })}
@@ -521,10 +337,10 @@ export default function ProfilePage() {
               
               <div className={styles.chartLegend}>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[0].date + '-01').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}
+                  {chartData.length > 0 ? new Date(chartData[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                 </span>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date + '-01').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}
+                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                 </span>
               </div>
               
