@@ -238,24 +238,28 @@ export async function GET(request: NextRequest) {
         return year >= 2025;
       });
       
-      // Get the earliest and latest dates to ensure all months are included
+      // Initialize all months from Jan 2025 to current month (or Dec 2025 if in future years)
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonthNum = now.getMonth(); // 0-11
+      
+      // Start from January 2025
+      const startMonth = new Date(2025, 0, 1);
+      
+      // End at current month if we're in 2025, otherwise go to Dec 2025
+      const endMonth = currentYear === 2025 
+        ? new Date(currentYear, currentMonthNum, 1)
+        : new Date(2025, 11, 1); // December 2025
+      
+      let currentMonth = new Date(startMonth);
+      while (currentMonth <= endMonth) {
+        const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+        monthlyCounts.set(monthKey, 0);
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+      }
+      
+      // Process each entry to get monthly counts
       if (data2025Plus && data2025Plus.length > 0) {
-        const dates = data2025Plus.map(e => new Date(e.created_at));
-        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-        
-        // Initialize all months with 0 (starting from Jan 2025 or the earliest date)
-        const startMonth = new Date(Math.max(minDate.getTime(), new Date(2025, 0, 1).getTime()));
-        const currentMonth = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
-        const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-        
-        while (currentMonth <= endMonth) {
-          const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-          monthlyCounts.set(monthKey, 0);
-          currentMonth.setMonth(currentMonth.getMonth() + 1);
-        }
-        
-        // Process each entry to get monthly counts
         data2025Plus.forEach(entry => {
           const date = new Date(entry.created_at);
           const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;

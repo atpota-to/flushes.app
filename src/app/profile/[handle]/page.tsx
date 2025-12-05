@@ -379,24 +379,28 @@ export default function ProfilePage() {
           return year >= 2025;
         });
         
+        // Initialize all months from Jan 2025 to current month (or Dec 2025 if in future years)
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonthNum = now.getMonth(); // 0-11
+        
+        // Start from January 2025
+        const startMonth = new Date(2025, 0, 1);
+        
+        // End at current month if we're in 2025, otherwise go to Dec 2025
+        const endMonth = currentYear === 2025 
+          ? new Date(currentYear, currentMonthNum, 1)
+          : new Date(2025, 11, 1); // December 2025
+        
+        let currentMonth = new Date(startMonth);
+        while (currentMonth <= endMonth) {
+          const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+          chartDataMap.set(monthKey, 0);
+          currentMonth.setMonth(currentMonth.getMonth() + 1);
+        }
+        
+        // Group entries by month
         if (entries2025Plus.length > 0) {
-          // Get the earliest and latest dates from 2025+ entries
-          const dates = entries2025Plus.map(e => new Date(e.created_at));
-          const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
-          const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-          
-          // Initialize all months with 0 (starting from Jan 2025 or the earliest date)
-          const startMonth = new Date(Math.max(minDate.getTime(), new Date(2025, 0, 1).getTime()));
-          const currentMonth = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
-          const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-          
-          while (currentMonth <= endMonth) {
-            const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-            chartDataMap.set(monthKey, 0);
-            currentMonth.setMonth(currentMonth.getMonth() + 1);
-          }
-          
-          // Group entries by month
           entries2025Plus.forEach((entry: FlushingEntry) => {
             const date = new Date(entry.created_at);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -578,7 +582,7 @@ export default function ProfilePage() {
             </div>
             
             <div className={styles.wrappedCard}>
-              <div className={styles.wrappedValue}>{wrapped2025Data.activeStreak}</div>
+              <div className={styles.wrappedValue}>{wrapped2025Data.activeStreak} days</div>
               <div className={styles.wrappedLabel}>Longest Streak</div>
             </div>
             
@@ -588,7 +592,7 @@ export default function ProfilePage() {
             </div>
             
             <div className={styles.wrappedCard}>
-              <div className={styles.wrappedValue}>{wrapped2025Data.avgStatusLength}</div>
+              <div className={styles.wrappedValue}>{wrapped2025Data.avgStatusLength}/59</div>
               <div className={styles.wrappedLabel}>Avg. Characters</div>
             </div>
             
