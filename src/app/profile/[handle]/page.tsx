@@ -490,7 +490,7 @@ export default function ProfilePage() {
                 {chartData.map((dataPoint, index) => {
                   // Calculate height percentage (max of 100%)
                   const maxCount = Math.max(...chartData.map(d => d.count));
-                  const heightPercent = Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100));
+                  const heightPercent = dataPoint.count === 0 ? 0 : Math.min(100, (dataPoint.count / maxCount) * 100);
                   
                   return (
                     <div
