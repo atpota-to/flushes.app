@@ -265,7 +265,7 @@ export default function ProfilePage() {
         const formatHour = (hour: number) => {
           const period = hour >= 12 ? 'pm' : 'am';
           const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-          return `${displayHour}${period}`;
+          return `${displayHour} ${period}`;
         };
         
         // Most active month
