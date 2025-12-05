@@ -44,6 +44,15 @@ export default function ProfilePage() {
   const [flushesPerDay, setFlushesPerDay] = useState<number>(0);
   const [chartData, setChartData] = useState<{date: string, count: number}[]>([]);
   const [emojiStats, setEmojiStats] = useState<EmojiStat[]>([]);
+  const [wrappedStats, setWrappedStats] = useState<{
+    mostFrequentHour: number | null;
+    daysActive: number;
+    totalFlushes: number;
+    topEmoji: string;
+    year: number;
+    mostFlushesInDay: number;
+    longestStreak: number;
+  } | null>(null);
   // Match Bluesky's API response format
   interface ProfileData {
     did: string;
@@ -213,6 +222,110 @@ export default function ProfilePage() {
       setTotalCount(userEntries.length);
       setEmojiStats(emojiStats);
       
+      // Calculate Wrapped stats (for current year)
+      const currentYear = new Date().getFullYear();
+      const yearEntries = userEntries.filter((entry: FlushingEntry) => {
+        const entryDate = new Date(entry.created_at);
+        return entryDate.getFullYear() === currentYear;
+      });
+      
+      if (yearEntries.length > 0) {
+        // Calculate most frequent hour
+        const hourCounts = new Map<number, number>();
+        yearEntries.forEach((entry: FlushingEntry) => {
+          const date = new Date(entry.created_at);
+          const hour = date.getHours();
+          hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
+        });
+        
+        let mostFrequentHour: number | null = null;
+        let maxCount = 0;
+        hourCounts.forEach((count, hour) => {
+          if (count > maxCount) {
+            maxCount = count;
+            mostFrequentHour = hour;
+          }
+        });
+        
+        // Calculate days active for the year and most flushes in a single day
+        const yearDateSet = new Set<string>();
+        const dayFlushCounts = new Map<string, number>();
+        yearEntries.forEach((entry: FlushingEntry) => {
+          const date = new Date(entry.created_at);
+          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          yearDateSet.add(dateKey);
+          dayFlushCounts.set(dateKey, (dayFlushCounts.get(dateKey) || 0) + 1);
+        });
+        
+        // Find most flushes in a single day
+        let mostFlushesInDay = 0;
+        dayFlushCounts.forEach((count) => {
+          if (count > mostFlushesInDay) {
+            mostFlushesInDay = count;
+          }
+        });
+        
+        // Calculate longest streak (consecutive days with at least one flush)
+        const sortedDates = Array.from(yearDateSet).sort();
+        let longestStreak = 0;
+        let currentStreak = 0;
+        let previousDate: Date | null = null;
+        
+        sortedDates.forEach((dateKey) => {
+          const currentDate = new Date(dateKey);
+          currentDate.setHours(0, 0, 0, 0);
+          
+          if (previousDate === null) {
+            currentStreak = 1;
+          } else {
+            const daysDiff = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysDiff === 1) {
+              currentStreak++;
+            } else {
+              if (currentStreak > longestStreak) {
+                longestStreak = currentStreak;
+              }
+              currentStreak = 1;
+            }
+          }
+          previousDate = currentDate;
+        });
+        
+        // Check if the last streak is the longest
+        if (currentStreak > longestStreak) {
+          longestStreak = currentStreak;
+        }
+        
+        // Get top emoji for the year
+        const yearEmojiCounts = new Map<string, number>();
+        yearEntries.forEach((entry: FlushingEntry) => {
+          const emoji = entry.emoji?.trim() || '🚽';
+          const validEmoji = APPROVED_EMOJIS.includes(emoji) ? emoji : '🚽';
+          yearEmojiCounts.set(validEmoji, (yearEmojiCounts.get(validEmoji) || 0) + 1);
+        });
+        
+        let topEmoji = '🚽';
+        let topEmojiCount = 0;
+        yearEmojiCounts.forEach((count, emoji) => {
+          if (count > topEmojiCount) {
+            topEmojiCount = count;
+            topEmoji = emoji;
+          }
+        });
+        
+        setWrappedStats({
+          mostFrequentHour,
+          daysActive: yearDateSet.size,
+          totalFlushes: yearEntries.length,
+          topEmoji,
+          year: currentYear,
+          mostFlushesInDay,
+          longestStreak
+        });
+      } else {
+        setWrappedStats(null);
+      }
+      
       // Calculate statistics and chart data
       if (userEntries.length > 0) {
         // Calculate actual active days count (days with at least one flush)
@@ -307,6 +420,63 @@ export default function ProfilePage() {
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
+      
+      {/* Flushes Wrapped Section */}
+      {!loading && !error && wrappedStats && (
+        <section className={styles.wrappedSection}>
+          <div className={styles.wrappedHeader}>
+            <h2 className={styles.wrappedTitle}>{handle}'s {wrappedStats.year} Flushes Roll Up</h2>
+            <p className={styles.wrappedSubtitle}>A year in review</p>
+          </div>
+          
+          <div className={styles.wrappedCards}>
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedCardIcon}>🚽</div>
+              <div className={styles.wrappedCardValue}>{wrappedStats.totalFlushes.toLocaleString()}</div>
+              <div className={styles.wrappedCardLabel}>Total Flushes</div>
+            </div>
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedCardIcon}>📅</div>
+              <div className={styles.wrappedCardValue}>{wrappedStats.daysActive}</div>
+              <div className={styles.wrappedCardLabel}>Days Active</div>
+            </div>
+            
+            {wrappedStats.mostFrequentHour !== null && (
+              <div className={styles.wrappedCard}>
+                <div className={styles.wrappedCardIcon}>⏰</div>
+                <div className={styles.wrappedCardValue}>
+                  {wrappedStats.mostFrequentHour === 0 ? '12' : wrappedStats.mostFrequentHour > 12 ? wrappedStats.mostFrequentHour - 12 : wrappedStats.mostFrequentHour}
+                  {wrappedStats.mostFrequentHour >= 12 ? 'PM' : 'AM'}
+                </div>
+                <div className={styles.wrappedCardLabel}>Most Active Time</div>
+              </div>
+            )}
+            
+            <div className={styles.wrappedCard}>
+              <div className={styles.wrappedCardIcon}>{wrappedStats.topEmoji}</div>
+              <div className={styles.wrappedCardValue}>{wrappedStats.topEmoji}</div>
+              <div className={styles.wrappedCardLabel}>Top Emoji</div>
+            </div>
+            
+            {wrappedStats.mostFlushesInDay > 0 && (
+              <div className={styles.wrappedCard}>
+                <div className={styles.wrappedCardIcon}>🔥</div>
+                <div className={styles.wrappedCardValue}>{wrappedStats.mostFlushesInDay}</div>
+                <div className={styles.wrappedCardLabel}>Most in One Day</div>
+              </div>
+            )}
+            
+            {wrappedStats.longestStreak > 0 && (
+              <div className={styles.wrappedCard}>
+                <div className={styles.wrappedCardIcon}>⚡</div>
+                <div className={styles.wrappedCardValue}>{wrappedStats.longestStreak}</div>
+                <div className={styles.wrappedCardLabel}>Day Streak</div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
       
       {!loading && !error && (
         <section className={styles.statsSection}>
