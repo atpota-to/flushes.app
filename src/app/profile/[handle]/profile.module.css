@@ -446,6 +446,55 @@
   min-width: 0;
 }
 
+.contentRight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.editButton {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+}
+
+.editButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.editButton:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(var(--primary-rgb), 0.05);
+}
+
+.actionError {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
+.actionSuccess {
+  background: #efe;
+  border: 1px solid #cfc;
+  color: #363;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+
 .userLine {
   display: flex;
   align-items: center;

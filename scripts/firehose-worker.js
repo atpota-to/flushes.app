@@ -342,10 +342,36 @@ async function processEvent(event) {
     
     console.log(`Processing ${operation} operation for DID: ${did}, collection: ${collection}, rkey: ${rkey}`);
     
-    // Skip delete operations
+    // Construct the URI for the record
+    const recordUri = `at://${did}/${collection}/${rkey}`;
+    
+    // Handle delete operations
     if (operation === 'delete') {
-      console.log(`Skipping delete operation`);
-      return;
+      console.log(`Processing delete operation for URI: ${recordUri}`);
+      
+      try {
+        const { data, error } = await supabase
+          .from('flushing_records')
+          .delete()
+          .eq('uri', recordUri);
+        
+        if (error) {
+          console.error(`Error deleting record: ${error.message}`);
+        } else {
+          console.log(`Successfully deleted record: ${recordUri}`);
+        }
+      } catch (deleteError) {
+        console.error(`Exception while deleting record: ${deleteError.message}`);
+      }
+      
+      return; // Done processing delete
+    }
+    
+    // Handle update operations (which are represented as 'update' in Jetstream)
+    if (operation === 'update') {
+      console.log(`Processing update operation for URI: ${recordUri}`);
+      // Updates are handled the same way as creates - we'll update the existing record
+      // Fall through to the normal processing below
     }
     
     // Try different approaches to get a handle

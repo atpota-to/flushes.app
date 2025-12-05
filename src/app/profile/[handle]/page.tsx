@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation';
 import styles from './profile.module.css';
 import { sanitizeText, containsBannedWords } from '@/lib/content-filter';
 import { formatRelativeTime } from '@/lib/time-utils';
+import { useAuth } from '@/lib/auth-context';
+import EditFlushModal from '@/components/EditFlushModal';
 
 // Define approved emojis list - keep in sync with API route
 const APPROVED_EMOJIS = [
@@ -34,6 +36,7 @@ interface EmojiStat {
 export default function ProfilePage() {
   const params = useParams();
   const handle = params.handle as string;
+  const { session, isAuthenticated } = useAuth();
   
   const [entries, setEntries] = useState<FlushingEntry[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -55,6 +58,9 @@ export default function ProfilePage() {
     avgStatusLength: number;
     mostFrequentTime: string;
   } | null>(null);
+  const [editingFlush, setEditingFlush] = useState<FlushingEntry | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   // Match Bluesky's API response format
   interface ProfileData {
     did: string;
@@ -431,8 +437,108 @@ export default function ProfilePage() {
     }
   };
 
+  // Check if the current user owns this profile
+  const isOwnProfile = () => {
+    if (!session || !profileData) return false;
+    return session.sub === profileData.did;
+  };
+
+  // Handle updating a flush
+  const handleUpdateFlush = async (text: string, emoji: string) => {
+    if (!session || !editingFlush) {
+      setActionError('You must be logged in to update a flush');
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+
+      const { updateFlushRecord } = await import('@/lib/api-client');
+      
+      await updateFlushRecord(
+        session,
+        editingFlush.uri,
+        text,
+        emoji,
+        editingFlush.created_at
+      );
+
+      setActionSuccess('Flush updated successfully!');
+      
+      // Update the local state
+      setEntries(entries.map(entry => 
+        entry.uri === editingFlush.uri 
+          ? { ...entry, text, emoji }
+          : entry
+      ));
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error updating flush:', error);
+      setActionError(error.message || 'Failed to update flush');
+    }
+  };
+
+  // Handle deleting a flush
+  const handleDeleteFlush = async () => {
+    if (!session || !editingFlush) {
+      setActionError('You must be logged in to delete a flush');
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+
+      const { deleteFlushRecord } = await import('@/lib/api-client');
+      
+      await deleteFlushRecord(session, editingFlush.uri);
+
+      setActionSuccess('Flush deleted successfully!');
+      
+      // Remove from local state
+      setEntries(entries.filter(entry => entry.uri !== editingFlush.uri));
+      setTotalCount(totalCount - 1);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error deleting flush:', error);
+      setActionError(error.message || 'Failed to delete flush');
+    }
+  };
+
   return (
     <div className={styles.container}>
+      
+      {/* Action messages */}
+      {actionError && (
+        <div className={styles.actionError}>
+          {actionError}
+        </div>
+      )}
+      
+      {actionSuccess && (
+        <div className={styles.actionSuccess}>
+          {actionSuccess}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      <EditFlushModal
+        isOpen={editingFlush !== null}
+        flushData={editingFlush ? {
+          uri: editingFlush.uri,
+          text: editingFlush.text,
+          emoji: editingFlush.emoji,
+          created_at: editingFlush.created_at
+        } : null}
+        onSave={handleUpdateFlush}
+        onDelete={handleDeleteFlush}
+        onClose={() => setEditingFlush(null)}
+      />
       
       <div className={styles.profileHeader}>
         <div className={styles.profileInfo}>
@@ -648,9 +754,24 @@ export default function ProfilePage() {
                       )}
                     </span>
                   </div>
-                  <span className={styles.timestamp}>
-                    {formatRelativeTime(entry.created_at)}
-                  </span>
+                  <div className={styles.contentRight}>
+                    <span className={styles.timestamp}>
+                      {formatRelativeTime(entry.created_at)}
+                    </span>
+                    {isOwnProfile() && isAuthenticated && (
+                      <button
+                        className={styles.editButton}
+                        onClick={() => setEditingFlush(entry)}
+                        aria-label="Edit flush"
+                        title="Edit or delete this flush"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))
