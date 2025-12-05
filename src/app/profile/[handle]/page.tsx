@@ -554,7 +554,7 @@ export default function ProfilePage() {
       {!loading && !error && wrapped2025Data && (
         <section className={styles.wrappedSection}>
           <h3 className={styles.wrappedHeader}>Flushes Roll Up 2025</h3>
-          <p className={styles.wrappedSubtitle}>The year in flushes</p>
+          <p className={styles.wrappedSubtitle}>The past year on the decentralized toilet</p>
           
           <div className={styles.wrappedGrid}>
             <div className={styles.wrappedCard}>
