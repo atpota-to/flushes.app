@@ -553,7 +553,7 @@ export default function ProfilePage() {
       {/* Flushes Roll Up 2025 Section */}
       {!loading && !error && wrapped2025Data && (
         <section className={styles.wrappedSection}>
-          <h3 className={styles.wrappedHeader}>🧻 Flushes Roll Up 2025</h3>
+          <h3 className={styles.wrappedHeader}>Flushes Roll Up 2025</h3>
           <p className={styles.wrappedSubtitle}>The year in flushes</p>
           
           <div className={styles.wrappedGrid}>
@@ -602,7 +602,7 @@ export default function ProfilePage() {
             className={styles.shareWrappedButton}
             onClick={() => {
               const shareHandle = profileData?.handle || handle;
-              const wrappedText = `🧻 My #FlushesRollUp2025:\n\n${wrapped2025Data.totalFlushes} flushes across ${wrapped2025Data.daysActive} days\nTop emoji: ${wrapped2025Data.topEmoji}\nLongest streak: ${wrapped2025Data.activeStreak} days\nMost active: ${wrapped2025Data.mostActiveMonth}\n\nSee your stats at flushes.app! 🚽`;
+              const wrappedText = `My @flushes.app Roll Up 2025:\n\n${wrapped2025Data.totalFlushes} total flushes\n${wrapped2025Data.daysActive} days active\nTop emoji: ${wrapped2025Data.topEmoji}\nMost in one day: ${wrapped2025Data.mostFlushesInDay}\nLongest streak: ${wrapped2025Data.activeStreak} days\nMost active month: ${wrapped2025Data.mostActiveMonth}\nAvg. characters: ${wrapped2025Data.avgStatusLength}\nPeak time: ${wrapped2025Data.mostFrequentTime}\n\nSee your stats at flushes.app! 🚽`;
               window.open(`https://bsky.app/intent/compose?text=${encodeURIComponent(wrappedText)}`, '_blank');
             }}
           >
