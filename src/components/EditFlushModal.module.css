@@ -13,7 +13,8 @@
 }
 
 .modalContent {
-  background: var(--background);
+  background: var(--card-background, #ffffff);
+  background-color: var(--card-background, #ffffff);
   border: 2px solid var(--border);
   padding: 30px;
   max-width: 600px;
@@ -82,8 +83,9 @@
   padding: 12px;
   font-size: 1rem;
   border: 2px solid var(--border);
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--input-background, #f5f5f5);
+  background-color: var(--input-background, #f5f5f5);
+  color: var(--foreground, #000000);
   font-family: inherit;
   transition: border-color 0.2s;
 }
@@ -113,7 +115,8 @@
 }
 
 .emojiButton {
-  background: var(--background);
+  background: var(--input-background, #f5f5f5);
+  background-color: var(--input-background, #f5f5f5);
   border: 2px solid var(--border);
   padding: 12px;
   font-size: 1.5rem;
