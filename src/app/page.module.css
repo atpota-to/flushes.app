@@ -133,7 +133,6 @@
 .loginButton:hover {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 /* Status form styles */
@@ -229,7 +228,6 @@
 .input:focus {
   border-color: var(--primary-color);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(91, 173, 240, 0.2);
 }
 
 .inputWrapper {
@@ -244,7 +242,6 @@
 
 .inputWrapper:focus-within {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(91, 173, 240, 0.2);
 }
 
 .inputPrefix {
@@ -382,7 +379,6 @@
 .submitButton:hover:not(:disabled) {
   background-color: var(--secondary-color);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px var(--shadow-color);
 }
 
 .submitButton:disabled {
@@ -718,7 +714,6 @@
   font-size: 1.1rem;
   line-height: 1.4;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-weight: 500;
 }
 

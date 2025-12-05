@@ -363,13 +363,7 @@
   border: 1px solid var(--tile-border);
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 5px var(--shadow-color);
   transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.feedItem:hover {
-  /* Removed transform and increased box-shadow to prevent movement */
-  box-shadow: 0 2px 5px var(--shadow-color);
 }
 
 @media (max-width: 600px) {
@@ -377,7 +371,6 @@
     padding: 0.75rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    box-shadow: 0 1px 3px var(--shadow-color);
   }
   
   .feedList {
@@ -386,7 +379,6 @@
   
   .feedItem:hover {
     transform: none;
-    box-shadow: 0 1px 3px var(--shadow-color);
   }
   
   .content {

@@ -252,7 +252,6 @@ button:hover {
   padding: 1.5rem;
   margin: 1rem 0;
   width: 100%;
-  box-shadow: 0 2px 5px var(--shadow-color);
   /* Removed transitions */
   background-image: repeating-linear-gradient(0deg, var(--tile-border), var(--tile-border) 1px, transparent 1px, transparent 20px);
 }
