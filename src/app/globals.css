@@ -6,7 +6,7 @@
   --secondary-hover: #155690;
   --success-color: #4caf50;
   --success-hover: #43a047;
-  --background-color: #f9f9f9;
+  --background-color: #eaf5ff;
   --background-start-rgb: 249, 249, 249;
   --background-end-rgb: 255, 255, 255;
   --card-background: #ffffff;
@@ -183,7 +183,7 @@ body {
   font-weight: 400;
   line-height: 1.6;
   color: var(--text-color);
-  background-color: #eaf5ff;
+  background-color: var(--background-color);
   min-height: 100vh;
 }
 
