@@ -341,29 +341,47 @@ export default function ProfilePage() {
         const perDay = parseFloat((userEntries.length / activeDaysCount).toFixed(1));
         setFlushesPerDay(perDay);
         
-        // Generate chart data (group by day)
-        const chartDataMap = new Map<string, number>();
+        // Generate chart data (group by month)
+        const monthDataMap = new Map<string, number>();
         
-        // Group entries by day
+        // Group entries by month
         userEntries.forEach((entry: FlushingEntry) => {
           const date = new Date(entry.created_at);
-          const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
           
-          if (chartDataMap.has(dateKey)) {
-            chartDataMap.set(dateKey, chartDataMap.get(dateKey)! + 1);
-          } else {
-            chartDataMap.set(dateKey, 1);
-          }
+          monthDataMap.set(monthKey, (monthDataMap.get(monthKey) || 0) + 1);
         });
         
-        // Convert map to array and sort by date
-        const chartDataArray = Array.from(chartDataMap.entries())
-          .map(([date, count]): {date: string, count: number} => ({ date, count }))
-          .sort((a, b) => a.date.localeCompare(b.date));
-        
-        // Limit to last 30 days for chart readability
-        const limitedData = chartDataArray.slice(-30);
-        setChartData(limitedData);
+        // Find the range of months from first flush to current month
+        if (userEntries.length > 0) {
+          // Find the oldest and newest entries
+          const sortedByDate = [...userEntries].sort((a, b) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+          const firstEntry = sortedByDate[0];
+          const firstDate = new Date(firstEntry.created_at);
+          const lastDate = new Date(); // Current date
+          
+          // Generate all months in the range
+          const allMonths: {date: string, count: number}[] = [];
+          const currentMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+          const endMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+          
+          while (currentMonth <= endMonth) {
+            const monthKey = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+            allMonths.push({
+              date: monthKey,
+              count: monthDataMap.get(monthKey) || 0
+            });
+            
+            // Move to next month
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+          }
+          
+          setChartData(allMonths);
+        } else {
+          setChartData([]);
+        }
       } else {
         setFlushesPerDay(0);
         setChartData([]);
@@ -431,20 +449,17 @@ export default function ProfilePage() {
           
           <div className={styles.wrappedCards}>
             <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardIcon}>🚽</div>
               <div className={styles.wrappedCardValue}>{wrappedStats.totalFlushes.toLocaleString()}</div>
               <div className={styles.wrappedCardLabel}>Total Flushes</div>
             </div>
             
             <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardIcon}>📅</div>
               <div className={styles.wrappedCardValue}>{wrappedStats.daysActive}</div>
               <div className={styles.wrappedCardLabel}>Days Active</div>
             </div>
             
             {wrappedStats.mostFrequentHour !== null && (
               <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardIcon}>⏰</div>
                 <div className={styles.wrappedCardValue}>
                   {wrappedStats.mostFrequentHour === 0 ? '12' : wrappedStats.mostFrequentHour > 12 ? wrappedStats.mostFrequentHour - 12 : wrappedStats.mostFrequentHour}
                   {wrappedStats.mostFrequentHour >= 12 ? 'PM' : 'AM'}
@@ -454,14 +469,12 @@ export default function ProfilePage() {
             )}
             
             <div className={styles.wrappedCard}>
-              <div className={styles.wrappedCardIcon}>{wrappedStats.topEmoji}</div>
               <div className={styles.wrappedCardValue}>{wrappedStats.topEmoji}</div>
               <div className={styles.wrappedCardLabel}>Top Emoji</div>
             </div>
             
             {wrappedStats.mostFlushesInDay > 0 && (
               <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardIcon}>🔥</div>
                 <div className={styles.wrappedCardValue}>{wrappedStats.mostFlushesInDay}</div>
                 <div className={styles.wrappedCardLabel}>Most in One Day</div>
               </div>
@@ -469,7 +482,6 @@ export default function ProfilePage() {
             
             {wrappedStats.longestStreak > 0 && (
               <div className={styles.wrappedCard}>
-                <div className={styles.wrappedCardIcon}>⚡</div>
                 <div className={styles.wrappedCardValue}>{wrappedStats.longestStreak}</div>
                 <div className={styles.wrappedCardLabel}>Day Streak</div>
               </div>
@@ -492,14 +504,16 @@ export default function ProfilePage() {
                 {chartData.map((dataPoint, index) => {
                   // Calculate height percentage (max of 100%)
                   const maxCount = Math.max(...chartData.map(d => d.count));
-                  const heightPercent = Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100));
+                  const heightPercent = maxCount > 0 
+                    ? Math.max(10, Math.min(100, (dataPoint.count / maxCount) * 100))
+                    : 0;
                   
                   return (
                     <div
                       key={index}
                       className={styles.chartBar}
                       style={{ height: `${heightPercent}%` }}
-                      title={`${dataPoint.date}: ${dataPoint.count} flushes`}
+                      title={`${new Date(dataPoint.date + '-01').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}: ${dataPoint.count} flushes`}
                     />
                   );
                 })}
@@ -507,10 +521,10 @@ export default function ProfilePage() {
               
               <div className={styles.chartLegend}>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[0].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                  {chartData.length > 0 ? new Date(chartData[0].date + '-01').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}
                 </span>
                 <span className={styles.chartLegendItem}>
-                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                  {chartData.length > 0 ? new Date(chartData[chartData.length - 1].date + '-01').toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : ''}
                 </span>
               </div>
               
