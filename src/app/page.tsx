@@ -7,6 +7,7 @@ import styles from './page.module.css';
 import { useAuth } from '@/lib/auth-context';
 import { containsBannedWords, sanitizeText, isAllowedEmoji } from '@/lib/content-filter';
 import { formatRelativeTime } from '@/lib/time-utils';
+import EditFlushModal from '@/components/EditFlushModal';
 
 // Types for feed entries
 interface FlushingEntry {
@@ -39,6 +40,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newEntryIds, setNewEntryIds] = useState<Set<string>>(new Set());
+  const [editingFlush, setEditingFlush] = useState<FlushingEntry | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch the latest entries when the component mounts
@@ -306,6 +310,78 @@ export default function Home() {
     await signOut();
   };
 
+  // Check if the current user owns this flush
+  const isOwnFlush = (authorDid: string) => {
+    if (!session) return false;
+    return session.sub === authorDid;
+  };
+
+  // Handle updating a flush
+  const handleUpdateFlush = async (text: string, emoji: string) => {
+    if (!session || !editingFlush) {
+      setActionError('You must be logged in to update a flush');
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+
+      const { updateFlushRecord } = await import('@/lib/api-client');
+      
+      await updateFlushRecord(
+        session,
+        editingFlush.uri,
+        text,
+        emoji,
+        editingFlush.createdAt
+      );
+
+      setActionSuccess('Flush updated successfully!');
+      
+      // Update the local state
+      setEntries(entries.map(entry => 
+        entry.uri === editingFlush.uri 
+          ? { ...entry, text, emoji }
+          : entry
+      ));
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error updating flush:', error);
+      setActionError(error.message || 'Failed to update flush');
+    }
+  };
+
+  // Handle deleting a flush
+  const handleDeleteFlush = async () => {
+    if (!session || !editingFlush) {
+      setActionError('You must be logged in to delete a flush');
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+
+      const { deleteFlushRecord } = await import('@/lib/api-client');
+      
+      await deleteFlushRecord(session, editingFlush.uri);
+
+      setActionSuccess('Flush deleted successfully!');
+      
+      // Remove from local state
+      setEntries(entries.filter(entry => entry.uri !== editingFlush.uri));
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setActionSuccess(null), 3000);
+    } catch (error: any) {
+      console.error('Error deleting flush:', error);
+      setActionError(error.message || 'Failed to delete flush');
+    }
+  };
+
   // List of emojis for status selection
   const EMOJIS = [
     '🚽', '🧻', '💩', '💨', '🚾', '🧼', '🪠', '🚻', '🩸', '💧', '💦', '😌', 
@@ -315,6 +391,34 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
+      
+      {/* Action messages */}
+      {actionError && (
+        <div className={styles.error}>
+          {actionError}
+        </div>
+      )}
+      
+      {actionSuccess && (
+        <div className={styles.success}>
+          {actionSuccess}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      <EditFlushModal
+        isOpen={editingFlush !== null}
+        flushData={editingFlush ? {
+          uri: editingFlush.uri,
+          text: editingFlush.text,
+          emoji: editingFlush.emoji,
+          created_at: editingFlush.createdAt
+        } : null}
+        onSave={handleUpdateFlush}
+        onDelete={handleDeleteFlush}
+        onClose={() => setEditingFlush(null)}
+      />
+      
       <header className={styles.header}>
         <div className={styles.headerContent}>
           {/* New header layout with 4 center-aligned lines */}
@@ -546,9 +650,24 @@ export default function Home() {
                               )}
                             </span>
                           </div>
-                          <span className={styles.timestamp}>
-                            {formatRelativeTime(entry.createdAt)}
-                          </span>
+                          <div className={styles.contentRight}>
+                            <span className={styles.timestamp}>
+                              {formatRelativeTime(entry.createdAt)}
+                            </span>
+                            {isOwnFlush(entry.authorDid) && isAuthenticated && (
+                              <button
+                                className={styles.editButton}
+                                onClick={() => setEditingFlush(entry)}
+                                aria-label="Edit flush"
+                                title="Edit or delete this flush"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
