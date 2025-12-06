@@ -569,23 +569,24 @@ export default function ProfilePage() {
             </>
           )}
 
-     <a 
-            href={profileData ? `https://anisota.net/profile/${profileData.handle}` : `https://anisota.net/profile/${handle}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className={styles.viewOnBluesky}
-          >
-            View account on Anisota
-          </a>
-
-          <a 
-            href={profileData ? `https://bsky.app/profile/${profileData.handle}` : `https://bsky.app/profile/${handle}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className={styles.viewOnBluesky}
-          >
-            View account on Bluesky
-          </a>
+     <div className={styles.viewOnBluesky}>
+           View account on{' '}
+           <a 
+             href={profileData ? `https://anisota.net/profile/${profileData.handle}` : `https://anisota.net/profile/${handle}`} 
+             target="_blank" 
+             rel="noopener noreferrer"
+           >
+             Anisota
+           </a>
+           {' '}or{' '}
+           <a 
+             href={profileData ? `https://bsky.app/profile/${profileData.handle}` : `https://bsky.app/profile/${handle}`} 
+             target="_blank" 
+             rel="noopener noreferrer"
+           >
+             Bluesky
+           </a>
+         </div>
         </div>
       </div>
 
