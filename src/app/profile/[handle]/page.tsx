@@ -569,12 +569,13 @@ export default function ProfilePage() {
             </>
           )}
 
-     <div className={styles.viewOnBluesky}>
+     <div>
            View account on{' '}
            <a 
              href={profileData ? `https://anisota.net/profile/${profileData.handle}` : `https://anisota.net/profile/${handle}`} 
              target="_blank" 
              rel="noopener noreferrer"
+             className={styles.viewOnBluesky}
            >
              Anisota
            </a>
@@ -583,6 +584,7 @@ export default function ProfilePage() {
              href={profileData ? `https://bsky.app/profile/${profileData.handle}` : `https://bsky.app/profile/${handle}`} 
              target="_blank" 
              rel="noopener noreferrer"
+             className={styles.viewOnBluesky}
            >
              Bluesky
            </a>
