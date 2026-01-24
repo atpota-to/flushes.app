@@ -1,5 +1,5 @@
 {
-  "client_id": "https://flushes.app/client-metadata.json",
+  "client_id": "https://flushes.app/oauth-client-metadata.json",
   "application_type": "web",
   "client_name": "Flushes",
   "client_uri": "https://flushes.app",

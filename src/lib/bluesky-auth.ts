@@ -1,7 +1,7 @@
 // Default Bluesky OAuth client configuration
 const DEFAULT_AUTH_SERVER = 'https://public.api.bsky.app';
 const REDIRECT_URI = 'https://flushes.app/auth/callback';
-const CLIENT_ID = 'https://flushes.app/client-metadata.json';
+const CLIENT_ID = 'https://flushes.app/oauth-client-metadata.json';
 // Need to include transition:generic to be able to create records
 const SCOPES = 'atproto transition:generic';
 

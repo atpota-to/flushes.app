@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 const DEFAULT_AUTH_SERVER = 'https://public.api.bsky.app';
 const REDIRECT_URI = 'https://flushes.app/auth/callback';
-const CLIENT_ID = 'https://flushes.app/client-metadata.json';
+const CLIENT_ID = 'https://flushes.app/oauth-client-metadata.json';
 
 // Function to get a nonce from the specified PDS
 async function getNonce(pdsEndpoint: string): Promise<string | null> {

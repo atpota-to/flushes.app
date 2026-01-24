@@ -111,7 +111,7 @@ export async function refreshAccessToken(
           body: new URLSearchParams({
             'grant_type': 'refresh_token',
             'refresh_token': refreshToken,
-            'client_id': 'https://flushes.app/client-metadata.json'
+            'client_id': 'https://flushes.app/oauth-client-metadata.json'
           })
         });
         
@@ -215,7 +215,7 @@ export async function refreshAccessToken(
       body: new URLSearchParams({
         'grant_type': 'refresh_token',
         'refresh_token': refreshToken,
-        'client_id': 'https://flushes.app/client-metadata.json'
+        'client_id': 'https://flushes.app/oauth-client-metadata.json'
       })
     });
     
@@ -276,7 +276,7 @@ export async function refreshAccessToken(
           body: new URLSearchParams({
             'grant_type': 'refresh_token',
             'refresh_token': refreshToken,
-            'client_id': 'https://flushes.app/client-metadata.json'
+            'client_id': 'https://flushes.app/oauth-client-metadata.json'
           })
         });
         

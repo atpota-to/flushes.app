@@ -53,7 +53,7 @@ This application is designed to be deployed on Vercel with the domain `flushing.
 For production deployment:
 
 1. Update the OAuth redirect URLs in both code and the Bluesky developer settings
-2. Make sure the client metadata file is accessible at `https://flushing.im/client-metadata.json`
+2. Make sure the client metadata file is accessible at `https://flushing.im/oauth-client-metadata.json`
 3. Deploy the application to Vercel
 
 ## Custom Lexicon Schema

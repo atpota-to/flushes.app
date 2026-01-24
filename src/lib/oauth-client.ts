@@ -2,7 +2,7 @@ import { BrowserOAuthClient } from '@atproto/oauth-client-browser'
 
 // Client metadata for the OAuth client
 const CLIENT_METADATA = {
-  "client_id": "https://flushes.app/client-metadata.json",
+  "client_id": "https://flushes.app/oauth-client-metadata.json",
   "application_type": "web" as const,
   "client_name": "Flushes",
   "client_uri": "https://flushes.app",
